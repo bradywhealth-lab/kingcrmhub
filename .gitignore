@@ -1,0 +1,88 @@
+# ------------------------------
+# Dependencies / package managers
+# ------------------------------
+node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.npm/
+.pnpm-store/
+
+# ------------------------------
+# Build outputs / caches
+# ------------------------------
+/.next/
+/out/
+/build/
+/dist/
+.cache/
+.turbo/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# ------------------------------
+# Environment / secrets
+# ------------------------------
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+*.crt
+
+# ------------------------------
+# Logs / runtime artifacts
+# ------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dev.log
+server.log
+
+# ------------------------------
+# Databases / local state
+# ------------------------------
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/dev.db*
+db/
+
+# ------------------------------
+# Repo-local generated data
+# ------------------------------
+upload/
+download/
+public/uploads/
+
+# ------------------------------
+# Tooling / IDE / OS
+# ------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+.claude/
+.z-ai-config
+.vercel/
+
+# ------------------------------
+# Local scratch / misc
+# ------------------------------
+local-*
+tmp/
+temp/
+test/
+prompt/
+*.swp
+*.swo
