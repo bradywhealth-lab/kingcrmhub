@@ -211,6 +211,14 @@ function calibrateConfidence(baseLeadScore: number, evidenceCount: number, topEv
 function buildKnowledgeCitations(knowledgeContext: KnowledgeCitation[]): PlaybookResponse['citations'] {
   return knowledgeContext
     .filter((citation) => citation.snippet.trim().length >= 50)
+    .map((citation) => ({
+      carrierId: citation.carrierId,
+      carrierName: citation.carrierName,
+      documentId: citation.documentId,
+      documentName: citation.documentName,
+      chunkIndex: citation.chunkIndex,
+      snippet: citation.snippet,
+    }))
     .slice(0, 6)
 }
 
