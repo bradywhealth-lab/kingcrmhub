@@ -8,9 +8,14 @@ BUILD_DIR="$SCRIPT_DIR"
 
 # 存储所有子进程的 PID
 pids=""
+cleaned_up=0
 
 # 清理函数：优雅关闭所有服务
 cleanup() {
+    if [ "$cleaned_up" -eq 1 ]; then
+        return
+    fi
+    cleaned_up=1
     echo ""
     echo "🛑 正在关闭所有服务..."
     
@@ -42,8 +47,10 @@ cleanup() {
     done
     
     echo "✅ 所有服务已关闭"
-    exit 0
 }
+
+# 注册信号处理，确保 Ctrl+C/TERM 时会清理所有后台服务
+trap cleanup INT TERM EXIT
 
 echo "🚀 开始启动所有服务..."
 echo ""
@@ -114,13 +121,17 @@ fi
 # 启动 Caddy（如果存在 Caddyfile）
 echo "🚀 启动 Caddy..."
 
-# Caddy 作为前台进程运行（主进程）
-echo "✅ Caddy 已启动（前台运行）"
+# Caddy 后台运行，由当前脚本负责信号转发与统一清理
+echo "✅ Caddy 已启动（后台运行）"
 echo ""
 echo "🎉 所有服务已启动！"
 echo ""
 echo "💡 按 Ctrl+C 停止所有服务"
 echo ""
 
-# Caddy 作为主进程运行
-exec caddy run --config Caddyfile --adapter caddyfile
+caddy run --config Caddyfile --adapter caddyfile &
+CADDY_PID=$!
+pids="$pids $CADDY_PID"
+
+# 等待 Caddy 退出；若收到信号，trap 会调用 cleanup
+wait "$CADDY_PID"

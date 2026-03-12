@@ -3,13 +3,20 @@
 		query XTransformPort=*
 	}
 
-	handle @transform_port_query {
+	# Allowlist transform ports to prevent query-driven SSRF to arbitrary localhost services.
+	@allowed_transform_port expression `{query.XTransformPort}.matches("^(3003)$")`
+
+	handle @transform_port_query @allowed_transform_port {
 		reverse_proxy localhost:{query.XTransformPort} {
 			header_up Host {host}
 			header_up X-Forwarded-For {remote_host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Real-IP {remote_host}
 		}
+	}
+
+	handle @transform_port_query {
+		respond "Invalid XTransformPort" 403
 	}
 
 	handle {

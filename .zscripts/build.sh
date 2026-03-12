@@ -80,6 +80,7 @@ fi
 # 最后再迁移数据库到 BUILD_DIR/db
 if [ "$(ls -A ./db 2>/dev/null)" ]; then
     echo "🗄️  检测到数据库文件，运行数据库迁移..."
+    mkdir -p "$BUILD_DIR/db"
     DATABASE_URL=file:$BUILD_DIR/db/custom.db bun run db:push
     echo "✅ 数据库迁移完成"
     ls -lah $BUILD_DIR/db
