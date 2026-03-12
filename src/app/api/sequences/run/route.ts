@@ -1,15 +1,24 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { isInternalRunnerAuthorized } from '@/lib/internal-runner'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * POST /api/sequences/run
  * Executes due sequence enrollments (minimal runner for follow-ups).
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    if (!isInternalRunnerAuthorized(request)) {
+      return NextResponse.json({ error: 'Unauthorized runner request' }, { status: 401 })
+    }
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const now = new Date()
     const dueEnrollments = await db.sequenceEnrollment.findMany({
       where: {
+        sequence: { organizationId: context.organizationId },
         status: 'active',
         OR: [{ nextStepAt: null }, { nextStepAt: { lte: now } }],
       },

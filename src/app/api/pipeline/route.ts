@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 // GET /api/pipeline - Get pipeline with stages and items
 export async function GET(request: NextRequest) {
   try {
-    const organizationId = 'demo-org-1'
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const organizationId = context.organizationId
     const pipelineId = request.nextUrl.searchParams.get('pipelineId')
     
     // Get or create default pipeline
@@ -105,8 +108,10 @@ export async function GET(request: NextRequest) {
 // POST /api/pipeline - Create pipeline item
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
-    const organizationId = 'demo-org-1'
+    const organizationId = context.organizationId
     
     const pipeline = await db.pipeline.findFirst({
       where: { organizationId, isDefault: true },

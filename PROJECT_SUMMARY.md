@@ -15,6 +15,9 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 - Scrape jobs with extraction, dedupe, and lead creation.
 - Social content queue with AI generation (text + media prompt), scheduling, edit/delete.
 - Carrier library for brochures and underwriting docs (upload + metadata + delete).
+- Carrier AI playbooks grounded by retrieved underwriting snippets with citations.
+- Saveable AI playbooks to lead timeline via activity metadata.
+- Internal-key hardening path for automation runner endpoints.
 
 ### Partially implemented / not production-hardened yet
 
@@ -22,6 +25,7 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 - Scheduled workers are not yet externalized (sequence runner and scraping still need production job orchestration).
 - Carrier document storage currently writes to local filesystem under `public/uploads`.
 - Some AI flows still rely on mixed fallback logic and need a unified production policy.
+- Request validation and rate limiting are not yet consistently enforced across all mutating APIs.
 
 ## Technical Stack
 
@@ -36,7 +40,7 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 - Core CRM: organizations, users, leads, activities, pipeline, sequences, content queue.
 - AI domain: feedback, insights, scoring metadata.
 - Scrape domain: `ScrapeJob`, `ScrapedContact`.
-- Broker domain: `Carrier`, `CarrierDocument`.
+- Broker domain: `Carrier`, `CarrierDocument`, `CarrierDocumentChunk`.
 
 ## API Surface (Notable)
 
@@ -45,7 +49,7 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 - Scraping: `/api/scrape`
 - Sequences: `/api/sequences`, `/api/sequences/run`
 - Sequence enrollment: `/api/sequences/enroll`
-- AI: `/api/ai`, `/api/ai/score`, `/api/ai/feedback`, `/api/ai/my-day`
+- AI: `/api/ai`, `/api/ai/score`, `/api/ai/feedback`, `/api/ai/my-day`, `/api/ai/carrier-playbook`, `/api/ai/carrier-playbook/save`
 - Social: `/api/content`, `/api/content/publish`
 - Appointments: `/api/bookings`
 - Carriers/docs: `/api/carriers`, `/api/carriers/[id]`, `/api/carriers/[id]/documents`, `/api/carriers/[id]/documents/[docId]`
@@ -63,6 +67,6 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 2. Move production DB to Postgres and run migration deployment flow.
 3. Move carrier docs from local filesystem to object storage.
 4. Add request validation and rate limiting to mutating endpoints.
-5. Add scheduler/worker infrastructure for recurring automation jobs.
+5. Add scheduler/worker infrastructure for recurring automation jobs and protect runner calls with `INTERNAL_RUNNER_KEY`.
 
 For full detail, see `cursor_sessionhandoff.md`.

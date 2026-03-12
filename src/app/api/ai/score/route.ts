@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const leadId = searchParams.get('leadId')
     if (!leadId) return NextResponse.json({ error: 'leadId is required' }, { status: 400 })
 
     const lead = await db.lead.findFirst({
-      where: { id: leadId, organizationId: ORGANIZATION_ID },
+      where: { id: leadId, organizationId: context.organizationId },
       include: {
         activities: {
           orderBy: { createdAt: 'desc' },

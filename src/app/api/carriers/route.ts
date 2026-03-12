@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
-const ORGANIZATION_ID = 'demo-org-1'
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const carriers = await db.carrier.findMany({
-      where: { organizationId: ORGANIZATION_ID },
+      where: { organizationId: context.organizationId },
       include: {
         _count: { select: { documents: true } },
       },
@@ -21,6 +22,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
     const { name, slug, logoUrl, website, notes } = body as {
       name: string
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     const carrier = await db.carrier.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         name: name.trim(),
         slug: normalizedSlug,
         logoUrl: logoUrl?.trim() || null,

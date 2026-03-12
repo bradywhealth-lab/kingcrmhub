@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 type PlaybookResponse = {
   recommendedCarrier: {
@@ -109,6 +108,15 @@ type RetrievedChunk = {
   content: string
 }
 
+type KnowledgeCitation = {
+  carrierId: string | null
+  carrierName: string
+  documentId: string
+  documentName: string
+  chunkIndex: number
+  snippet: string
+}
+
 function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[a-z0-9]{3,}/g) || []).slice(0, 500)
 }
@@ -188,11 +196,40 @@ function retrieveTopChunks(
     .filter((c): c is RetrievedChunk => !!c)
     .sort((a, b) => b.score - a.score)
 
-  return scored.slice(0, 8)
+  return scored
+    .filter((item) => item.score >= 0.02 && item.content.length >= 60)
+    .slice(0, 8)
+}
+
+function calibrateConfidence(baseLeadScore: number, evidenceCount: number, topEvidenceScore: number): number {
+  const scoreSignal = Math.max(0.45, Math.min(0.9, 0.45 + baseLeadScore / 220))
+  const evidenceSignal = Math.min(0.2, evidenceCount * 0.03)
+  const qualitySignal = Math.min(0.12, Math.max(0, topEvidenceScore) * 0.8)
+  return Math.max(0.5, Math.min(0.96, scoreSignal + evidenceSignal + qualitySignal))
+}
+
+function buildKnowledgeCitations(knowledgeContext: KnowledgeCitation[]): PlaybookResponse['citations'] {
+  return knowledgeContext
+    .filter((citation) => citation.snippet.trim().length >= 50)
+    .slice(0, 6)
+}
+
+function normalizeCitations(
+  citations: PlaybookResponse['citations'] | undefined,
+  knowledgeContext: KnowledgeCitation[]
+): PlaybookResponse['citations'] {
+  const filteredCitations = (Array.isArray(citations) ? citations : [])
+    .filter((citation) => typeof citation.snippet === 'string' && citation.snippet.trim().length >= 50)
+    .slice(0, 6)
+
+  if (filteredCitations.length > 0) return filteredCitations
+  return buildKnowledgeCitations(knowledgeContext)
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json().catch(() => ({}))
     const { leadId, extraContext = '' } = body as { leadId?: string; extraContext?: string }
 
@@ -201,7 +238,7 @@ export async function POST(request: NextRequest) {
     }
 
     const lead = await db.lead.findFirst({
-      where: { id: leadId, organizationId: ORGANIZATION_ID },
+      where: { id: leadId, organizationId: context.organizationId },
       include: {
         notes: {
           orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
@@ -219,7 +256,7 @@ export async function POST(request: NextRequest) {
     }
 
     const carriers = await db.carrier.findMany({
-      where: { organizationId: ORGANIZATION_ID },
+      where: { organizationId: context.organizationId },
       include: {
         documents: {
           orderBy: { createdAt: 'desc' },
@@ -275,10 +312,10 @@ export async function POST(request: NextRequest) {
 
     const candidateChunks = await db.carrierDocumentChunk.findMany({
       where: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         carrierDocument: {
           carrier: {
-            organizationId: ORGANIZATION_ID,
+            organizationId: context.organizationId,
           },
         },
       },
@@ -392,16 +429,13 @@ Respond as strict JSON only using this schema:
       const parsed = safeJsonParse<PlaybookResponse>(jsonCandidate)
 
       if (parsed && parsed.recommendedCarrier?.name && parsed.followUpScripts?.sms) {
-        if (!Array.isArray(parsed.citations) || parsed.citations.length === 0) {
-          parsed.citations = knowledgeContext.slice(0, 4).map((k) => ({
-            carrierId: k.carrierId,
-            carrierName: k.carrierName,
-            documentId: k.documentId,
-            documentName: k.documentName,
-            chunkIndex: k.chunkIndex,
-            snippet: k.snippet,
-          }))
-        }
+        parsed.recommendedCarrier.confidence = calibrateConfidence(
+          lead.aiScore,
+          topChunks.length,
+          topChunks[0]?.score || 0
+        )
+        parsed.citations = normalizeCitations(parsed.citations, knowledgeContext)
+
         return NextResponse.json({ playbook: parsed, source: 'llm' })
       }
     } catch (error) {
@@ -422,14 +456,12 @@ Respond as strict JSON only using this schema:
       },
       carriers.map((c) => ({ id: c.id, name: c.name }))
     )
-    fallback.citations = knowledgeContext.slice(0, 4).map((k) => ({
-      carrierId: k.carrierId,
-      carrierName: k.carrierName,
-      documentId: k.documentId,
-      documentName: k.documentName,
-      chunkIndex: k.chunkIndex,
-      snippet: k.snippet,
-    }))
+    fallback.citations = normalizeCitations(undefined, knowledgeContext)
+    fallback.recommendedCarrier.confidence = calibrateConfidence(
+      lead.aiScore,
+      topChunks.length,
+      topChunks[0]?.score || 0
+    )
     return NextResponse.json({ playbook: fallback, source: 'fallback' })
   } catch (error) {
     console.error('Carrier playbook error:', error)

@@ -42,10 +42,32 @@ Use this checklist for pre-release smoke testing of elite CRM flows.
 - [ ] Create carrier in Settings
 - [ ] Upload brochure/underwriting document
 - [ ] Confirm document metadata and list rendering
+- [ ] Confirm upload response contains indexing metadata (`extracted`, `chunkCount`)
 - [ ] Delete a document and confirm it is removed
 
-## 6) Release Gate
+## 6) Carrier AI Assistant
+
+- [ ] Open a lead detail modal and click "Generate pitch playbook"
+- [ ] Confirm response includes:
+  - recommended carrier
+  - plan suggestion
+  - follow-up scripts
+  - citations
+- [ ] Click "Save to timeline" and confirm a lead activity is created
+- [ ] Confirm fallback behavior works when LLM parsing fails
+
+## 7) Automation Runner Security
+
+- [ ] Set `INTERNAL_RUNNER_KEY` in environment
+- [ ] Call runner endpoints without header and confirm `401`
+- [ ] Call with `x-internal-runner-key` and confirm success:
+  - `POST /api/content/publish`
+  - `POST /api/sequences/run`
+
+## 8) Release Gate
 
 - [ ] `npm run lint` passes
 - [ ] `npm run build` passes
+- [ ] `npm run db:generate` passes
+- [ ] migration/deploy DB step succeeds for target environment
 - [ ] No `.env` or secret files staged in git

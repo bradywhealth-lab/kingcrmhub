@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * POST /api/bookings — Elite appointment setting: create a meeting from a booking.
@@ -8,10 +9,10 @@ import { db } from '@/lib/db'
  * Expects: leadId or contact info (to create lead), start, end, timezone.
  * Creates Activity (type: meeting); optionally syncs to calendar via Integration.
  */
-const ORGANIZATION_ID = 'demo-org-1'
-
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
     const {
       leadId,
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (!resolvedLeadId && (email || phone)) {
       let lead = await db.lead.findFirst({
         where: {
-          organizationId: ORGANIZATION_ID,
+          organizationId: context.organizationId,
           OR: [
             ...(email ? [{ email: email.toLowerCase() }] : []),
             ...(phone ? [{ phone: phone.replace(/\D/g, '') }] : []),
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       if (!lead && (firstName || lastName || email)) {
         lead = await db.lead.create({
           data: {
-            organizationId: ORGANIZATION_ID,
+            organizationId: context.organizationId,
             firstName: firstName || null,
             lastName: lastName || null,
             email: email?.toLowerCase() || null,
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     const activity = await db.activity.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         leadId: resolvedLeadId ?? undefined,
         type: 'meeting',
         title,
@@ -101,11 +102,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const activities = await db.activity.findMany({
       where: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         type: 'meeting',
       },
       include: { lead: true },

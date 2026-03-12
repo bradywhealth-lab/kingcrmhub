@@ -2,246 +2,198 @@
 
 ## Session Summary
 
-This handoff captures the major implementation and polish work completed in this session, where we pushed Elite CRM from "scaffolded" to a much more operational AI-centric CRM for insurance workflows.
+This session completed the next major AI-assistant phase and hardening pass for Elite CRM.  
+The app now supports a grounded carrier recommendation workflow for each lead, with follow-up scripts, objection handling, and underwriting-source citations, plus stronger automation endpoint protection.
 
 ---
 
-## 1) What Was Completed In This Session
+## 1) What We Completed This Session
 
-### 1.1 Core Data + Platform Foundation
+### 1.1 Carrier AI Assistant (Lead -> Carrier + Scripts)
 
-- Updated Prisma schema with production-facing entities for scraping and broker document workflows:
-  - `ScrapeJob`
-  - `ScrapedContact`
-  - `Carrier`
-  - `CarrierDocument`
-- Added Organization and Lead relations for these entities.
-- Regenerated Prisma client and synced DB schema (`db:generate`, `db:push` completed during session).
-- Updated DB client setup in `src/lib/db.ts` to use `PrismaBetterSqlite3` adapter for local SQLite reliability.
+- Enhanced `POST /api/ai/carrier-playbook` to support:
+  - lead-context analysis (notes, activities, ai fields, profile fields)
+  - retrieved underwriting snippets as grounding context
+  - structured playbook output:
+    - recommended carrier
+    - backup carriers
+    - suggested plan type
+    - qualification summary
+    - objection handling bullets
+    - call/SMS/email scripts
+    - next actions
+    - citations
+- Added confidence calibration logic driven by:
+  - base lead AI score
+  - evidence count
+  - top evidence quality
+- Added citation quality filtering to avoid weak snippets.
 
-### 1.2 Lead Scraper: From Stub To Working Pipeline
+### 1.2 Underwriting Knowledge Ingestion + Indexing
 
-- Replaced the scraper stub with a functioning pipeline in `src/app/api/scrape/route.ts`.
-- Implemented:
-  - `POST /api/scrape` to create jobs and queue processing.
-  - `GET /api/scrape` to list jobs and fetch job details.
-  - Background-style in-process job runner (`runScrapeJob`) with:
-    - page queueing and crawling
-    - link discovery
-    - duplicate detection (email/phone)
-    - lead creation
-    - activity logging
-    - job status + stats updates
-- Added extraction quality improvements:
-  - JSON-LD person/contact parsing
-  - context window parsing near email/phone
-  - heuristic name/title/company detection
-  - normalized phone + dedupe keys
+- Updated schema to support extracted carrier knowledge:
+  - `CarrierDocument.extractedText`
+  - `CarrierDocument.indexedAt`
+  - new `CarrierDocumentChunk` model
+  - `Organization.carrierDocumentChunks` relation
+- Updated carrier document upload flow (`POST /api/carriers/[id]/documents`) to:
+  - extract text from plain text formats and PDFs
+  - normalize text
+  - chunk extracted content with overlap
+  - persist chunks for retrieval grounding
+  - return indexing metadata (`extracted`, `chunkCount`)
+- Added `pdf-parse` dependency for PDF ingestion.
 
-### 1.3 Anti-Block Strategy + Scraper Controls
+### 1.3 Lead UI: Saveable Playbook + Citations
 
-- Added anti-block config support in scraper API:
-  - `rotateUserAgent`
-  - `delayMs` and `jitterMs`
-  - `respectRobots`
-  - `proxyEnabled`
-  - `proxyProvider` (`none`, `scrapingbee`, `proxy_template`)
-  - `proxyUrlTemplate`
-- Added multiple fetch strategies:
-  - direct fetch with rotating UA
-  - ScrapingBee path (if `SCRAPINGBEE_API_KEY`)
-  - proxy template path (if configured)
-  - Firecrawl path (if `FIRECRAWL_API_KEY` + headless enabled)
+- Upgraded lead assistant section in `src/app/page.tsx`:
+  - renders grounding citations in playbook panel
+  - adds "Save to timeline" action for generated playbook
+- Added `POST /api/ai/carrier-playbook/save`:
+  - saves playbook snapshot into `Activity` metadata (`ai_playbook_saved`)
+  - preserves source (`llm` or `fallback`) and full payload
 
-### 1.4 Social Tab: Fully Functional AI Content Workspace
+### 1.4 Automation Security Hardening
 
-- Replaced placeholder `SocialMediaView` with a functional content studio:
-  - AI content generation dialog
-  - AI media prompt generation dialog
-  - manual composer
-  - save draft / schedule actions
-  - queue list with filters
-  - publish and delete actions
-  - insurance campaign packs (quick-start templates)
-  - motion-based micro-interactions
-- Backend support:
-  - `GET/POST/PATCH/DELETE /api/content`
-  - `POST /api/ai` extended with `generate-media`
+- Added internal runner auth helper: `src/lib/internal-runner.ts`
+- Hardened cron-style endpoints:
+  - `POST /api/content/publish`
+  - `POST /api/sequences/run`
+- Behavior:
+  - if `INTERNAL_RUNNER_KEY` is configured, requests must include header:
+    - `x-internal-runner-key: <value>`
+  - otherwise endpoint returns 401 unauthorized.
+  - if key is not configured yet, backward-compatible local behavior remains.
 
-### 1.5 Broker Materials (Carriers + Document Library)
+### 1.5 Prior Session Features Also Included in Current Branch
 
-- Implemented carrier/document APIs:
-  - `GET/POST /api/carriers`
-  - `PATCH /api/carriers/[id]`
-  - `GET/POST /api/carriers/[id]/documents`
-  - `DELETE /api/carriers/[id]/documents/[docId]`
-- Implemented file upload flow:
-  - stores files under `public/uploads/carriers/<carrierId>/...`
-  - stores metadata in `CarrierDocument`
-- Built `CarrierLibrarySettings` UI in Settings:
-  - create/select carriers
-  - upload brochures/underwriting docs
-  - document filtering
-  - insurance-oriented workflow hints and checklist
-  - animated list presentation
-
-### 1.6 AI Learning + Daily Assistant Surfaces
-
-- Added AI endpoints:
-  - `POST /api/ai/feedback`
-  - `GET /api/ai/score?leadId=...`
-  - `GET /api/ai/my-day`
-- Added lead actions in UI:
-  - Re-score
-  - Mark Won/Lost (with feedback persistence)
-- Added Dashboard AI Daily Assistant card:
-  - prioritized leads to call
-  - meeting focus list
-  - summary text
-
-### 1.7 Follow-Up Runner (Sequence Execution Base)
-
-- Added `POST /api/sequences/run`:
-  - processes due enrollments
-  - logs sequence step activities
-  - advances to next step
-  - completes sequence when done
-
-### 1.8 Validation Completed In This Session
-
-- `npm run lint` passed.
-- `npm run build` passed.
-- Build output included all expected new routes (`/api/scrape`, `/api/carriers/*`, `/api/ai/*`, `/api/sequences/run`, etc.).
+- Scraper pipeline + anti-block controls
+- Social content generation + queue + scheduled publish runner
+- Sequence enrollment + sequence runner
+- Carrier CRUD and document library
+- AI scoring, feedback, my-day assistant
 
 ---
 
-## 2) Current State (Where We Left Off)
+## 2) Verification Completed
 
-### Working now
+The following commands were run successfully after each major change set:
 
-- Scrape jobs can be created, processed, and reviewed.
-- Social tab is operational (AI generation + queue management).
-- Carrier documents can be uploaded and managed from Settings.
-- AI score/feedback/my-day flows are wired into API and UI.
-- Sequence runner endpoint exists for scheduled follow-up execution.
+- `npm run lint` (multiple times) ✅
+- `npm run build` (multiple times) ✅
+- `npm run db:generate` ✅
+- `npm run db:push` ✅
 
-### Important limitations still present
+Build output confirms these important routes are active:
 
-- Multi-tenant auth context is still hardcoded (`demo-org-1`) across most routes.
-- Scrape runner is still in-process; for true production reliability it should move to a queue/worker.
-- Carrier file storage is local filesystem under `public/` (works for local/single instance, not ideal for distributed production).
-- AI features are mixed between rule-based and LLM-driven endpoints; not yet unified with strict guardrails/validation.
-- No real scheduler/cron wiring yet for:
-  - sequence runner cadence
-  - scheduled social publishing
-  - periodic AI insight generation
+- `/api/ai/carrier-playbook`
+- `/api/ai/carrier-playbook/save`
+- `/api/content/publish`
+- `/api/sequences/enroll`
+- `/api/sequences/run`
+- `/api/scrape`
 
 ---
 
-## 3) Production-Ready Today Plan (Priority Order)
+## 3) Where We Left Off
 
-This is the shortest path to deploy safely today with the current codebase.
+### Fully working now
 
-### P0 (must do before production launch today)
+- Upload carrier docs and build an underwriting knowledge index.
+- Generate grounded AI playbook from a selected lead.
+- See citations from retrieved underwriting snippets.
+- Save playbook to lead timeline as structured activity metadata.
+- Run sequence and content automation endpoints with optional internal-key protection.
 
-1. **Move from SQLite to Postgres**
-   - Set production `DATABASE_URL` to managed Postgres.
-   - Run `prisma migrate deploy` (or equivalent deployment-safe migration process).
-2. **Implement real auth/org context**
-   - Replace `demo-org-1` hardcoding with authenticated org/user resolution in all API routes.
-3. **Harden file storage**
-   - Replace local `public/uploads/...` carrier storage with object storage (S3/Supabase Storage/R2).
-4. **Add request validation**
-   - Add Zod schema validation to all mutating endpoints (`POST/PATCH/DELETE`) especially scrape/content/carriers/leads.
-5. **Add baseline security controls**
-   - API rate limiting for scrape + AI + messaging endpoints.
-   - Add auth checks on all sensitive routes.
-   - Confirm secret management (no plaintext secrets committed).
+### Still not production-ready yet
 
-### P1 (same-day if possible)
-
-1. **Production scheduler wiring**
-   - schedule `/api/sequences/run`
-   - schedule social publish processor
-2. **Observability**
-   - centralized error tracking (Sentry or equivalent)
-   - structured request logs on API routes
-3. **Scrape reliability**
-   - move scraper run loop from in-process to queued worker (Inngest, BullMQ, or managed jobs)
-4. **Content publishing integration**
-   - connect at least one real social provider for post publication lifecycle
-
-### P2 (next 24-72 hours)
-
-1. **Twilio live send + inbound webhooks**
-2. **Calendar integration for real appointment sync**
-3. **AI assistant enhancements**
-   - better prioritization model
-   - richer "My Day" recommendation evidence/explanations
-4. **Pipeline API parity**
-   - replace remaining mock-driven UI sections with API-backed data
+- Org context is still hardcoded to `demo-org-1` in most routes.
+- Storage is still local filesystem for carrier documents.
+- Scheduler execution is not yet wired to managed cron/job infra.
+- Request validation/rate limiting is still partial.
+- Scraper and runners are still in-process and should move to durable workers.
 
 ---
 
-## 4) Recommended "Today" Execution Checklist
+## 4) Go Live Today Plan (Priority)
 
-1. Configure production env vars:
+### P0 (Must complete before launch today)
+
+1. **Auth + Org Isolation**
+   - Replace hardcoded org IDs with session-driven org/user context.
+   - Enforce auth on all sensitive API routes.
+
+2. **Data + Storage Productionization**
+   - Use production Postgres `DATABASE_URL`.
+   - Run migration/deploy-safe DB flow.
+   - Move carrier doc storage to object store (S3/R2/Supabase Storage).
+
+3. **Security Controls**
+   - Add Zod validation on all mutating endpoints.
+   - Add rate limiting for AI/scrape/automation endpoints.
+   - Set `INTERNAL_RUNNER_KEY` in production and pass on scheduler calls.
+
+4. **Operational Wiring**
+   - Schedule:
+     - `POST /api/sequences/run`
+     - `POST /api/content/publish`
+   - Ensure scheduler includes `x-internal-runner-key`.
+
+### P1 (Same day if possible)
+
+1. **Observability**
+   - Sentry (or equivalent), structured logs, endpoint error metadata.
+2. **Automation durability**
+   - Move long-running scrape/publish/sequence workloads to worker/queue.
+3. **Carrier Assistant Quality**
+   - tune retrieval thresholds and confidence calibration on real data.
+   - add result acceptance feedback loop into `AIFeedback`.
+
+---
+
+## 5) Launch Checklist (Today)
+
+1. Set env vars (minimum):
    - `DATABASE_URL`
-   - `SCRAPINGBEE_API_KEY` (optional)
-   - `FIRECRAWL_API_KEY` (optional)
-   - any AI provider keys required by your runtime
+   - `INTERNAL_RUNNER_KEY`
+   - AI provider credentials
+   - any optional scraper provider keys
 2. Run:
    - `npm run db:generate`
-   - `npm run db:push` (dev) or migration deploy strategy for production
+   - migration/deploy DB step
    - `npm run lint`
    - `npm run build`
-3. Deploy app + validate:
-   - scrape create/list
-   - social generate/save/schedule
-   - carrier upload/open
-   - AI re-score + My Day panel
+3. Smoke test:
+   - upload carrier doc -> confirm indexing metadata
+   - generate playbook -> verify scripts + citations
+   - save playbook -> verify activity timeline record
+   - schedule post -> run publish endpoint with internal key
+   - enroll sequence -> run sequence endpoint with internal key
 
 ---
 
-## 5) Key Files Added/Updated This Session
+## 6) Key Files Touched This Session
 
-### Data + models
 - `prisma/schema.prisma`
-
-### API routes
-- `src/app/api/scrape/route.ts`
-- `src/app/api/content/route.ts`
-- `src/app/api/ai/route.ts`
-- `src/app/api/ai/feedback/route.ts`
-- `src/app/api/ai/score/route.ts`
-- `src/app/api/ai/my-day/route.ts`
-- `src/app/api/carriers/route.ts`
-- `src/app/api/carriers/[id]/route.ts`
+- `package.json`
+- `package-lock.json`
 - `src/app/api/carriers/[id]/documents/route.ts`
-- `src/app/api/carriers/[id]/documents/[docId]/route.ts`
-- `src/app/api/leads/[id]/route.ts`
+- `src/app/api/ai/carrier-playbook/route.ts`
+- `src/app/api/ai/carrier-playbook/save/route.ts`
+- `src/app/api/content/publish/route.ts`
 - `src/app/api/sequences/run/route.ts`
-- `src/app/api/upload/route.ts` (GET signature correction)
-
-### Frontend
+- `src/lib/internal-runner.ts`
 - `src/app/page.tsx`
-  - `DashboardView`
-  - `LeadsView`
-  - `SocialMediaView`
-  - `CarrierLibrarySettings`
-  - scrape dialog and orchestration state
-
-### Infra/DB client
-- `src/lib/db.ts`
 
 ---
 
-## 6) How To Resume In Next Session
+## 7) Next Session Starting Point
 
-1. Start with **P0 production blockers** in Section 3.
-2. Focus first on:
-   - auth/org context replacement
-   - storage migration for carrier docs
-   - validation/rate limiting
-3. Then wire scheduler jobs for follow-ups and social publishing.
-4. Keep this handoff as source of truth and update it after each major deployment gate.
+Start with production blockers in this order:
+
+1. session-based org context replacement
+2. object storage migration for carrier documents
+3. validation + rate limiting pass
+4. scheduler wiring with internal-runner auth
+
+Then run the complete checklist in `ELITE_TEST_CHECKLIST.md` before production cutover.

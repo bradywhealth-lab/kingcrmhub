@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import type { Prisma } from '@prisma/client'
+import { getOrgContext } from '@/lib/request-context'
 
-const ORGANIZATION_ID = 'demo-org-1'
 const DEFAULT_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 
@@ -35,6 +35,8 @@ const runningJobs = new Set<string>()
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json().catch(() => ({}))
     const {
       url,
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     const job = await db.scrapeJob.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         name: name?.trim() || null,
         sourceUrl: targetUrls[0],
         urls: targetUrls,
@@ -130,13 +132,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const jobId = searchParams.get('jobId')
     const limit = Math.max(1, Math.min(100, Number(searchParams.get('limit') || '20')))
 
     if (jobId) {
       const job = await db.scrapeJob.findFirst({
-        where: { id: jobId, organizationId: ORGANIZATION_ID },
+        where: { id: jobId, organizationId: context.organizationId },
         include: {
           contacts: {
             orderBy: { createdAt: 'desc' },
@@ -149,7 +153,7 @@ export async function GET(request: NextRequest) {
     }
 
     const jobs = await db.scrapeJob.findMany({
-      where: { organizationId: ORGANIZATION_ID },
+      where: { organizationId: context.organizationId },
       orderBy: { createdAt: 'desc' },
       take: limit,
     })
@@ -167,6 +171,7 @@ async function runScrapeJob(jobId: string) {
   try {
     const job = await db.scrapeJob.findUnique({ where: { id: jobId } })
     if (!job) return
+    const organizationId = job.organizationId
 
     const config = (job.config || {}) as ScrapeConfig
     const queue = [
@@ -222,7 +227,7 @@ async function runScrapeJob(jobId: string) {
       if (!contact.email && !contact.phone) continue
       const existing = await db.lead.findFirst({
         where: {
-          organizationId: ORGANIZATION_ID,
+          organizationId,
           OR: [
             ...(contact.email ? [{ email: contact.email.toLowerCase() }] : []),
             ...(contact.phone ? [{ phone: normalizePhone(contact.phone) }] : []),
@@ -234,7 +239,7 @@ async function runScrapeJob(jobId: string) {
         duplicates++
         await db.scrapedContact.create({
           data: {
-            organizationId: ORGANIZATION_ID,
+            organizationId,
             scrapeJobId: jobId,
             sourceUrl: contact.sourceUrl,
             rawData: contact.rawData,
@@ -252,7 +257,7 @@ async function runScrapeJob(jobId: string) {
 
       const lead = await db.lead.create({
         data: {
-          organizationId: ORGANIZATION_ID,
+          organizationId,
           source: 'scrape',
           status: 'new',
           firstName: contact.firstName || null,
@@ -269,7 +274,7 @@ async function runScrapeJob(jobId: string) {
 
       await db.scrapedContact.create({
         data: {
-          organizationId: ORGANIZATION_ID,
+          organizationId,
           scrapeJobId: jobId,
           sourceUrl: contact.sourceUrl,
           rawData: contact.rawData,
@@ -285,7 +290,7 @@ async function runScrapeJob(jobId: string) {
 
       await db.activity.create({
         data: {
-          organizationId: ORGANIZATION_ID,
+          organizationId,
           leadId: lead.id,
           type: 'import',
           title: 'Lead imported from web scrape',

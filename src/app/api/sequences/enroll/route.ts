@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * POST /api/sequences/enroll
@@ -12,6 +11,8 @@ const ORGANIZATION_ID = 'demo-org-1'
  */
 export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const leadId = searchParams.get('leadId')
     const sequenceId = searchParams.get('sequenceId')
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
       where: {
         ...(leadId ? { leadId } : {}),
         ...(sequenceId ? { sequenceId } : {}),
-        sequence: { organizationId: ORGANIZATION_ID },
+        sequence: { organizationId: context.organizationId },
       },
       include: {
         lead: {
@@ -56,6 +57,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
     const { leadId, sequenceId, startNow = true } = body as {
       leadId?: string
@@ -69,10 +72,10 @@ export async function POST(request: NextRequest) {
 
     const [lead, sequence] = await Promise.all([
       db.lead.findFirst({
-        where: { id: leadId, organizationId: ORGANIZATION_ID },
+        where: { id: leadId, organizationId: context.organizationId },
       }),
       db.sequence.findFirst({
-        where: { id: sequenceId, organizationId: ORGANIZATION_ID },
+        where: { id: sequenceId, organizationId: context.organizationId },
         include: { steps: { orderBy: { order: 'asc' } } },
       }),
     ])
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     await db.activity.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         leadId,
         type: 'sequence_enrolled',
         title: `Enrolled in sequence: ${sequence.name}`,

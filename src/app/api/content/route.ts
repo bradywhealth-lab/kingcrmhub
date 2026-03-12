@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * GET /api/content — List content queue items (elite social/marketing).
  * POST /api/content — Create a draft or scheduled post.
  */
-const ORGANIZATION_ID = 'demo-org-1'
-
 export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const platform = searchParams.get('platform')
     const status = searchParams.get('status')
     const limit = parseInt(searchParams.get('limit') || '50')
 
     const where: { organizationId: string; platform?: string; status?: string } = {
-      organizationId: ORGANIZATION_ID,
+      organizationId: context.organizationId,
     }
     if (platform) where.platform = platform
     if (status) where.status = status
@@ -38,6 +39,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
     const {
       platform,
@@ -66,14 +69,14 @@ export async function POST(request: NextRequest) {
 
     const item = await db.contentQueue.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         platform,
         type: type || 'post',
         title: title?.trim() || null,
         content: content.trim(),
         status: status === 'scheduled' ? 'scheduled' : 'draft',
         scheduledFor: scheduledAt ? new Date(scheduledAt) : null,
-        mediaUrls: Array.isArray(mediaUrls) ? mediaUrls : null,
+        mediaUrls: Array.isArray(mediaUrls) ? mediaUrls : undefined,
       },
     })
 
@@ -89,6 +92,8 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
@@ -118,10 +123,12 @@ export async function PATCH(request: NextRequest) {
     if (body.publishedUrl !== undefined) updateData.publishedUrl = body.publishedUrl || null
     if (body.mediaUrls !== undefined) updateData.mediaUrls = Array.isArray(body.mediaUrls) ? body.mediaUrls : null
 
-    const item = await db.contentQueue.update({
-      where: { id },
+    const updated = await db.contentQueue.updateMany({
+      where: { id, organizationId: context.organizationId },
       data: updateData,
     })
+    if (updated.count === 0) return NextResponse.json({ error: 'Content item not found' }, { status: 404 })
+    const item = await db.contentQueue.findUnique({ where: { id } })
 
     return NextResponse.json({ item })
   } catch (error) {
@@ -132,11 +139,16 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-    await db.contentQueue.delete({ where: { id } })
+    const deleted = await db.contentQueue.deleteMany({
+      where: { id, organizationId: context.organizationId },
+    })
+    if (deleted.count === 0) return NextResponse.json({ error: 'Content item not found' }, { status: 404 })
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Content DELETE error:', error)

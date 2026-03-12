@@ -94,3 +94,47 @@
 
 - `npm run lint` passed.
 - `npm run build` passed with all routes generated successfully.
+
+## 2026-03-12 - Carrier Assistant Grounding + Phase 3 Hardening
+
+### Carrier intelligence and retrieval grounding
+
+- Added underwriting document text indexing:
+  - `CarrierDocument.extractedText`
+  - `CarrierDocument.indexedAt`
+  - `CarrierDocumentChunk` model
+- Updated carrier document upload endpoint to:
+  - extract text from text files and PDFs
+  - normalize and chunk text
+  - persist chunk records for retrieval
+- Added dependency:
+  - `pdf-parse`
+
+### AI assistant feature expansion
+
+- Enhanced carrier playbook endpoint:
+  - retrieval-based chunk matching against lead context
+  - citation-backed recommendations
+  - confidence calibration using lead score + evidence quality
+  - citation filtering for better output quality
+- Added playbook persistence endpoint:
+  - `POST /api/ai/carrier-playbook/save`
+  - stores playbook in lead timeline activity metadata
+- Updated lead UI:
+  - shows citations in AI assistant panel
+  - adds "Save to timeline" action
+
+### Security hardening
+
+- Added `src/lib/internal-runner.ts` for internal automation auth.
+- Hardened runner endpoints:
+  - `POST /api/content/publish`
+  - `POST /api/sequences/run`
+- Runner endpoints now validate `x-internal-runner-key` when `INTERNAL_RUNNER_KEY` is configured.
+
+### Verification run
+
+- `npm run lint` passed after each major change set.
+- `npm run build` passed after each major change set.
+- `npm run db:generate` passed.
+- `npm run db:push` passed.

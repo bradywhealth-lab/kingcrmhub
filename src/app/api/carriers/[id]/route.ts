@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { id } = await params
     const body = await request.json()
     const existing = await db.carrier.findFirst({
-      where: { id, organizationId: ORGANIZATION_ID },
+      where: { id, organizationId: context.organizationId },
     })
     if (!existing) return NextResponse.json({ error: 'Carrier not found' }, { status: 404 })
 

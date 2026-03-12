@@ -673,6 +673,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [assistantLoading, setAssistantLoading] = useState(false)
+  const [assistantSaving, setAssistantSaving] = useState(false)
   const [assistantPlaybook, setAssistantPlaybook] = useState<CarrierPlaybook | null>(null)
   const [assistantSource, setAssistantSource] = useState<'llm' | 'fallback' | null>(null)
 
@@ -815,6 +816,36 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       })
     } finally {
       setAssistantLoading(false)
+    }
+  }
+
+  const savePlaybookToTimeline = async (leadId: string) => {
+    if (!assistantPlaybook) return
+    try {
+      setAssistantSaving(true)
+      const res = await fetch('/api/ai/carrier-playbook/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId,
+          source: assistantSource || 'manual',
+          playbook: assistantPlaybook,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      toast({
+        title: 'Playbook saved',
+        description: 'AI playbook was saved to the lead timeline.',
+      })
+    } catch (saveError) {
+      toast({
+        title: 'Save failed',
+        description: saveError instanceof Error ? saveError.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    } finally {
+      setAssistantSaving(false)
     }
   }
 
@@ -1016,6 +1047,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           setAssistantPlaybook(null)
           setAssistantSource(null)
           setAssistantLoading(false)
+          setAssistantSaving(false)
         }}
       >
         <DialogContent className="bg-white border-[#E8E4D9] max-w-2xl">
@@ -1107,6 +1139,14 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         Source: {assistantSource}
                       </Badge>
                     )}
+                    <Button
+                      variant="outline"
+                      className="border-[#E8E4D9] text-gray-700 hover:bg-[#F8F4E8]"
+                      disabled={!assistantPlaybook || assistantSaving}
+                      onClick={() => void savePlaybookToTimeline(selectedLead.id)}
+                    >
+                      {assistantSaving ? 'Saving...' : 'Save to timeline'}
+                    </Button>
                   </div>
 
                   {assistantPlaybook && (

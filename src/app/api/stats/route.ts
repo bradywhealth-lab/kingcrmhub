@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 // GET /api/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    const organizationId = 'demo-org-1'
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const organizationId = context.organizationId
     
     // Get lead counts
     const totalLeads = await db.lead.count({
