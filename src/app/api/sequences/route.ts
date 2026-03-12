@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * GET /api/sequences — List sequences for the org (elite follow-ups).
  * POST /api/sequences — Create a new sequence.
  */
-const ORGANIZATION_ID = 'demo-org-1'
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const sequences = await db.sequence.findMany({
-      where: { organizationId: ORGANIZATION_ID },
+      where: { organizationId: context.organizationId },
       include: {
         steps: { orderBy: { order: 'asc' } },
         _count: { select: { enrollments: true } },
@@ -29,6 +30,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
     const { name, description, type = 'email', steps = [] } = body as {
       name: string
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const sequence = await db.sequence.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         name: name.trim(),
         description: description?.trim() || null,
         type: type === 'sms' ? 'sms' : 'email',

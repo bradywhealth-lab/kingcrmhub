@@ -1047,6 +1047,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           setAssistantPlaybook(null)
           setAssistantSource(null)
           setAssistantLoading(false)
+          setAssistantSaving(false)
         }}
       >
         <DialogContent className="bg-white border-[#E8E4D9] max-w-2xl">

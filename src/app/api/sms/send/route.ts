@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * POST /api/sms/send
@@ -8,7 +9,9 @@ import { db } from '@/lib/db'
  */
 export async function POST(request: NextRequest) {
   try {
-    const organizationId = 'demo-org-1'
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const organizationId = context.organizationId
     const body = await request.json()
     const { leadId, templateId, body: messageBody, mediaUrl } = body as {
       leadId: string

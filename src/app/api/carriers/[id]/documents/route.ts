@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { mkdir, writeFile } from 'fs/promises'
-import path from 'path'
+import { getOrgContext } from '@/lib/request-context'
+import { uploadToObjectStorage } from '@/lib/object-storage'
 
-const ORGANIZATION_ID = 'demo-org-1'
 type Params = { params: Promise<{ id: string }> }
 const CHUNK_SIZE = 900
 const CHUNK_OVERLAP = 150
 
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { id } = await params
     const documents = await db.carrierDocument.findMany({
-      where: { carrierId: id, organizationId: ORGANIZATION_ID },
+      where: { carrierId: id, organizationId: context.organizationId },
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json({ documents })
@@ -24,6 +25,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { id } = await params
     const formData = await request.formData()
 
@@ -37,28 +40,25 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const now = Date.now()
-    const relativeDir = path.join('uploads', 'carriers', id)
-    const absoluteDir = path.join(process.cwd(), 'public', relativeDir)
-    await mkdir(absoluteDir, { recursive: true })
-
-    const savedFileName = `${now}-${safeName}`
-    const absolutePath = path.join(absoluteDir, savedFileName)
-    await writeFile(absolutePath, buffer)
-
-    const fileUrl = `/${relativeDir}/${savedFileName}`
+    const { fileUrl, storagePath } = await uploadToObjectStorage({
+      organizationId: context.organizationId,
+      carrierId: id,
+      originalFileName: file.name,
+      contentType: file.type || 'application/octet-stream',
+      buffer,
+    })
     const extractedText = await extractCarrierText(file, buffer)
     const normalizedText = normalizeText(extractedText)
 
     const document = await db.carrierDocument.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         carrierId: id,
         type,
         name: name.trim() || file.name,
         description: description.trim() || null,
         fileUrl,
+        storagePath,
         fileType: file.type || null,
         fileSize: file.size || null,
         version: version.trim() || null,
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (chunks.length > 0) {
         await db.carrierDocumentChunk.createMany({
           data: chunks.map((content, index) => ({
-            organizationId: ORGANIZATION_ID,
+            organizationId: context.organizationId,
             carrierDocumentId: document.id,
             chunkIndex: index,
             content,

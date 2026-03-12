@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getOrgContext } from '@/lib/request-context'
 
 // GET /api/activities - Get activity timeline
 export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
     const type = searchParams.get('type')
     const leadId = searchParams.get('leadId')
     
-    const organizationId = 'demo-org-1'
+    const organizationId = context.organizationId
     
     const where: Record<string, unknown> = { organizationId }
     if (type) where.type = type
@@ -50,9 +53,11 @@ export async function GET(request: NextRequest) {
 // POST /api/activities - Log new activity
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
-    const organizationId = 'demo-org-1'
-    const userId = 'demo-user-1'
+    const organizationId = context.organizationId
+    const userId = context.userId
     
     const activity = await db.activity.create({
       data: {

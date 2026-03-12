@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 export async function GET(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const limit = Math.max(1, Math.min(25, Number(searchParams.get('limit') || '8')))
 
     const [priorityLeads, todayMeetings] = await Promise.all([
       db.lead.findMany({
-        where: { organizationId: ORGANIZATION_ID },
+        where: { organizationId: context.organizationId },
         orderBy: [{ aiScore: 'desc' }, { updatedAt: 'desc' }],
         take: limit,
       }),
       db.activity.findMany({
         where: {
-          organizationId: ORGANIZATION_ID,
+          organizationId: context.organizationId,
           type: 'meeting',
         },
         include: { lead: true },

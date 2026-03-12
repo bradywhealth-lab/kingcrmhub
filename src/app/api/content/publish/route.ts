@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isInternalRunnerAuthorized } from '@/lib/internal-runner'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 /**
  * POST /api/content/publish
@@ -15,6 +14,8 @@ export async function POST(request: NextRequest) {
     if (!isInternalRunnerAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized runner request' }, { status: 401 })
     }
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json().catch(() => ({}))
     const limit = Math.max(1, Math.min(100, Number(body.limit) || 25))
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     const dueItems = await db.contentQueue.findMany({
       where: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         status: 'scheduled',
         OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }],
       },
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const activeAccounts = await db.socialAccount.findMany({
       where: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         isActive: true,
       },
       select: { platform: true, accountId: true },
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
         skipped++
         await db.activity.create({
           data: {
-            organizationId: ORGANIZATION_ID,
+            organizationId: context.organizationId,
             type: 'content_publish_skipped',
             title: `Skipped publishing ${item.platform} content`,
             description: 'No active social account connected for this platform',
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 
         await db.activity.create({
           data: {
-            organizationId: ORGANIZATION_ID,
+            organizationId: context.organizationId,
             type: 'content_published',
             title: `Published ${item.platform} content`,
             description: item.title || item.content.slice(0, 120),
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
         })
         await db.activity.create({
           data: {
-            organizationId: ORGANIZATION_ID,
+            organizationId: context.organizationId,
             type: 'content_publish_failed',
             title: `Failed to publish ${item.platform} content`,
             description: error instanceof Error ? error.message : 'Unknown publish error',

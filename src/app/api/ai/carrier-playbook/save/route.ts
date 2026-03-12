@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const ORGANIZATION_ID = 'demo-org-1'
+import { getOrgContext } from '@/lib/request-context'
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json().catch(() => ({}))
     const { leadId, playbook, source = 'manual' } = body as {
       leadId?: string
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const lead = await db.lead.findFirst({
-      where: { id: leadId, organizationId: ORGANIZATION_ID },
+      where: { id: leadId, organizationId: context.organizationId },
     })
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const savedActivity = await db.activity.create({
       data: {
-        organizationId: ORGANIZATION_ID,
+        organizationId: context.organizationId,
         leadId,
         type: 'ai_playbook_saved',
         title: `AI carrier playbook saved (${recommendedCarrier})`,

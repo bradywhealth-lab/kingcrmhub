@@ -515,6 +515,7 @@ model CarrierDocument {
   name           String
   description    String?
   fileUrl        String
+  storagePath    String?
   fileType       String?
   fileSize       Int?
   version        String?
