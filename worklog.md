@@ -195,3 +195,37 @@
 - Batch 3/4:
   - `npm run lint` ✅
   - `npm run build` ✅
+
+## 2026-03-13 - Full Non-Interactive Feature Sweep
+
+### Scope
+
+- Ran full project-level non-interactive validation and endpoint/action smoke tests without manual UI input.
+- Included API create/update/delete flows, security checks, runner authorization checks, and upload/carrier document workflows.
+
+### Verification commands
+
+- `npm run lint` ✅
+- `npm run build` ✅
+- `npm test` ✅ (2 test files, 5 tests)
+- `npm run db:push` ✅
+- targeted endpoint checks via local server + scripted fetch suite ✅
+
+### API smoke results
+
+- 29 endpoint/action checks executed.
+- 28 passed.
+- 1 failed:
+  - `POST /api/ai` with `action: generate-content`
+  - failure reason: AI provider/runtime availability (`LLM.chat` undefined in current runtime context)
+
+### Notable validated behaviors
+
+- Runner security hardening verified:
+  - `POST /api/content/publish` returns `401` without `x-internal-runner-key`
+  - `POST /api/sequences/run` returns `401` without `x-internal-runner-key`
+  - both succeed when key is provided
+- CRUD/mutation flows validated for:
+  - leads, activities, content, sequences/enrollment, pipeline, scrape jobs, bookings, SMS logging
+  - carrier CRUD and document upload/delete path
+  - playbook generate/save path (fallback path exercised successfully)

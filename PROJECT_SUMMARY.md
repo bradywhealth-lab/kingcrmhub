@@ -61,6 +61,8 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 
 - Core feature architecture is in place across API, DB, and UI.
 - Lint and production build passed in this session.
+- Automated non-interactive API smoke sweep passed for 28/29 tested endpoint actions.
+- Remaining automated failure is isolated to AI generation route provider/runtime availability (`POST /api/ai` action: `generate-content`).
 
 ### Must complete before production launch
 

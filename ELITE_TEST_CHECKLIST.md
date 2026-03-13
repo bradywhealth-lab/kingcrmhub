@@ -8,6 +8,10 @@ Use this checklist for pre-release smoke testing of elite CRM flows.
 - [x] `npm run build` passed (multiple runs during P0 go-live execution)
 - [x] `npm run db:generate` passed
 - [x] `npm run db:push` passed for local schema sync
+- [x] Automated API smoke sweep completed (non-interactive)
+  - 29 endpoint/action checks executed
+  - 28 passed
+  - 1 failed (`POST /api/ai` `generate-content`) due external LLM runtime/provider availability
 - [ ] Manual UI smoke flow items still require browser run-through in target environment
 
 ## 1) Lead Scraping

@@ -104,6 +104,10 @@ The following commands were run successfully after each major change set:
 - `npm run db:generate` ✅
 - `npm run db:push` ✅
 - `npm run runner:tick` wiring added (requires production env vars/secrets)
+- Automated non-interactive API smoke sweep ✅
+  - 29 endpoint/action checks run against local server
+  - 28 passed
+  - 1 failed due external AI provider/runtime dependency on `POST /api/ai` (`generate-content`)
 
 Build output confirms these important routes are active:
 
@@ -189,6 +193,7 @@ Build output confirms these important routes are active:
    - generate playbook -> verify scripts + citations
    - save playbook -> verify activity timeline record
    - run `npm run runner:tick` -> confirm sequence/content runners succeed
+   - verify `POST /api/ai` generation actions with production AI credentials/runtime
 
 ---
 
