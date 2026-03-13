@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const enrollSchema = z.object({
+  leadId: z.string().min(1),
+  sequenceId: z.string().min(1),
+  startNow: z.boolean().optional(),
+})
 
 /**
  * POST /api/sequences/enroll
@@ -57,18 +66,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'sequence-enroll', limit: 120, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
-    const { leadId, sequenceId, startNow = true } = body as {
-      leadId?: string
-      sequenceId?: string
-      startNow?: boolean
-    }
-
-    if (!leadId || !sequenceId) {
-      return NextResponse.json({ error: 'leadId and sequenceId are required' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(request, enrollSchema)
+    if (!parsed.success) return parsed.response
+    const { leadId, sequenceId, startNow = true } = parsed.data
 
     const [lead, sequence] = await Promise.all([
       db.lead.findFirst({

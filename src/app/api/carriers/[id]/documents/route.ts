@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
 import { uploadToObjectStorage } from '@/lib/object-storage'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ id: string }> }
 const CHUNK_SIZE = 900
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
+    const limited = enforceRateLimit(request, { key: 'carrier-doc-upload', limit: 30, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { id } = await params
@@ -37,6 +40,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     const version = String(formData.get('version') || '')
 
     if (!file) return NextResponse.json({ error: 'file is required' }, { status: 400 })
+    if (file.size <= 0 || file.size > 25 * 1024 * 1024) {
+      return NextResponse.json({ error: 'file must be between 1B and 25MB' }, { status: 400 })
+    }
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isInternalRunnerAuthorized } from '@/lib/internal-runner'
 import { getOrgContext } from '@/lib/request-context'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/sequences/run
@@ -9,6 +10,8 @@ import { getOrgContext } from '@/lib/request-context'
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'sequence-runner', limit: 30, windowMs: 60_000 })
+    if (limited) return limited
     if (!isInternalRunnerAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized runner request' }, { status: 401 })
     }

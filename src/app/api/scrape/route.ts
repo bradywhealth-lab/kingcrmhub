@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import type { Prisma } from '@prisma/client'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 const DEFAULT_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
@@ -33,11 +36,33 @@ type ScrapeContact = {
 
 const runningJobs = new Set<string>()
 
+const scrapeRequestSchema = z.object({
+  url: z.string().url().optional(),
+  urls: z.array(z.string().url()).optional(),
+  type: z.string().optional(),
+  name: z.string().max(200).optional(),
+  maxPages: z.coerce.number().int().min(1).max(100).optional(),
+  followLinks: z.boolean().optional(),
+  respectRobots: z.boolean().optional(),
+  useHeadless: z.boolean().optional(),
+  delayMs: z.coerce.number().int().min(0).max(10_000).optional(),
+  jitterMs: z.coerce.number().int().min(0).max(3_000).optional(),
+  rotateUserAgent: z.boolean().optional(),
+  proxyEnabled: z.boolean().optional(),
+  proxyProvider: z.enum(['none', 'scrapingbee', 'proxy_template']).optional(),
+  proxyUrlTemplate: z.string().optional(),
+  selectors: z.record(z.string(), z.string()).optional(),
+})
+
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'scrape-create', limit: 30, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json().catch(() => ({}))
+    const parsed = await parseJsonBody(request, scrapeRequestSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const {
       url,
       urls,

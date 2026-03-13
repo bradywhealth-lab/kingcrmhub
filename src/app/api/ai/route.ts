@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const aiRequestSchema = z.object({
+  action: z.enum(['score-lead', 'generate-content', 'generate-media', 'generate-insights', 'chat']),
+  data: z.record(z.string(), z.unknown()).default({}),
+})
 
 // AI API using z-ai-web-dev-sdk
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, data } = body
+    const limited = enforceRateLimit(request, { key: 'ai-generate', limit: 50, windowMs: 60_000 })
+    if (limited) return limited
+    const parsed = await parseJsonBody(request, aiRequestSchema)
+    if (!parsed.success) return parsed.response
+    const { action, data } = parsed.data
     
     // Dynamic import for server-side only
     const { LLM } = await import('z-ai-web-dev-sdk')

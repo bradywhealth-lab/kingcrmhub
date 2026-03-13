@@ -138,3 +138,60 @@
 - `npm run build` passed after each major change set.
 - `npm run db:generate` passed.
 - `npm run db:push` passed.
+
+## 2026-03-12 - P0 Go-Live Execution (Auth, Storage, Validation, Scheduler)
+
+### 1) Org/session context rollout
+
+- Added shared resolver: `src/lib/request-context.ts`.
+- Removed hardcoded `demo-org-1` from API route handlers in favor of request-derived org context.
+- Added `401 Unauthorized` guard where org context is missing.
+
+### 2) Carrier docs object storage migration
+
+- Added `CarrierDocument.storagePath` to `prisma/schema.prisma`.
+- Added object storage helper: `src/lib/object-storage.ts` (Supabase Storage).
+- Updated carrier document upload/delete routes to use object storage upload + object delete.
+- Added dependency: `@supabase/supabase-js`.
+
+### 3) Zod validation + rate limiting on mutating APIs
+
+- Added `src/lib/validation.ts` for shared Zod request parsing.
+- Added `src/lib/rate-limit.ts` for API-level throttling.
+- Applied validation/rate limits to mutating endpoints (`POST/PATCH/DELETE`) across:
+  - leads, activities, bookings
+  - carriers and carrier docs
+  - content + publish runner
+  - pipeline, scrape
+  - sequences + enroll + run
+  - AI mutation routes
+  - SMS send
+  - upload
+  - linear mutation route
+
+### 4) Scheduler wiring for internal runners
+
+- Added scheduler runner script:
+  - `scripts/run-internal-runners.mjs`
+- Added npm command:
+  - `npm run runner:tick`
+- Runner script calls:
+  - `POST /api/sequences/run`
+  - `POST /api/content/publish`
+- Sends:
+  - `x-internal-runner-key`
+  - `x-organization-id`
+
+### Verification after batches
+
+- Batch 1:
+  - `npm run lint` ✅
+  - `npm run build` ✅
+- Batch 2:
+  - `npm run db:generate` ✅
+  - `npm run db:push` ✅
+  - `npm run lint` ✅
+  - `npm run build` ✅
+- Batch 3/4:
+  - `npm run lint` ✅
+  - `npm run build` ✅

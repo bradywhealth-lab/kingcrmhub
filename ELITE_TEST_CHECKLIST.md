@@ -2,6 +2,14 @@
 
 Use this checklist for pre-release smoke testing of elite CRM flows.
 
+## Execution Notes (2026-03-12)
+
+- [x] `npm run lint` passed (multiple runs during P0 go-live execution)
+- [x] `npm run build` passed (multiple runs during P0 go-live execution)
+- [x] `npm run db:generate` passed
+- [x] `npm run db:push` passed for local schema sync
+- [ ] Manual UI smoke flow items still require browser run-through in target environment
+
 ## 1) Lead Scraping
 
 - [ ] Open Leads view and trigger "Scrape Leads"

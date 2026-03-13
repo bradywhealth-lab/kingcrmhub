@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const createPipelineItemSchema = z.object({
+  stageId: z.string().optional(),
+  leadId: z.string().optional(),
+  title: z.string().min(1).max(200),
+  value: z.coerce.number().nonnegative().optional(),
+  probability: z.coerce.number().int().min(0).max(100).optional(),
+  expectedClose: z.string().optional(),
+})
+
+const patchPipelineItemSchema = z.object({
+  itemId: z.string().min(1),
+  stageId: z.string().min(1),
+  position: z.coerce.number().int().min(0).optional(),
+})
 
 // GET /api/pipeline - Get pipeline with stages and items
 export async function GET(request: NextRequest) {
@@ -108,9 +126,13 @@ export async function GET(request: NextRequest) {
 // POST /api/pipeline - Create pipeline item
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'pipeline-create', limit: 120, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, createPipelineItemSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const organizationId = context.organizationId
     
     const pipeline = await db.pipeline.findFirst({
@@ -121,17 +143,38 @@ export async function POST(request: NextRequest) {
     if (!pipeline || pipeline.stages.length === 0) {
       return NextResponse.json({ error: 'No pipeline found' }, { status: 404 })
     }
-    
+
+    if (body.leadId) {
+      const lead = await db.lead.findFirst({
+        where: {
+          id: body.leadId,
+          organizationId,
+        },
+        select: { id: true },
+      })
+      if (!lead) {
+        return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+      }
+    }
+
     const firstStage = pipeline.stages[0]
+    const targetStageId = body.stageId || firstStage.id
+    const stageExists = pipeline.stages.some((stage) => stage.id === targetStageId)
+    if (!stageExists) {
+      return NextResponse.json({ error: 'Stage not found' }, { status: 404 })
+    }
     
     const item = await db.pipelineItem.create({
       data: {
         pipelineId: pipeline.id,
-        stageId: body.stageId || firstStage.id,
+        stageId: targetStageId,
         leadId: body.leadId,
         title: body.title,
         value: body.value,
-        probability: body.probability || firstStage.probability,
+        probability:
+          body.probability ||
+          pipeline.stages.find((stage) => stage.id === targetStageId)?.probability ||
+          firstStage.probability,
         expectedClose: body.expectedClose ? new Date(body.expectedClose) : null,
       },
       include: {
@@ -150,9 +193,43 @@ export async function POST(request: NextRequest) {
 // PATCH /api/pipeline - Move item between stages
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { itemId, stageId, position } = body
-    
+    const limited = enforceRateLimit(request, { key: 'pipeline-move', limit: 160, windowMs: 60_000 })
+    if (limited) return limited
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const organizationId = context.organizationId
+    const parsed = await parseJsonBody(request, patchPipelineItemSchema)
+    if (!parsed.success) return parsed.response
+    const { itemId, stageId, position } = parsed.data
+
+    const existingItem = await db.pipelineItem.findFirst({
+      where: {
+        id: itemId,
+        pipeline: {
+          organizationId,
+        },
+      },
+      select: { id: true },
+    })
+
+    if (!existingItem) {
+      return NextResponse.json({ error: 'Pipeline item not found' }, { status: 404 })
+    }
+
+    const targetStage = await db.pipelineStage.findFirst({
+      where: {
+        id: stageId,
+        pipeline: {
+          organizationId,
+        },
+      },
+      select: { id: true },
+    })
+
+    if (!targetStage) {
+      return NextResponse.json({ error: 'Stage not found' }, { status: 404 })
+    }
+
     const item = await db.pipelineItem.update({
       where: { id: itemId },
       data: {
@@ -164,7 +241,7 @@ export async function PATCH(request: NextRequest) {
         stage: true
       }
     })
-    
+
     // Update lead status if linked
     if (item.leadId) {
       const stageToStatus: Record<string, string> = {
@@ -178,8 +255,11 @@ export async function PATCH(request: NextRequest) {
       
       const status = stageToStatus[item.stage?.name.toLowerCase() || '']
       if (status) {
-        await db.lead.update({
-          where: { id: item.leadId },
+        await db.lead.updateMany({
+          where: {
+            id: item.leadId,
+            organizationId,
+          },
           data: { status }
         })
       }

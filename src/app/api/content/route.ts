@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const createContentSchema = z.object({
+  platform: z.string().min(1),
+  type: z.string().min(1).optional(),
+  title: z.string().max(200).optional(),
+  content: z.string().min(1).max(8000),
+  status: z.enum(['draft', 'scheduled']).optional(),
+  scheduledAt: z.string().optional(),
+  mediaUrls: z.array(z.string()).optional(),
+})
+
+const patchContentSchema = z.object({
+  title: z.string().max(200).optional(),
+  content: z.string().max(8000).optional(),
+  status: z.string().optional(),
+  platform: z.string().optional(),
+  scheduledAt: z.string().nullable().optional(),
+  publishedAt: z.string().nullable().optional(),
+  publishedUrl: z.string().nullable().optional(),
+  mediaUrls: z.array(z.string()).nullable().optional(),
+})
 
 /**
  * GET /api/content — List content queue items (elite social/marketing).
@@ -39,9 +63,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'content-create', limit: 80, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, createContentSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const {
       platform,
       type = 'post',
@@ -58,13 +86,6 @@ export async function POST(request: NextRequest) {
       status?: string
       scheduledAt?: string
       mediaUrls?: string[]
-    }
-
-    if (!platform || !content?.trim()) {
-      return NextResponse.json(
-        { error: 'platform and content are required' },
-        { status: 400 }
-      )
     }
 
     const item = await db.contentQueue.create({
@@ -92,13 +113,17 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'content-update', limit: 100, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, patchContentSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const updateData: {
       title?: string | null
       content?: string
@@ -139,6 +164,8 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'content-delete', limit: 80, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)

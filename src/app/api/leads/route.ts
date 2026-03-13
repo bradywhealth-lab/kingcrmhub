@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const createLeadSchema = z.object({
+  firstName: z.string().max(120).optional(),
+  lastName: z.string().max(120).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().max(40).optional(),
+  company: z.string().max(160).optional(),
+  title: z.string().max(160).optional(),
+  website: z.string().max(300).optional(),
+  linkedin: z.string().max(300).optional(),
+  source: z.string().max(80).optional(),
+  estimatedValue: z.coerce.number().nonnegative().optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
+})
 
 // GET /api/leads - Get all leads for organization
 export async function GET(request: NextRequest) {
@@ -58,9 +75,13 @@ export async function GET(request: NextRequest) {
 // POST /api/leads - Create new lead
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'leads-create', limit: 120, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, createLeadSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const organizationId = context.organizationId
     
     const lead = await db.lead.create({

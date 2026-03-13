@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const smsSchema = z.object({
+  leadId: z.string().min(1),
+  templateId: z.string().optional(),
+  body: z.string().max(2000).optional(),
+  mediaUrl: z.string().optional(),
+})
 
 /**
  * POST /api/sms/send
@@ -9,20 +19,14 @@ import { getOrgContext } from '@/lib/request-context'
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'sms-send', limit: 100, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const organizationId = context.organizationId
-    const body = await request.json()
-    const { leadId, templateId, body: messageBody, mediaUrl } = body as {
-      leadId: string
-      templateId?: string
-      body?: string
-      mediaUrl?: string
-    }
-
-    if (!leadId) {
-      return NextResponse.json({ error: 'leadId is required' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(request, smsSchema)
+    if (!parsed.success) return parsed.response
+    const { leadId, templateId, body: messageBody, mediaUrl } = parsed.data
 
     const lead = await db.lead.findFirst({
       where: { id: leadId, organizationId },

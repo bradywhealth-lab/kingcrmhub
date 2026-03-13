@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const bookingSchema = z.object({
+  leadId: z.string().optional(),
+  firstName: z.string().max(120).optional(),
+  lastName: z.string().max(120).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().max(40).optional(),
+  start: z.string().min(1),
+  end: z.string().min(1),
+  title: z.string().max(200).optional(),
+  description: z.string().max(3000).optional(),
+})
 
 /**
  * POST /api/bookings — Elite appointment setting: create a meeting from a booking.
@@ -11,9 +26,13 @@ import { getOrgContext } from '@/lib/request-context'
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'bookings-create', limit: 80, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, bookingSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const {
       leadId,
       firstName,

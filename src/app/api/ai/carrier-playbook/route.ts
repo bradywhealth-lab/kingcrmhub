@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const carrierPlaybookSchema = z.object({
+  leadId: z.string().min(1),
+  extraContext: z.string().max(4000).optional().default(''),
+})
 
 type PlaybookResponse = {
   recommendedCarrier: {
@@ -208,7 +216,7 @@ function calibrateConfidence(baseLeadScore: number, evidenceCount: number, topEv
   return Math.max(0.5, Math.min(0.96, scoreSignal + evidenceSignal + qualitySignal))
 }
 
-function buildKnowledgeCitations(knowledgeContext: KnowledgeCitation[]): PlaybookResponse['citations'] {
+export function buildKnowledgeCitations(knowledgeContext: KnowledgeCitation[]): PlaybookResponse['citations'] {
   return knowledgeContext
     .filter((citation) => citation.snippet.trim().length >= 50)
     .map((citation) => ({
@@ -236,14 +244,13 @@ function normalizeCitations(
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'carrier-playbook', limit: 30, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json().catch(() => ({}))
-    const { leadId, extraContext = '' } = body as { leadId?: string; extraContext?: string }
-
-    if (!leadId) {
-      return NextResponse.json({ error: 'leadId is required' }, { status: 400 })
-    }
+    const parsedBody = await parseJsonBody(request, carrierPlaybookSchema)
+    if (!parsedBody.success) return parsedBody.response
+    const { leadId, extraContext } = parsedBody.data
 
     const lead = await db.lead.findFirst({
       where: { id: leadId, organizationId: context.organizationId },

@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 /**
  * GET /api/sequences — List sequences for the org (elite follow-ups).
  * POST /api/sequences — Create a new sequence.
  */
+const sequenceStepSchema = z.object({
+  order: z.coerce.number().int().min(0),
+  type: z.string().min(1),
+  delayDays: z.coerce.number().int().min(0).optional(),
+  delayHours: z.coerce.number().int().min(0).optional(),
+  subject: z.string().optional(),
+  content: z.string().default(''),
+})
+
+const createSequenceSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(3000).optional(),
+  type: z.enum(['email', 'sms']).optional(),
+  steps: z.array(sequenceStepSchema).optional(),
+})
+
 export async function GET(request: NextRequest) {
   try {
     const context = await getOrgContext(request)
@@ -30,19 +49,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'sequence-create', limit: 60, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
-    const { name, description, type = 'email', steps = [] } = body as {
-      name: string
-      description?: string
-      type?: string
-      steps?: { order: number; type: string; delayDays?: number; delayHours?: number; subject?: string; content: string }[]
-    }
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 })
-    }
+    const parsed = await parseJsonBody(request, createSequenceSchema)
+    if (!parsed.success) return parsed.response
+    const { name, description, type = 'email', steps = [] } = parsed.data
 
     const sequence = await db.sequence.create({
       data: {

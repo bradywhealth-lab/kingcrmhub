@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import { db } from '@/lib/db'
 
 type OrgContext = {
@@ -19,31 +20,20 @@ function readSessionTokenFromRequest(request: NextRequest): string | null {
   return cookieToken?.trim() || null
 }
 
+function isTrustedInternalRunnerRequest(request: NextRequest): boolean {
+  const requiredKey = process.env.INTERNAL_RUNNER_KEY?.trim()
+  if (!requiredKey) return false
+
+  const providedKey = request.headers.get('x-internal-runner-key')?.trim()
+  if (!providedKey) return false
+
+  const requiredBuffer = Buffer.from(requiredKey)
+  const providedBuffer = Buffer.from(providedKey)
+  if (requiredBuffer.length !== providedBuffer.length) return false
+  return timingSafeEqual(requiredBuffer, providedBuffer)
+}
+
 export async function getOrgContext(request: NextRequest): Promise<OrgContext | null> {
-  const orgHeader = request.headers.get('x-organization-id')?.trim()
-  if (orgHeader) {
-    const existing = await db.organization.findUnique({ where: { id: orgHeader }, select: { id: true } })
-    if (existing) return { organizationId: existing.id, userId: null }
-  }
-
-  const userIdHeader = request.headers.get('x-user-id')?.trim()
-  if (userIdHeader) {
-    const user = await db.user.findUnique({
-      where: { id: userIdHeader },
-      select: { id: true, organizationId: true },
-    })
-    if (user) return { organizationId: user.organizationId, userId: user.id }
-  }
-
-  const userEmailHeader = request.headers.get('x-user-email')?.trim().toLowerCase()
-  if (userEmailHeader) {
-    const user = await db.user.findUnique({
-      where: { email: userEmailHeader },
-      select: { id: true, organizationId: true },
-    })
-    if (user) return { organizationId: user.organizationId, userId: user.id }
-  }
-
   const token = readSessionTokenFromRequest(request)
   if (token) {
     const session = await db.userSession.findFirst({
@@ -58,6 +48,17 @@ export async function getOrgContext(request: NextRequest): Promise<OrgContext | 
     })
     if (session?.user) {
       return { organizationId: session.user.organizationId, userId: session.user.id }
+    }
+  }
+
+  if (isTrustedInternalRunnerRequest(request)) {
+    const orgHeader = request.headers.get('x-organization-id')?.trim()
+    if (orgHeader) {
+      const existing = await db.organization.findUnique({
+        where: { id: orgHeader },
+        select: { id: true },
+      })
+      if (existing) return { organizationId: existing.id, userId: null }
     }
   }
 

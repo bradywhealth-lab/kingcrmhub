@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import {
   isLinearConfigured,
   fetchLinearIssues,
@@ -7,6 +8,20 @@ import {
   updateLinearIssue,
   fetchLinearWorkflowStates,
 } from "@/lib/linear"
+import { parseJsonBody } from "@/lib/validation"
+import { enforceRateLimit } from "@/lib/rate-limit"
+
+const linearSchema = z.object({
+  action: z.enum(["create", "update"]),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  teamId: z.string().optional(),
+  priority: z.number().optional(),
+  labelIds: z.array(z.string()).optional(),
+  issueId: z.string().optional(),
+  stateId: z.string().optional(),
+  assigneeId: z.string().optional(),
+})
 
 export async function GET(req: NextRequest) {
   if (!isLinearConfigured()) {
@@ -69,7 +84,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json()
+    const limited = enforceRateLimit(req, { key: "linear-mutate", limit: 80, windowMs: 60_000 })
+    if (limited) return limited
+    const parsed = await parseJsonBody(req, linearSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const { action } = body
 
     switch (action) {

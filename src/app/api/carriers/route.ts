@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const createCarrierSchema = z.object({
+  name: z.string().min(1).max(200),
+  slug: z.string().max(200).optional(),
+  logoUrl: z.string().max(500).optional(),
+  website: z.string().max(500).optional(),
+  notes: z.string().max(4000).optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,9 +33,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'carriers-create', limit: 60, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, createCarrierSchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const { name, slug, logoUrl, website, notes } = body as {
       name: string
       slug?: string

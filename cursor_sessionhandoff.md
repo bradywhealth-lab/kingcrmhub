@@ -2,12 +2,18 @@
 
 ## Session Summary
 
-This session completed the next major AI-assistant phase and hardening pass for Elite CRM.  
-The app now supports a grounded carrier recommendation workflow for each lead, with follow-up scripts, objection handling, and underwriting-source citations, plus stronger automation endpoint protection.
+This session executed the full P0 go-live checklist for Elite CRM hardening.  
+The app now has org/session context resolution across APIs, carrier document object storage, mutating endpoint validation/rate limiting, and scheduler-ready runner wiring with internal key headers.
 
 ---
 
-## 1) What We Completed This Session
+## 1) What We Completed This Session (P0 Go-Live)
+
+### 1.0 Auth + Organization Context
+
+- Added shared request context resolver in `src/lib/request-context.ts`.
+- Replaced hardcoded `demo-org-1` route usage with resolved org context across API routes.
+- Added guarded unauthorized responses (`401`) when org context cannot be resolved.
 
 ### 1.1 Carrier AI Assistant (Lead -> Carrier + Scripts)
 
@@ -31,18 +37,12 @@ The app now supports a grounded carrier recommendation workflow for each lead, w
 
 ### 1.2 Underwriting Knowledge Ingestion + Indexing
 
-- Updated schema to support extracted carrier knowledge:
-  - `CarrierDocument.extractedText`
-  - `CarrierDocument.indexedAt`
-  - new `CarrierDocumentChunk` model
-  - `Organization.carrierDocumentChunks` relation
-- Updated carrier document upload flow (`POST /api/carriers/[id]/documents`) to:
-  - extract text from plain text formats and PDFs
-  - normalize text
-  - chunk extracted content with overlap
-  - persist chunks for retrieval grounding
-  - return indexing metadata (`extracted`, `chunkCount`)
-- Added `pdf-parse` dependency for PDF ingestion.
+- Added object storage migration for carrier docs:
+  - new `CarrierDocument.storagePath`
+  - `src/lib/object-storage.ts` for Supabase storage upload/delete
+  - upload route now stores files in object storage (not local filesystem)
+  - delete route removes object from storage when `storagePath` exists
+- Existing extraction/chunking/indexing flow remains active after upload.
 
 ### 1.3 Lead UI: Saveable Playbook + Citations
 
@@ -65,7 +65,27 @@ The app now supports a grounded carrier recommendation workflow for each lead, w
   - otherwise endpoint returns 401 unauthorized.
   - if key is not configured yet, backward-compatible local behavior remains.
 
-### 1.5 Prior Session Features Also Included in Current Branch
+### 1.5 Validation + Rate Limiting
+
+- Added `src/lib/validation.ts` for standardized Zod JSON body parsing.
+- Added `src/lib/rate-limit.ts` for request throttling on mutating endpoints.
+- Applied validation/rate-limits to mutating API routes (`POST`, `PATCH`, `DELETE`) including:
+  - leads, activities, pipeline, sequences, scrape, carriers/docs, content, AI mutation routes, SMS, uploads, linear updates.
+
+### 1.6 Scheduler Wiring
+
+- Added production scheduler runner script:
+  - `scripts/run-internal-runners.mjs`
+  - invokes:
+    - `POST /api/sequences/run`
+    - `POST /api/content/publish`
+  - sends required headers:
+    - `x-internal-runner-key`
+    - `x-organization-id`
+- Added npm shortcut:
+  - `npm run runner:tick`
+
+### 1.7 Prior Session Features Also Included in Current Branch
 
 - Scraper pipeline + anti-block controls
 - Social content generation + queue + scheduled publish runner
@@ -83,6 +103,7 @@ The following commands were run successfully after each major change set:
 - `npm run build` (multiple times) ✅
 - `npm run db:generate` ✅
 - `npm run db:push` ✅
+- `npm run runner:tick` wiring added (requires production env vars/secrets)
 
 Build output confirms these important routes are active:
 
@@ -107,10 +128,8 @@ Build output confirms these important routes are active:
 
 ### Still not production-ready yet
 
-- Org context is still hardcoded to `demo-org-1` in most routes.
-- Storage is still local filesystem for carrier documents.
-- Scheduler execution is not yet wired to managed cron/job infra.
-- Request validation/rate limiting is still partial.
+- Production scheduler host is still required (GitHub Actions/Render/CronJob/etc.) to execute `npm run runner:tick`.
+- In-memory rate limiting should be replaced with Redis/shared limiter for multi-instance deployments.
 - Scraper and runners are still in-process and should move to durable workers.
 
 ---
@@ -119,25 +138,22 @@ Build output confirms these important routes are active:
 
 ### P0 (Must complete before launch today)
 
-1. **Auth + Org Isolation**
-   - Replace hardcoded org IDs with session-driven org/user context.
-   - Enforce auth on all sensitive API routes.
+1. **Auth + Org Isolation** ✅
+   - Replaced hardcoded org IDs with session/header-based org context.
+   - Enforced unauthorized response when context is missing.
 
-2. **Data + Storage Productionization**
-   - Use production Postgres `DATABASE_URL`.
-   - Run migration/deploy-safe DB flow.
-   - Move carrier doc storage to object store (S3/R2/Supabase Storage).
+2. **Data + Storage Productionization** ✅ (app-layer) / ⏳ (infra setup)
+   - Added object-storage code path and schema support.
+   - Production bucket/env configuration still required.
 
-3. **Security Controls**
-   - Add Zod validation on all mutating endpoints.
-   - Add rate limiting for AI/scrape/automation endpoints.
-   - Set `INTERNAL_RUNNER_KEY` in production and pass on scheduler calls.
+3. **Security Controls** ✅
+   - Zod validation added to mutating JSON endpoints.
+   - Rate limiting added across mutating APIs.
+   - Runner auth headers wired.
 
-4. **Operational Wiring**
-   - Schedule:
-     - `POST /api/sequences/run`
-     - `POST /api/content/publish`
-   - Ensure scheduler includes `x-internal-runner-key`.
+4. **Operational Wiring** ✅ (code wiring) / ⏳ (infra schedule)
+   - Scheduler runner script added for sequences/content endpoints.
+   - Sends required `x-internal-runner-key` header.
 
 ### P1 (Same day if possible)
 
@@ -156,6 +172,11 @@ Build output confirms these important routes are active:
 1. Set env vars (minimum):
    - `DATABASE_URL`
    - `INTERNAL_RUNNER_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_STORAGE_BUCKET`
+   - `RUNNER_ORGANIZATION_ID`
+   - `APP_BASE_URL`
    - AI provider credentials
    - any optional scraper provider keys
 2. Run:
@@ -164,11 +185,10 @@ Build output confirms these important routes are active:
    - `npm run lint`
    - `npm run build`
 3. Smoke test:
-   - upload carrier doc -> confirm indexing metadata
+   - upload carrier doc -> confirm object-storage URL + indexing metadata
    - generate playbook -> verify scripts + citations
    - save playbook -> verify activity timeline record
-   - schedule post -> run publish endpoint with internal key
-   - enroll sequence -> run sequence endpoint with internal key
+   - run `npm run runner:tick` -> confirm sequence/content runners succeed
 
 ---
 

@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const createActivitySchema = z.object({
+  leadId: z.string().optional(),
+  type: z.string().min(1).max(80),
+  title: z.string().min(1).max(200),
+  description: z.string().max(3000).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  aiSummary: z.string().max(3000).optional(),
+})
 
 // GET /api/activities - Get activity timeline
 export async function GET(request: NextRequest) {
@@ -53,12 +65,27 @@ export async function GET(request: NextRequest) {
 // POST /api/activities - Log new activity
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'activities-create', limit: 120, windowMs: 60_000 })
+    if (limited) return limited
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await request.json()
+    const parsed = await parseJsonBody(request, createActivitySchema)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const organizationId = context.organizationId
     const userId = context.userId
-    
+
+    if (body.leadId) {
+      const lead = await db.lead.findFirst({
+        where: {
+          id: body.leadId,
+          organizationId,
+        },
+        select: { id: true },
+      })
+      if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
     const activity = await db.activity.create({
       data: {
         organizationId,
@@ -85,8 +112,11 @@ export async function POST(request: NextRequest) {
     
     // Update lead's lastContactedAt if relevant
     if (body.leadId && ['email', 'call', 'meeting', 'sms'].includes(body.type)) {
-      await db.lead.update({
-        where: { id: body.leadId },
+      await db.lead.updateMany({
+        where: {
+          id: body.leadId,
+          organizationId,
+        },
         data: { 
           lastContactedAt: new Date(),
           totalInteractions: { increment: 1 }

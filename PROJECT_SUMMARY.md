@@ -17,15 +17,16 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 - Carrier library for brochures and underwriting docs (upload + metadata + delete).
 - Carrier AI playbooks grounded by retrieved underwriting snippets with citations.
 - Saveable AI playbooks to lead timeline via activity metadata.
-- Internal-key hardening path for automation runner endpoints.
+- Internal-key protected automation runner endpoints with scheduler runner script.
+- Session/org-auth context resolution across API routes (header/session token based).
+- Object storage upload/delete path for carrier documents.
+- Zod validation + API rate limiting on mutating routes.
 
 ### Partially implemented / not production-hardened yet
 
-- Organization/user context is still mostly hardcoded to `demo-org-1`.
 - Scheduled workers are not yet externalized (sequence runner and scraping still need production job orchestration).
-- Carrier document storage currently writes to local filesystem under `public/uploads`.
 - Some AI flows still rely on mixed fallback logic and need a unified production policy.
-- Request validation and rate limiting are not yet consistently enforced across all mutating APIs.
+- Current rate limiting is in-memory and should be moved to a shared store (Redis) for multi-instance deployments.
 
 ## Technical Stack
 
@@ -33,7 +34,7 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 - **Backend:** Next.js route handlers under `src/app/api`.
 - **Data:** Prisma ORM with SQLite in local/dev; Postgres recommended for production.
 - **AI:** `z-ai-web-dev-sdk` via `src/app/api/ai/route.ts` plus deterministic AI support routes.
-- **Storage:** local filesystem currently for carrier docs; object storage recommended for production.
+- **Storage:** Supabase object storage path for carrier documents (`storagePath` + public URL persistence).
 
 ## Key Domains In Schema
 
@@ -63,10 +64,10 @@ Elite CRM is a multi-tenant, AI-first CRM platform for life and health insurance
 
 ### Must complete before production launch
 
-1. Replace hardcoded org context with real auth/session enforcement.
-2. Move production DB to Postgres and run migration deployment flow.
-3. Move carrier docs from local filesystem to object storage.
-4. Add request validation and rate limiting to mutating endpoints.
-5. Add scheduler/worker infrastructure for recurring automation jobs and protect runner calls with `INTERNAL_RUNNER_KEY`.
+1. Move production DB to Postgres and run migration deployment flow.
+2. Set production object storage env vars and bucket policies.
+3. Schedule recurring runner execution (`npm run runner:tick`) in production scheduler.
+4. Upgrade rate limiting from in-memory to centralized Redis-backed limiter.
+5. Externalize long-running scrape/automation jobs into durable workers.
 
 For full detail, see `cursor_sessionhandoff.md`.

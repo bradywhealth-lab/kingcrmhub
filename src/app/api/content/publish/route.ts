@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isInternalRunnerAuthorized } from '@/lib/internal-runner'
 import { getOrgContext } from '@/lib/request-context'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const publishRunnerSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+})
 
 /**
  * POST /api/content/publish
@@ -11,14 +18,17 @@ import { getOrgContext } from '@/lib/request-context'
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = enforceRateLimit(request, { key: 'content-publish-runner', limit: 30, windowMs: 60_000 })
+    if (limited) return limited
     if (!isInternalRunnerAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized runner request' }, { status: 401 })
     }
     const context = await getOrgContext(request)
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await request.json().catch(() => ({}))
-    const limit = Math.max(1, Math.min(100, Number(body.limit) || 25))
+    const parsed = await parseJsonBody(request, publishRunnerSchema)
+    if (!parsed.success) return parsed.response
+    const limit = parsed.data.limit ?? 25
     const now = new Date()
 
     const dueItems = await db.contentQueue.findMany({

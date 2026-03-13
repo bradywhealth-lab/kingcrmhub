@@ -1,35 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { z } from 'zod'
+import { parseJsonBody } from '@/lib/validation'
+import { enforceRateLimit } from '@/lib/rate-limit'
+
+const feedbackSchema = z.object({
+  entityType: z.string().min(1),
+  entityId: z.string().min(1),
+  rating: z.number().int().min(-1).max(5),
+  feedback: z.string().max(2000).optional(),
+  corrections: z.record(z.string(), z.unknown()).optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const {
-      entityType,
-      entityId,
-      rating,
-      feedback,
-      corrections,
-    } = body as {
-      entityType: string
-      entityId: string
-      rating: number
-      feedback?: string
-      corrections?: Record<string, unknown>
-    }
-
-    if (!entityType || !entityId || Number.isNaN(Number(rating))) {
-      return NextResponse.json(
-        { error: 'entityType, entityId, and rating are required' },
-        { status: 400 }
-      )
-    }
+    const limited = enforceRateLimit(request, { key: 'ai-feedback', limit: 60, windowMs: 60_000 })
+    if (limited) return limited
+    const parsed = await parseJsonBody(request, feedbackSchema)
+    if (!parsed.success) return parsed.response
+    const { entityType, entityId, rating, feedback, corrections } = parsed.data
 
     const saved = await db.aIFeedback.create({
       data: {
         entityType,
         entityId,
-        rating: Number(rating),
+        rating,
         feedback: feedback || null,
         corrections: corrections || null,
       },
