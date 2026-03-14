@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -17,8 +17,7 @@ const createActivitySchema = z.object({
 // GET /api/activities - Get activity timeline
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
@@ -56,6 +55,7 @@ export async function GET(request: NextRequest) {
       total,
       hasMore: offset + limit < total
     })
+    })
   } catch (error) {
     console.error('Error fetching activities:', error)
     return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 })
@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'activities-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createActivitySchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -125,6 +124,7 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(activity)
+    })
   } catch (error) {
     console.error('Error creating activity:', error)
     return NextResponse.json({ error: 'Failed to create activity' }, { status: 500 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -17,8 +17,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const limited = enforceRateLimit(request, { key: 'leads-update', limit: 160, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { id } = await params
     const parsed = await parseJsonBody(request, updateLeadSchema)
     if (!parsed.success) return parsed.response
@@ -51,6 +50,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     return NextResponse.json({ lead: updated })
+    })
   } catch (error) {
     console.error('Lead PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 })

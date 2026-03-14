@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -15,8 +15,7 @@ const createCarrierSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const carriers = await db.carrier.findMany({
       where: { organizationId: context.organizationId },
       include: {
@@ -25,6 +24,7 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' },
     })
     return NextResponse.json({ carriers })
+    })
   } catch (error) {
     console.error('Carriers GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch carriers' }, { status: 500 })
@@ -35,8 +35,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'carriers-create', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createCarrierSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -70,6 +69,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ carrier })
+    })
   } catch (error) {
     console.error('Carriers POST error:', error)
     return NextResponse.json({ error: 'Failed to create carrier' }, { status: 500 })

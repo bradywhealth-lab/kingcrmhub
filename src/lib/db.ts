@@ -1,11 +1,14 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { AsyncLocalStorage } from 'node:async_hooks'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-export const db =
+const rlsTxStorage = new AsyncLocalStorage<PrismaClient>()
+
+const baseClient =
   globalForPrisma.prisma ??
   (() => {
     const databaseUrl = process.env.DATABASE_URL?.trim()
@@ -17,3 +20,34 @@ export const db =
     if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = client
     return client
   })()
+
+export const db = new Proxy(baseClient, {
+  get(target, prop, receiver) {
+    const scopedClient = rlsTxStorage.getStore() ?? target
+    const value = Reflect.get(scopedClient as object, prop, receiver)
+    if (typeof value === 'function') {
+      return value.bind(scopedClient)
+    }
+    return value
+  },
+}) as PrismaClient
+
+export async function withOrgRlsTransaction<T>(
+  organizationId: string,
+  callback: () => Promise<T>,
+): Promise<T> {
+  return baseClient.$transaction(async tx => {
+    await tx.$executeRaw`SELECT set_config('app.current_organization_id', ${organizationId}, true)`
+    return rlsTxStorage.run(tx as PrismaClient, callback)
+  })
+}
+
+export async function withSessionTokenRlsTransaction<T>(
+  sessionToken: string,
+  callback: () => Promise<T>,
+): Promise<T> {
+  return baseClient.$transaction(async tx => {
+    await tx.$executeRaw`SELECT set_config('app.current_session_token', ${sessionToken}, true)`
+    return rlsTxStorage.run(tx as PrismaClient, callback)
+  })
+}

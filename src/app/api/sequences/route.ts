@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -27,8 +27,7 @@ const createSequenceSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const sequences = await db.sequence.findMany({
       where: { organizationId: context.organizationId },
       include: {
@@ -38,6 +37,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json({ sequences })
+    })
   } catch (error) {
     console.error('Sequences GET error:', error)
     return NextResponse.json(
@@ -51,8 +51,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'sequence-create', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createSequenceSchema)
     if (!parsed.success) return parsed.response
     const { name, description, type = 'email', steps = [] } = parsed.data
@@ -86,6 +85,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ sequence: withSteps })
+    })
   } catch (error) {
     console.error('Sequences POST error:', error)
     return NextResponse.json(

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const leadId = searchParams.get('leadId')
     if (!leadId) return NextResponse.json({ error: 'leadId is required' }, { status: 400 })
@@ -59,6 +58,7 @@ export async function GET(request: NextRequest) {
       aiConfidence: updated.aiConfidence,
       aiNextAction: updated.aiNextAction,
       aiInsights: updated.aiInsights,
+    })
     })
   } catch (error) {
     console.error('AI score error:', error)
