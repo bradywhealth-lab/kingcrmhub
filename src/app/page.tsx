@@ -1406,6 +1406,14 @@ type UploadRecord = {
   aiAutoScored: boolean
 }
 
+async function readApiJsonOrText(response: Response): Promise<{ data: any | null; text: string | null }> {
+  const contentType = response.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    return { data: await response.json(), text: null }
+  }
+  return { data: null, text: await response.text() }
+}
+
 // Uploads History View
 function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void; refreshKey?: number }) {
   const [uploads, setUploads] = useState<UploadRecord[]>([])
@@ -1414,10 +1422,14 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/upload?limit=100')
-      .then((res) => res.json())
-      .then((data) => {
+    ;(async () => {
+      try {
+        const res = await fetch('/api/upload?limit=100')
+        const { data, text } = await readApiJsonOrText(res)
         if (cancelled) return
+        if (!data) {
+          throw new Error(`Upload API returned non-JSON (${res.status}). ${text?.slice(0, 120) || ''}`.trim())
+        }
         if (data.error) {
           setError(data.error)
           setUploads([])
@@ -1447,16 +1459,15 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
           aiAutoScored: !!u.aiAutoScored,
         }))
         setUploads(list)
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load uploads')
           setUploads([])
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    })()
     return () => { cancelled = true }
   }, [refreshKey])
 
@@ -3355,7 +3366,10 @@ export default function EliteCRM() {
     formData.append('aiAutoScore', 'true')
     try {
       const response = await fetch('/api/upload', { method: 'POST', body: formData })
-      const result = await response.json()
+      const { data: result, text } = await readApiJsonOrText(response)
+      if (!result) {
+        throw new Error(`Upload API returned non-JSON (${response.status}). ${text?.slice(0, 120) || ''}`.trim())
+      }
       if (result.error) throw new Error(result.details ? `${result.error}: ${result.details}` : result.error)
       toast({
         title: "Import complete",
