@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 
 // GET /api/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     
     // Get lead counts
@@ -128,6 +127,7 @@ export async function GET(request: NextRequest) {
         count: s._count.id
       })),
       leadTrend
+    })
     })
   } catch (error) {
     console.error('Error fetching stats:', error)

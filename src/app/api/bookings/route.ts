@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'bookings-create', limit: 80, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, bookingSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -112,6 +111,7 @@ export async function POST(request: NextRequest) {
       end,
       message: 'Meeting created. Connect Google Calendar in Settings to sync to calendar.',
     })
+    })
   } catch (error) {
     console.error('Bookings POST error:', error)
     return NextResponse.json(
@@ -123,8 +123,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const activities = await db.activity.findMany({
       where: {
         organizationId: context.organizationId,
@@ -135,6 +134,7 @@ export async function GET(request: NextRequest) {
       take: 50,
     })
     return NextResponse.json({ bookings: activities })
+    })
   } catch (error) {
     console.error('Bookings GET error:', error)
     return NextResponse.json(

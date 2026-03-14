@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { uploadToObjectStorage } from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
@@ -10,14 +10,14 @@ const CHUNK_OVERLAP = 150
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { id } = await params
     const documents = await db.carrierDocument.findMany({
       where: { carrierId: id, organizationId: context.organizationId },
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json({ documents })
+    })
   } catch (error) {
     console.error('Carrier documents GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch carrier documents' }, { status: 500 })
@@ -28,8 +28,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const limited = enforceRateLimit(request, { key: 'carrier-doc-upload', limit: 30, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { id } = await params
     const formData = await request.formData()
 
@@ -100,6 +99,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         extracted: !!normalizedText,
         chunkCount,
       },
+    })
     })
   } catch (error) {
     console.error('Carrier documents POST error:', error)

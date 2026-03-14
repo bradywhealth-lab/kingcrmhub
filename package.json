@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "release-gate": "node scripts/release-gate.mjs",
     "db:push": "prisma db push",
+    "db:apply:init": "node scripts/apply-init-sql.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",

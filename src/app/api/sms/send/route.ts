@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -21,8 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'sms-send', limit: 100, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     const parsed = await parseJsonBody(request, smsSchema)
     if (!parsed.success) return parsed.response
@@ -101,6 +100,7 @@ export async function POST(request: NextRequest) {
       threadId: thread.id,
       status: 'pending',
       message: 'Message recorded. Connect Twilio in Settings → Integrations to send live SMS.',
+    })
     })
   } catch (error) {
     console.error('SMS send error:', error)

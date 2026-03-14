@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
-import { db } from '@/lib/db'
+import { db, withOrgRlsTransaction, withSessionTokenRlsTransaction } from '@/lib/db'
 
 type OrgContext = {
   organizationId: string
@@ -36,16 +36,18 @@ function isTrustedInternalRunnerRequest(request: NextRequest): boolean {
 export async function getOrgContext(request: NextRequest): Promise<OrgContext | null> {
   const token = readSessionTokenFromRequest(request)
   if (token) {
-    const session = await db.userSession.findFirst({
-      where: {
-        token,
-        isActive: true,
-        expiresAt: { gt: new Date() },
-      },
-      select: {
-        user: { select: { id: true, organizationId: true } },
-      },
-    })
+    const session = await withSessionTokenRlsTransaction(token, async () =>
+      db.userSession.findFirst({
+        where: {
+          token,
+          isActive: true,
+          expiresAt: { gt: new Date() },
+        },
+        select: {
+          user: { select: { id: true, organizationId: true } },
+        },
+      }),
+    )
     if (session?.user) {
       return { organizationId: session.user.organizationId, userId: session.user.id }
     }
@@ -54,10 +56,12 @@ export async function getOrgContext(request: NextRequest): Promise<OrgContext | 
   if (isTrustedInternalRunnerRequest(request)) {
     const orgHeader = request.headers.get('x-organization-id')?.trim()
     if (orgHeader) {
-      const existing = await db.organization.findUnique({
-        where: { id: orgHeader },
-        select: { id: true },
-      })
+      const existing = await withOrgRlsTransaction(orgHeader, async () =>
+        db.organization.findUnique({
+          where: { id: orgHeader },
+          select: { id: true },
+        }),
+      )
       if (existing) return { organizationId: existing.id, userId: null }
     }
   }
@@ -66,19 +70,24 @@ export async function getOrgContext(request: NextRequest): Promise<OrgContext | 
   if (process.env.NODE_ENV !== 'production') {
     const fallbackOrgId = process.env.DEV_DEFAULT_ORG_ID?.trim()
     if (fallbackOrgId) {
-      const existing = await db.organization.findUnique({
-        where: { id: fallbackOrgId },
-        select: { id: true },
-      })
+      const existing = await withOrgRlsTransaction(fallbackOrgId, async () =>
+        db.organization.findUnique({
+          where: { id: fallbackOrgId },
+          select: { id: true },
+        }),
+      )
       if (existing) return { organizationId: existing.id, userId: null }
     }
-
-    const firstOrg = await db.organization.findFirst({
-      select: { id: true },
-      orderBy: { createdAt: 'asc' },
-    })
-    if (firstOrg) return { organizationId: firstOrg.id, userId: null }
   }
 
   return null
+}
+
+export async function withRequestOrgContext<T>(
+  request: NextRequest,
+  handler: (context: OrgContext) => Promise<T>,
+): Promise<T | NextResponse> {
+  const context = await getOrgContext(request)
+  if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return withOrgRlsTransaction(context.organizationId, () => handler(context))
 }

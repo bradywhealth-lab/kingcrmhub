@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -23,8 +23,7 @@ const patchPipelineItemSchema = z.object({
 // GET /api/pipeline - Get pipeline with stages and items
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     const pipelineId = request.nextUrl.searchParams.get('pipelineId')
     
@@ -117,6 +116,7 @@ export async function GET(request: NextRequest) {
         stageCount: pipeline.stages.length
       }
     })
+    })
   } catch (error) {
     console.error('Error fetching pipeline:', error)
     return NextResponse.json({ error: 'Failed to fetch pipeline' }, { status: 500 })
@@ -128,8 +128,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'pipeline-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createPipelineItemSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -184,6 +183,7 @@ export async function POST(request: NextRequest) {
     })
     
     return NextResponse.json(item)
+    })
   } catch (error) {
     console.error('Error creating pipeline item:', error)
     return NextResponse.json({ error: 'Failed to create pipeline item' }, { status: 500 })
@@ -195,8 +195,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'pipeline-move', limit: 160, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     const parsed = await parseJsonBody(request, patchPipelineItemSchema)
     if (!parsed.success) return parsed.response
@@ -266,6 +265,7 @@ export async function PATCH(request: NextRequest) {
     }
     
     return NextResponse.json(item)
+    })
   } catch (error) {
     console.error('Error moving pipeline item:', error)
     return NextResponse.json({ error: 'Failed to move item' }, { status: 500 })

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const limit = Math.max(1, Math.min(25, Number(searchParams.get('limit') || '8')))
 
@@ -62,6 +61,7 @@ export async function GET(request: NextRequest) {
       summary,
       leadsToCall,
       meetings,
+    })
     })
   } catch (error) {
     console.error('AI my-day error:', error)

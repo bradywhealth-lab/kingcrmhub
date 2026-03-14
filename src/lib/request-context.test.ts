@@ -13,6 +13,8 @@ const mockDb = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   db: mockDb,
+  withOrgRlsTransaction: vi.fn(async (_organizationId: string, callback: () => Promise<unknown>) => callback()),
+  withSessionTokenRlsTransaction: vi.fn(async (_sessionToken: string, callback: () => Promise<unknown>) => callback()),
 }))
 
 import { getOrgContext } from '@/lib/request-context'

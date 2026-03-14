@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import type { Prisma } from '@prisma/client'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -58,8 +58,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'scrape-create', limit: 30, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, scrapeRequestSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -146,6 +145,7 @@ export async function POST(request: NextRequest) {
       status: job.status,
       message: 'Scrape job queued. Poll /api/scrape?jobId=... for progress.',
     })
+    })
   } catch (error) {
     console.error('Scrape POST error:', error)
     return NextResponse.json(
@@ -157,8 +157,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const jobId = searchParams.get('jobId')
     const limit = Math.max(1, Math.min(100, Number(searchParams.get('limit') || '20')))
@@ -183,6 +182,7 @@ export async function GET(request: NextRequest) {
       take: limit,
     })
     return NextResponse.json({ jobs })
+    })
   } catch (error) {
     console.error('Scrape GET error:', error)
     return NextResponse.json({ error: 'Failed to load scrape jobs' }, { status: 500 })

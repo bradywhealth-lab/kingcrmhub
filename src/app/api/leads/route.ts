@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -22,8 +22,7 @@ const createLeadSchema = z.object({
 // GET /api/leads - Get all leads for organization
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const sortBy = searchParams.get('sortBy') || 'createdAt'
@@ -66,6 +65,7 @@ export async function GET(request: NextRequest) {
       total,
       hasMore: offset + limit < total
     })
+    })
   } catch (error) {
     console.error('Error fetching leads:', error)
     return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
@@ -77,8 +77,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'leads-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createLeadSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -120,6 +119,7 @@ export async function POST(request: NextRequest) {
       ...lead, 
       aiScore,
       message: 'Lead created and scored successfully' 
+    })
     })
   } catch (error) {
     console.error('Error creating lead:', error)
