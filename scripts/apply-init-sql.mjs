@@ -14,7 +14,7 @@ if (!/^postgres(ql)?:\/\//i.test(databaseUrl)) {
   process.exit(1)
 }
 
-const result = spawnSync('npx', ['prisma', 'db', 'execute', '--file', 'prisma/init.sql'], {
+const result = spawnSync('npx', ['prisma', 'db', 'execute', '--file', 'prisma/rls.sql'], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
 })
