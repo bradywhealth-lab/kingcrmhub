@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { deleteFromObjectStorage } from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
@@ -10,8 +10,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const limited = enforceRateLimit(request, { key: 'carrier-doc-delete', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { id, docId } = await params
     const doc = await db.carrierDocument.findFirst({
       where: { id: docId, carrierId: id, organizationId: context.organizationId },
@@ -23,6 +22,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
     await db.carrierDocument.delete({ where: { id: docId } })
     return NextResponse.json({ success: true })
+    })
   } catch (error) {
     console.error('Carrier document DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete carrier document' }, { status: 500 })

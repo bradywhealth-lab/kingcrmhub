@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -32,8 +32,7 @@ const patchContentSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const platform = searchParams.get('platform')
     const status = searchParams.get('status')
@@ -52,6 +51,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ items })
+    })
   } catch (error) {
     console.error('Content GET error:', error)
     return NextResponse.json(
@@ -65,8 +65,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'content-create', limit: 80, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createContentSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -102,6 +101,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ item })
+    })
   } catch (error) {
     console.error('Content POST error:', error)
     return NextResponse.json(
@@ -115,8 +115,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'content-update', limit: 100, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
@@ -156,6 +155,7 @@ export async function PATCH(request: NextRequest) {
     const item = await db.contentQueue.findUnique({ where: { id } })
 
     return NextResponse.json({ item })
+    })
   } catch (error) {
     console.error('Content PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update content item' }, { status: 500 })
@@ -166,8 +166,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'content-delete', limit: 80, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
@@ -177,6 +176,7 @@ export async function DELETE(request: NextRequest) {
     })
     if (deleted.count === 0) return NextResponse.json({ error: 'Content item not found' }, { status: 404 })
     return NextResponse.json({ success: true })
+    })
   } catch (error) {
     console.error('Content DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete content item' }, { status: 500 })

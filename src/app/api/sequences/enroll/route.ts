@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -20,8 +20,7 @@ const enrollSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const leadId = searchParams.get('leadId')
     const sequenceId = searchParams.get('sequenceId')
@@ -58,6 +57,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ enrollments })
+    })
   } catch (error) {
     console.error('Enrollments GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch enrollments' }, { status: 500 })
@@ -68,8 +68,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'sequence-enroll', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, enrollSchema)
     if (!parsed.success) return parsed.response
     const { leadId, sequenceId, startNow = true } = parsed.data
@@ -138,6 +137,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ enrollment })
+    })
   } catch (error) {
     console.error('Enrollments POST error:', error)
     return NextResponse.json({ error: 'Failed to enroll lead into sequence' }, { status: 500 })

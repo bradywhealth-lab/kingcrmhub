@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isInternalRunnerAuthorized } from '@/lib/internal-runner'
-import { getOrgContext } from '@/lib/request-context'
+import { withRequestOrgContext } from '@/lib/request-context'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 /**
@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
     if (!isInternalRunnerAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized runner request' }, { status: 401 })
     }
-    const context = await getOrgContext(request)
-    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return withRequestOrgContext(request, async (context) => {
 
     const now = new Date()
     const dueEnrollments = await db.sequenceEnrollment.findMany({
@@ -87,6 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ processed, totalDue: dueEnrollments.length })
+    })
   } catch (error) {
     console.error('Sequence runner error:', error)
     return NextResponse.json({ error: 'Failed to execute sequence runner' }, { status: 500 })
