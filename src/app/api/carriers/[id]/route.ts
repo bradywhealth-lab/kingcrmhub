@@ -15,6 +15,30 @@ const patchCarrierSchema = z.object({
 
 type Params = { params: Promise<{ id: string }> }
 
+export async function GET(request: NextRequest, { params }: Params) {
+  try {
+    return withRequestOrgContext(request, async (context) => {
+    const { id } = await params
+
+    const carrier = await db.carrier.findFirst({
+      where: { id, organizationId: context.organizationId },
+      include: {
+        documents: {
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: { select: { documents: true } },
+      },
+    })
+    if (!carrier) return NextResponse.json({ error: 'Carrier not found' }, { status: 404 })
+
+    return NextResponse.json({ carrier })
+    })
+  } catch (error) {
+    console.error('Carrier GET error:', error)
+    return NextResponse.json({ error: 'Failed to fetch carrier' }, { status: 500 })
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const limited = enforceRateLimit(request, { key: 'carriers-update', limit: 80, windowMs: 60_000 })
@@ -53,5 +77,27 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error('Carrier PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update carrier' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: Params) {
+  try {
+    const limited = enforceRateLimit(request, { key: 'carriers-delete', limit: 60, windowMs: 60_000 })
+    if (limited) return limited
+    return withRequestOrgContext(request, async (context) => {
+    const { id } = await params
+
+    const existing = await db.carrier.findFirst({
+      where: { id, organizationId: context.organizationId },
+    })
+    if (!existing) return NextResponse.json({ error: 'Carrier not found' }, { status: 404 })
+
+    await db.carrier.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+    })
+  } catch (error) {
+    console.error('Carrier DELETE error:', error)
+    return NextResponse.json({ error: 'Failed to delete carrier' }, { status: 500 })
   }
 }

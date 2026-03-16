@@ -13,6 +13,34 @@ const updateLeadSchema = z.object({
 
 type Params = { params: Promise<{ id: string }> }
 
+export async function GET(request: NextRequest, { params }: Params) {
+  try {
+    return withRequestOrgContext(request, async (context) => {
+    const { id } = await params
+
+    const lead = await db.lead.findFirst({
+      where: { id, organizationId: context.organizationId },
+      include: {
+        tags: { include: { tag: true } },
+        activities: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        },
+      },
+    })
+    if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+
+    return NextResponse.json({
+      ...lead,
+      tags: lead.tags.map((t: { tag: { id: string; name: string; color: string } }) => t.tag),
+    })
+    })
+  } catch (error) {
+    console.error('Lead GET error:', error)
+    return NextResponse.json({ error: 'Failed to fetch lead' }, { status: 500 })
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const limited = enforceRateLimit(request, { key: 'leads-update', limit: 160, windowMs: 60_000 })
@@ -54,5 +82,27 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error('Lead PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: Params) {
+  try {
+    const limited = enforceRateLimit(request, { key: 'leads-delete', limit: 80, windowMs: 60_000 })
+    if (limited) return limited
+    return withRequestOrgContext(request, async (context) => {
+    const { id } = await params
+
+    const lead = await db.lead.findFirst({
+      where: { id, organizationId: context.organizationId },
+    })
+    if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+
+    await db.lead.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+    })
+  } catch (error) {
+    console.error('Lead DELETE error:', error)
+    return NextResponse.json({ error: 'Failed to delete lead' }, { status: 500 })
   }
 }
