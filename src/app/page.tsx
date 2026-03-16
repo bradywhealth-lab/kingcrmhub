@@ -1337,6 +1337,7 @@ function PipelineView() {
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveItem(null)
     const { active, over } = event
     if (!over) return
 
@@ -1403,19 +1404,11 @@ function PipelineView() {
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={(e) => {
-          console.log('[DnD] dragStart active:', e.active.id)
           const item = stages.flatMap(s => s.items).find(i => i.id === String(e.active.id))
           setActiveItem(item ?? null)
         }}
-        onDragEnd={(e) => {
-          console.log('[DnD] dragEnd active:', e.active.id, 'over:', e.over?.id ?? 'null')
-          setActiveItem(null)
-          handleDragEnd(e)
-        }}
-        onDragCancel={(e) => {
-          console.log('[DnD] dragCancel active:', e.active.id)
-          setActiveItem(null)
-        }}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveItem(null)}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
@@ -1458,17 +1451,12 @@ function PipelineView() {
             </div>
           ))}
         </div>
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {activeItem && (
-            <Card className="bg-white border-[#D4AF37] shadow-lg mb-2 opacity-90 w-[280px]">
+            <Card className="bg-white border-[#D4AF37] shadow-xl mb-2 w-[280px] rotate-2 scale-105">
               <CardContent className="p-3">
                 <h4 className="text-sm font-medium text-black truncate">{activeItem.title}</h4>
                 {activeItem.value && <p className="text-lg font-semibold text-black mt-1">${activeItem.value.toLocaleString()}</p>}
-                {activeItem.aiWinProbability && (
-                  <Badge variant="outline" className="text-xs border-[#D4AF37]/50 text-[#D4AF37] mt-2">
-                    {Math.round(activeItem.aiWinProbability * 100)}% win
-                  </Badge>
-                )}
               </CardContent>
             </Card>
           )}
