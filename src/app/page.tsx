@@ -1311,11 +1311,78 @@ function SortableItem({ item }: { item: PipelineItem }) {
 
 function PipelineView() {
   const [stages, setStages] = useState(mockPipelineStages)
-  
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/pipeline')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.pipeline?.stages && data.pipeline.stages.length > 0) {
+          const mapped = data.pipeline.stages.map((s: { id: string; name: string; color: string; order: number; items: Array<{ id: string; title: string; value: number | null; probability: number | null; stageId: string; leadId: string | null; lead: Lead | null; expectedClose: string | null }> }) => ({
+            id: s.id,
+            name: s.name,
+            color: s.color || '#6B7280',
+            order: s.order,
+            items: (s.items || []).map((item: { id: string; title: string; value: number | null; probability: number | null; stageId: string; leadId: string | null; lead: Lead | null; expectedClose: string | null }) => ({
+              id: item.id,
+              title: item.title,
+              value: item.value,
+              probability: item.probability,
+              stageId: item.stageId || s.id,
+              leadId: item.leadId,
+              lead: item.lead,
+              aiWinProbability: item.probability ? item.probability / 100 : null,
+              expectedClose: item.expectedClose,
+            })),
+          }))
+          setStages(mapped)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const activeId = String(active.id)
+    const overId = String(over.id)
+
+    setStages((prev) => {
+      const sourceStage = prev.find((s) => s.items.some((i) => i.id === activeId))
+      if (!sourceStage) return prev
+
+      const targetStage = prev.find((s) => s.id === overId || s.items.some((i) => i.id === overId))
+      if (!targetStage) return prev
+
+      const item = sourceStage.items.find((i) => i.id === activeId)
+      if (!item) return prev
+
+      const newStages = prev.map((stage) => ({
+        ...stage,
+        items: stage.items.filter((i) => i.id !== activeId),
+      }))
+
+      const targetIdx = newStages.findIndex((s) => s.id === targetStage.id)
+      if (targetIdx >= 0) {
+        newStages[targetIdx].items.push({ ...item, stageId: targetStage.id })
+      }
+
+      fetch('/api/pipeline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: activeId, stageId: targetStage.id, position: 0 }),
+      }).catch(() => {})
+
+      return newStages
+    })
+  }, [])
   
   const totalValue = stages.reduce((sum, stage) => 
     sum + stage.items.reduce((s, item) => s + (item.value || 0), 0), 0
@@ -1345,7 +1412,7 @@ function PipelineView() {
       </div>
       
       {/* Kanban Board */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={() => {}}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
             <div
