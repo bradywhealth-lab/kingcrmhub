@@ -6,17 +6,17 @@ import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 const createLeadSchema = z.object({
-  firstName: z.string().max(120).optional(),
-  lastName: z.string().max(120).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().max(40).optional(),
-  company: z.string().max(160).optional(),
-  title: z.string().max(160).optional(),
-  website: z.string().max(300).optional(),
-  linkedin: z.string().max(300).optional(),
-  source: z.string().max(80).optional(),
-  estimatedValue: z.coerce.number().nonnegative().optional(),
-  customFields: z.record(z.string(), z.unknown()).optional(),
+  firstName: z.string().max(120).nullable().optional(),
+  lastName: z.string().max(120).nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(40).nullable().optional(),
+  company: z.string().max(160).nullable().optional(),
+  title: z.string().max(160).nullable().optional(),
+  website: z.string().max(300).nullable().optional(),
+  linkedin: z.string().max(300).nullable().optional(),
+  source: z.string().max(80).nullable().optional(),
+  estimatedValue: z.coerce.number().nonnegative().nullable().optional(),
+  customFields: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
 // GET /api/leads - Get all leads for organization

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   LayoutDashboard, Users, GitBranch, Brain, Share2, Settings,
@@ -35,7 +35,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { useAppStore, type Lead, type PipelineItem, type Activity as ActivityType, type AIInsight } from "@/lib/store"
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, useDroppable } from "@dnd-kit/core"
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
@@ -287,7 +287,7 @@ const mockNotifications = [
 ]
 
 // Header Component
-function Header({ onAddLead, onNotifications }: { onAddLead: () => void; onNotifications?: () => void }) {
+function Header({ onAddLead, onNotifications, onSearch }: { onAddLead: () => void; onNotifications?: () => void; onSearch?: () => void }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const unreadCount = mockNotifications.filter(n => n.unread).length
   return (
@@ -296,8 +296,11 @@ function Header({ onAddLead, onNotifications }: { onAddLead: () => void; onNotif
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Search leads, deals, contacts..."
-            className="pl-10 bg-[#F8F4E8] border-[#E8E4D9] focus:border-[#D4AF37] focus:ring-[#D4AF37]"
+            placeholder="Search leads, deals, contacts... (⌘K)"
+            className="pl-10 bg-[#F8F4E8] border-[#E8E4D9] focus:border-[#D4AF37] focus:ring-[#D4AF37] cursor-pointer"
+            readOnly
+            onClick={onSearch}
+            onFocus={onSearch}
           />
         </div>
       </div>
@@ -1309,17 +1312,65 @@ function SortableItem({ item }: { item: PipelineItem }) {
   )
 }
 
+function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div ref={setNodeRef} className={cn("flex-1 min-h-[100px] transition-colors", isOver && "bg-[#D4AF37]/5 rounded-lg")}>
+      {children}
+    </div>
+  )
+}
+
 function PipelineView() {
   const [stages, setStages] = useState(mockPipelineStages)
   
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   
   const totalValue = stages.reduce((sum, stage) => 
     sum + stage.items.reduce((s, item) => s + (item.value || 0), 0), 0
   )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over) return
+
+    const activeItemId = String(active.id)
+    const overId = String(over.id)
+
+    const sourceStage = stages.find(s => s.items.some(i => i.id === activeItemId))
+    if (!sourceStage) return
+
+    // Determine target stage: either the column container itself or the column containing the hovered item
+    let targetStage = stages.find(s => s.id === overId)
+    if (!targetStage) {
+      targetStage = stages.find(s => s.items.some(i => i.id === overId))
+    }
+    if (!targetStage || sourceStage.id === targetStage.id) return
+
+    const draggedItem = sourceStage.items.find(i => i.id === activeItemId)!
+    const prevStages = stages
+    const newStages = stages.map(stage => {
+      if (stage.id === sourceStage.id) {
+        return { ...stage, items: stage.items.filter(i => i.id !== activeItemId) }
+      }
+      if (stage.id === targetStage!.id) {
+        return { ...stage, items: [...stage.items, { ...draggedItem, stageId: stage.id }] }
+      }
+      return stage
+    })
+    setStages(newStages)
+
+    void fetch('/api/pipeline', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId: activeItemId, stageId: targetStage.id, position: 0 }),
+    }).catch(() => {
+      setStages(prevStages)
+    })
+  }
   
   return (
     <div className="p-6 space-y-6 bg-[#FEFCF6] min-h-screen">
@@ -1345,7 +1396,7 @@ function PipelineView() {
       </div>
       
       {/* Kanban Board */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={() => {}}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
             <div
@@ -1370,19 +1421,21 @@ function PipelineView() {
               
               {/* Column Content */}
               <ScrollArea className="h-[calc(100vh-320px)]">
-                <div className="p-2">
-                  <SortableContext items={stage.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                    {stage.items.map((item) => (
-                      <SortableItem key={item.id} item={item} />
-                    ))}
-                  </SortableContext>
-                  
-                  {stage.items.length === 0 && (
-                    <div className="text-center py-8 text-gray-400 text-sm">
-                      No deals in this stage
-                    </div>
-                  )}
-                </div>
+                <DroppableColumn id={stage.id}>
+                  <div className="p-2">
+                    <SortableContext items={stage.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                      {stage.items.map((item) => (
+                        <SortableItem key={item.id} item={item} />
+                      ))}
+                    </SortableContext>
+                    
+                    {stage.items.length === 0 && (
+                      <div className="text-center py-8 text-gray-400 text-sm">
+                        No deals in this stage
+                      </div>
+                    )}
+                  </div>
+                </DroppableColumn>
               </ScrollArea>
             </div>
           ))}
@@ -3177,9 +3230,15 @@ function AddLeadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to create lead')
       setForm({ firstName: '', lastName: '', email: '', phone: '', company: '', title: '', source: 'manual', estimatedValue: '' })
+      toast({ title: 'Lead added', description: 'New lead created and scored successfully.' })
       onOpenChange(false)
     } catch (err) {
       console.error(err)
+      toast({
+        title: 'Failed to create lead',
+        description: err instanceof Error ? err.message : 'Something went wrong',
+        variant: 'destructive',
+      })
     } finally {
       setSaving(false)
     }
@@ -3411,7 +3470,7 @@ export default function EliteCRM() {
         className="transition-all duration-300"
         style={{ marginLeft: sidebarOpen ? 260 : 80 }}
       >
-        <Header onAddLead={() => setShowAddLeadDialog(true)} />
+        <Header onAddLead={() => setShowAddLeadDialog(true)} onSearch={() => setCommandPaletteOpen(true)} />
         <main className="min-h-[calc(100vh-4rem)]">
           <AnimatePresence mode="wait">
             <motion.div
