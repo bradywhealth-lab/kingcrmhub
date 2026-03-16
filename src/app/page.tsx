@@ -35,7 +35,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { useAppStore, type Lead, type PipelineItem, type Activity as ActivityType, type AIInsight } from "@/lib/store"
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
+import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragOverEvent, useDroppable } from "@dnd-kit/core"
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
@@ -1309,9 +1309,19 @@ function SortableItem({ item }: { item: PipelineItem }) {
   )
 }
 
+function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div ref={setNodeRef} className={cn("min-h-[120px] p-2 transition-colors", isOver && "bg-[#D4AF37]/5 rounded-md")}>
+      {children}
+    </div>
+  )
+}
+
 function PipelineView() {
   const [stages, setStages] = useState(mockPipelineStages)
   const [loading, setLoading] = useState(true)
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/pipeline')
@@ -1343,46 +1353,66 @@ function PipelineView() {
   }, [])
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const findStageByItemId = useCallback((itemId: string) => {
+    return stages.find((s) => s.items.some((i) => i.id === itemId))
+  }, [stages])
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id) return
+    if (!over) return
 
     const activeId = String(active.id)
     const overId = String(over.id)
 
+    const sourceStage = findStageByItemId(activeId)
+    if (!sourceStage) return
+
+    const isOverStage = stages.some((s) => s.id === overId)
+    const overStage = isOverStage
+      ? stages.find((s) => s.id === overId)
+      : findStageByItemId(overId)
+
+    if (!overStage || sourceStage.id === overStage.id) return
+
     setStages((prev) => {
-      const sourceStage = prev.find((s) => s.items.some((i) => i.id === activeId))
-      if (!sourceStage) return prev
-
-      const targetStage = prev.find((s) => s.id === overId || s.items.some((i) => i.id === overId))
-      if (!targetStage) return prev
-
-      const item = sourceStage.items.find((i) => i.id === activeId)
+      const item = prev.find((s) => s.id === sourceStage.id)?.items.find((i) => i.id === activeId)
       if (!item) return prev
 
-      const newStages = prev.map((stage) => ({
-        ...stage,
-        items: stage.items.filter((i) => i.id !== activeId),
-      }))
-
-      const targetIdx = newStages.findIndex((s) => s.id === targetStage.id)
-      if (targetIdx >= 0) {
-        newStages[targetIdx].items.push({ ...item, stageId: targetStage.id })
-      }
-
-      fetch('/api/pipeline', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: activeId, stageId: targetStage.id, position: 0 }),
-      }).catch(() => {})
-
-      return newStages
+      return prev.map((stage) => {
+        if (stage.id === sourceStage.id) {
+          return { ...stage, items: stage.items.filter((i) => i.id !== activeId) }
+        }
+        if (stage.id === overStage.id) {
+          const alreadyExists = stage.items.some((i) => i.id === activeId)
+          if (alreadyExists) return stage
+          return { ...stage, items: [...stage.items, { ...item, stageId: overStage.id }] }
+        }
+        return stage
+      })
     })
-  }, [])
+  }, [findStageByItemId, stages])
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveItemId(null)
+    if (!over) return
+
+    const activeId = String(active.id)
+    const overId = String(over.id)
+
+    const targetStage = stages.find((s) => s.id === overId) || findStageByItemId(activeId)
+    if (!targetStage) return
+
+    fetch('/api/pipeline', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId: activeId, stageId: targetStage.id, position: 0 }),
+    }).catch(() => {})
+  }, [findStageByItemId, stages])
   
   const totalValue = stages.reduce((sum, stage) => 
     sum + stage.items.reduce((s, item) => s + (item.value || 0), 0), 0
@@ -1412,7 +1442,13 @@ function PipelineView() {
       </div>
       
       {/* Kanban Board */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={(e) => setActiveItemId(String(e.active.id))}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
             <div
@@ -1437,7 +1473,7 @@ function PipelineView() {
               
               {/* Column Content */}
               <ScrollArea className="h-[calc(100vh-320px)]">
-                <div className="p-2">
+                <DroppableColumn id={stage.id}>
                   <SortableContext items={stage.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
                     {stage.items.map((item) => (
                       <SortableItem key={item.id} item={item} />
@@ -1449,7 +1485,7 @@ function PipelineView() {
                       No deals in this stage
                     </div>
                   )}
-                </div>
+                </DroppableColumn>
               </ScrollArea>
             </div>
           ))}
