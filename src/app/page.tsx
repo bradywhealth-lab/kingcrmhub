@@ -1403,14 +1403,19 @@ function PipelineView() {
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={(e) => {
+          console.log('[DnD] dragStart active:', e.active.id)
           const item = stages.flatMap(s => s.items).find(i => i.id === String(e.active.id))
           setActiveItem(item ?? null)
         }}
         onDragEnd={(e) => {
+          console.log('[DnD] dragEnd active:', e.active.id, 'over:', e.over?.id ?? 'null')
           setActiveItem(null)
           handleDragEnd(e)
         }}
-        onDragCancel={() => setActiveItem(null)}
+        onDragCancel={(e) => {
+          console.log('[DnD] dragCancel active:', e.active.id)
+          setActiveItem(null)
+        }}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
