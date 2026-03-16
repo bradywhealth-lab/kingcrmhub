@@ -35,7 +35,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { useAppStore, type Lead, type PipelineItem, type Activity as ActivityType, type AIInsight } from "@/lib/store"
-import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, useDroppable, DragOverlay } from "@dnd-kit/core"
+import { DndContext, closestCorners, KeyboardSensor, PointerSensor, MouseSensor, TouchSensor, useSensor, useSensors, type DragEndEvent, useDroppable, DragOverlay } from "@dnd-kit/core"
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
@@ -1326,7 +1326,9 @@ function PipelineView() {
   const [activeItem, setActiveItem] = useState<PipelineItem | null>(null)
   
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   
