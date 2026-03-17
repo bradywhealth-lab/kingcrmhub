@@ -10,6 +10,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "release-gate": "node scripts/release-gate.mjs",
+    "smoke:deployment": "node scripts/smoke-check.mjs",
     "db:push": "prisma db push",
     "db:apply:init": "node scripts/apply-init-sql.mjs",
     "db:generate": "prisma generate",

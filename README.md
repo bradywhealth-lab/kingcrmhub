@@ -1,5 +1,14 @@
 # 🚀 Welcome to Z.ai Code Scaffold
 
+## Elite CRM maintenance automation
+
+Operational automation for this app now lives in `.github/workflows/` and is explained in `docs/operations/automation-guide.md`.
+
+- CI checks code health on every push and pull request.
+- Scheduled smoke checks watch the live app and open a GitHub issue on failure.
+- Scheduled runner ticks execute internal follow-up and content automation.
+- Dependabot opens weekly maintenance PRs for dependencies and GitHub Actions.
+
 A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
 
 ## ✨ Technology Stack
