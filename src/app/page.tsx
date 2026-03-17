@@ -182,6 +182,8 @@ function Sidebar({ activeView, setActiveView, userName, userRole, onSignOut }: {
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "leads", icon: Users, label: "Leads" },
     { id: "pipeline", icon: GitBranch, label: "Pipeline" },
+    { id: "commissions", icon: DollarSign, label: "Commissions" },
+    { id: "analytics", icon: BarChart3, label: "Analytics" },
     { id: "uploads", icon: Upload, label: "CSV Uploads" },
     { id: "linear", icon: SquareKanban, label: "Linear" },
     { id: "automation", icon: Zap, label: "AI Automation" },
@@ -3012,6 +3014,393 @@ function CarrierLibrarySettings() {
   )
 }
 
+// Commissions Tracker View
+type CommissionRecord = {
+  id: string
+  clientName: string
+  carrier: string | null
+  product: string | null
+  policyNumber: string | null
+  type: string
+  status: string
+  premiumAmount: number | null
+  commissionRate: number | null
+  commissionAmount: number
+  effectiveDate: string | null
+  paidDate: string | null
+  notes: string | null
+  createdAt: string
+}
+
+function CommissionsView() {
+  const [commissions, setCommissions] = useState<CommissionRecord[]>([])
+  const [summary, setSummary] = useState({ totalPending: 0, totalPaid: 0, totalClawedBack: 0, netEarnings: 0, count: 0 })
+  const [loading, setLoading] = useState(true)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ clientName: '', carrier: '', product: '', policyNumber: '', type: 'new_business', premiumAmount: '', commissionRate: '', commissionAmount: '', notes: '' })
+
+  const loadCommissions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/commissions')
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setCommissions(data.commissions || [])
+      setSummary(data.summary || { totalPending: 0, totalPaid: 0, totalClawedBack: 0, netEarnings: 0, count: 0 })
+    } catch { setCommissions([]) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { void loadCommissions() }, [loadCommissions])
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch('/api/commissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName: form.clientName,
+          carrier: form.carrier || undefined,
+          product: form.product || undefined,
+          policyNumber: form.policyNumber || undefined,
+          type: form.type,
+          premiumAmount: form.premiumAmount ? parseFloat(form.premiumAmount) : undefined,
+          commissionRate: form.commissionRate ? parseFloat(form.commissionRate) : undefined,
+          commissionAmount: parseFloat(form.commissionAmount || '0'),
+          notes: form.notes || undefined,
+        }),
+      })
+      if (res.ok) {
+        setShowAddDialog(false)
+        setForm({ clientName: '', carrier: '', product: '', policyNumber: '', type: 'new_business', premiumAmount: '', commissionRate: '', commissionAmount: '', notes: '' })
+        void loadCommissions()
+      }
+    } catch { /* silent */ }
+    finally { setSaving(false) }
+  }
+
+  const markPaid = async (id: string) => {
+    await fetch(`/api/commissions?id=${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'paid', paidDate: new Date().toISOString() }),
+    })
+    void loadCommissions()
+  }
+
+  return (
+    <div className="p-6 space-y-6 bg-[#FDFBF7] min-h-screen">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1E293B]">Commissions</h1>
+          <p className="text-gray-500">Track your earnings, pending payments, and commission history</p>
+        </div>
+        <Button className="btn-gold gap-2" onClick={() => setShowAddDialog(true)}>
+          <Plus className="w-4 h-4" />
+          Log Commission
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-gray-500">Net Earnings</p>
+            <p className="text-2xl font-bold text-[#1E293B]">${summary.netEarnings.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-gray-500">Paid</p>
+            <p className="text-2xl font-bold text-emerald-600">${summary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-gray-500">Pending</p>
+            <p className="text-2xl font-bold text-amber-600">${summary.totalPending.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-gray-500">Clawed Back</p>
+            <p className="text-2xl font-bold text-red-600">${summary.totalClawedBack.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {loading && <div className="flex items-center justify-center py-12 text-gray-500"><RefreshCw className="w-6 h-6 animate-spin mr-2" />Loading commissions…</div>}
+
+      {!loading && commissions.length === 0 && (
+        <Card className="bg-white border-[#E2DDD4]">
+          <CardContent className="p-12 text-center">
+            <DollarSign className="w-12 h-12 text-[#3B8595]/40 mx-auto mb-4" />
+            <p className="text-gray-600">No commissions logged yet.</p>
+            <Button className="btn-gold mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
+              <Plus className="w-4 h-4" />
+              Log your first commission
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && commissions.length > 0 && (
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[#E2DDD4] bg-[#F5F1EA]">
+                    <th className="text-left p-3 text-xs font-medium text-gray-500 uppercase">Client</th>
+                    <th className="text-left p-3 text-xs font-medium text-gray-500 uppercase">Carrier</th>
+                    <th className="text-left p-3 text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="text-right p-3 text-xs font-medium text-gray-500 uppercase">Premium</th>
+                    <th className="text-right p-3 text-xs font-medium text-gray-500 uppercase">Commission</th>
+                    <th className="text-left p-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="text-left p-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commissions.map((c) => (
+                    <tr key={c.id} className="border-b border-[#E2DDD4] last:border-0 hover:bg-[#F5F1EA]/50">
+                      <td className="p-3 text-sm font-medium text-[#1E293B]">{c.clientName}</td>
+                      <td className="p-3 text-sm text-gray-600">{c.carrier || '—'}</td>
+                      <td className="p-3">
+                        <Badge variant="outline" className="text-xs capitalize">{c.type.replace('_', ' ')}</Badge>
+                      </td>
+                      <td className="p-3 text-sm text-right text-gray-600">{c.premiumAmount ? `$${c.premiumAmount.toLocaleString()}` : '—'}</td>
+                      <td className="p-3 text-sm text-right font-semibold text-[#1E293B]">${c.commissionAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td className="p-3">
+                        <Badge variant="outline" className={cn(
+                          "text-xs capitalize",
+                          c.status === 'paid' && "border-emerald-500 text-emerald-600",
+                          c.status === 'pending' && "border-amber-500 text-amber-600",
+                          c.status === 'clawed_back' && "border-red-500 text-red-600",
+                        )}>{c.status.replace('_', ' ')}</Badge>
+                      </td>
+                      <td className="p-3">
+                        {c.status === 'pending' && (
+                          <Button variant="ghost" size="sm" className="text-xs text-emerald-600 hover:text-emerald-700" onClick={() => markPaid(c.id)}>
+                            <Check className="w-3 h-3 mr-1" /> Mark Paid
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="bg-white border-[#E2DDD4] max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-[#1E293B] flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-[#3B8595]" />
+              Log Commission
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAdd} className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-600">Client name *</Label>
+                <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.clientName} onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))} required />
+              </div>
+              <div>
+                <Label className="text-gray-600">Carrier</Label>
+                <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.carrier} onChange={(e) => setForm((f) => ({ ...f, carrier: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-600">Product</Label>
+                <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.product} onChange={(e) => setForm((f) => ({ ...f, product: e.target.value }))} placeholder="Term Life, Medicare Supp..." />
+              </div>
+              <div>
+                <Label className="text-gray-600">Policy #</Label>
+                <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.policyNumber} onChange={(e) => setForm((f) => ({ ...f, policyNumber: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-gray-600">Premium ($)</Label>
+                <Input type="number" className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.premiumAmount} onChange={(e) => setForm((f) => ({ ...f, premiumAmount: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-gray-600">Rate (%)</Label>
+                <Input type="number" className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.commissionRate} onChange={(e) => setForm((f) => ({ ...f, commissionRate: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-gray-600">Commission ($) *</Label>
+                <Input type="number" step="0.01" className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.commissionAmount} onChange={(e) => setForm((f) => ({ ...f, commissionAmount: e.target.value }))} required />
+              </div>
+            </div>
+            <div>
+              <Label className="text-gray-600">Type</Label>
+              <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}>
+                <SelectTrigger className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new_business">New Business</SelectItem>
+                  <SelectItem value="renewal">Renewal</SelectItem>
+                  <SelectItem value="override">Override</SelectItem>
+                  <SelectItem value="bonus">Bonus</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-600">Notes</Label>
+              <Textarea className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
+            </div>
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="outline" className="border-[#E2DDD4]" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+              <Button type="submit" className="btn-gold" disabled={saving}>{saving ? 'Saving...' : 'Log Commission'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+// Analytics View
+function AnalyticsView() {
+  return (
+    <div className="p-6 space-y-6 bg-[#FDFBF7] min-h-screen">
+      <div>
+        <h1 className="text-2xl font-bold text-[#1E293B]">Analytics</h1>
+        <p className="text-gray-500">Deep insights into your sales performance and team metrics</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-[#1E293B] text-lg">Revenue & Leads</CardTitle>
+            <CardDescription>6-month trend overview</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2DDD4" />
+                  <XAxis dataKey="month" stroke="#64748B" fontSize={12} />
+                  <YAxis stroke="#64748B" fontSize={12} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="revenue" stroke="#3B8595" fill="#3B8595" fillOpacity={0.15} strokeWidth={2} />
+                  <Area type="monotone" dataKey="leads" stroke="#334155" fill="#334155" fillOpacity={0.08} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-[#1E293B] text-lg">Lead Sources</CardTitle>
+            <CardDescription>Where your leads come from</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie data={sourceData} cx="50%" cy="50%" outerRadius={100} dataKey="value" nameKey="name" label>
+                    {sourceData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-[#1E293B] text-lg">Win Rate by Month</CardTitle>
+            <CardDescription>Deals won vs total deals</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2DDD4" />
+                  <XAxis dataKey="month" stroke="#64748B" fontSize={12} />
+                  <YAxis stroke="#64748B" fontSize={12} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="won" fill="#3B8595" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="leads" fill="#E2DDD4" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-[#E2DDD4] shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-[#1E293B] text-lg">Activity Heatmap</CardTitle>
+            <CardDescription>Your most productive hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-7 gap-1.5">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                <div key={day} className="text-center">
+                  <span className="text-xs text-gray-500">{day}</span>
+                  <div className="space-y-1 mt-1">
+                    {Array.from({ length: 8 }, (_, i) => {
+                      const intensity = Math.random()
+                      return (
+                        <div
+                          key={i}
+                          className="w-full h-5 rounded-sm"
+                          style={{ background: intensity > 0.7 ? '#3B8595' : intensity > 0.4 ? '#5BA3B3' : intensity > 0.15 ? '#E2DDD4' : '#F5F1EA' }}
+                          title={`${8 + i}:00 - ${9 + i}:00`}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-3">
+              <span className="text-xs text-gray-500">Less</span>
+              {['#F5F1EA', '#E2DDD4', '#5BA3B3', '#3B8595'].map((c) => (
+                <div key={c} className="w-4 h-4 rounded-sm" style={{ background: c }} />
+              ))}
+              <span className="text-xs text-gray-500">More</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="bg-white border-[#E2DDD4] shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-[#1E293B] text-lg">Key Performance Indicators</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { label: 'Avg. Close Time', value: '14 days', sub: '-2d from last month' },
+              { label: 'Conversion Rate', value: '23%', sub: '+5% this quarter' },
+              { label: 'Avg. Deal Size', value: '$52K', sub: '+8% YoY' },
+              { label: 'Response Time', value: '2.4 hrs', sub: 'Target: < 4 hrs' },
+              { label: 'NPS Score', value: '72', sub: 'Excellent' },
+            ].map((kpi) => (
+              <div key={kpi.label} className="p-4 bg-[#F5F1EA] rounded-lg text-center">
+                <p className="text-2xl font-bold text-[#1E293B]">{kpi.value}</p>
+                <p className="text-sm text-gray-600 mt-1">{kpi.label}</p>
+                <p className="text-xs text-[#3B8595] mt-0.5">{kpi.sub}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function SettingsView() {
   const [activeSettingsTab, setActiveSettingsTab] = useState("organization")
   return (
@@ -3561,6 +3950,8 @@ export default function EliteCRM() {
       case "dashboard": return <DashboardView />
       case "leads": return <LeadsView onAddLead={() => setShowAddLeadDialog(true)} onUploadCSV={() => setShowUploadDialog(true)} onScrape={() => setShowScrapeDialog(true)} refreshKey={leadsRefreshKey} />
       case "pipeline": return <PipelineView />
+      case "commissions": return <CommissionsView />
+      case "analytics": return <AnalyticsView />
       case "linear": return <LinearView onCreateIssue={() => { setLinearIssuePrefill({}); setShowLinearIssueDialog(true) }} />
       case "uploads": return <UploadsView onUploadCSV={() => setShowUploadDialog(true)} refreshKey={uploadsRefreshKey} />
       case "automation": return <AutomationView />
