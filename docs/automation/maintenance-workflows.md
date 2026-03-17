@@ -31,6 +31,7 @@ Runs four independent status-check jobs on every change:
 4. **`build`**: install dependencies, run Prisma generate, then run `bun run build`
 
 Each job appears as a separate GitHub check, so branch protections can require them individually.
+For Dependabot-authored PRs, CI uses non-frozen `bun install` to avoid lockfile drift failures between `package-lock.json` and `bun.lock`.
 
 ### Why this helps
 
