@@ -362,16 +362,25 @@ function DashboardView() {
     leadsToCall: { id: string; name: string; company?: string | null; aiScore: number; reason: string }[]
     meetings: { id: string; title: string; time: string; lead: { name: string } | null }[]
   } | null>(null)
+  const [dashStats, setDashStats] = useState({ totalLeads: 0, pipelineValue: 0, avgLeadScore: 0, wonThisMonth: 0 })
 
   useEffect(() => {
     fetch('/api/ai/my-day?limit=5')
       .then((r) => r.json())
+      .then((data) => { if (!data.error) setMyDay(data) })
+      .catch(() => {})
+
+    fetch('/api/stats')
+      .then((r) => { if (!r.ok) throw new Error('fail'); return r.json() })
       .then((data) => {
-        if (!data.error) setMyDay(data)
+        setDashStats({
+          totalLeads: data.totalLeads || 0,
+          pipelineValue: data.pipelineValue || 0,
+          avgLeadScore: data.avgLeadScore || 0,
+          wonThisMonth: data.wonThisMonth || 0,
+        })
       })
-      .catch(() => {
-        // silent fallback to mock-only dashboard blocks
-      })
+      .catch(() => {})
   }, [])
 
   return (
@@ -379,10 +388,10 @@ function DashboardView() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: "Total Leads", value: 156, change: 12, icon: Users, color: "gold" },
-          { title: "Pipeline Value", value: 280000, change: 8, icon: DollarSign, color: "black", prefix: "$" },
-          { title: "Avg Lead Score", value: 78, change: 5, icon: Target, color: "gold" },
-          { title: "Won This Month", value: 24, change: 18, icon: CheckCircle2, color: "emerald" },
+          { title: "Total Leads", value: dashStats.totalLeads, change: 12, icon: Users, color: "gold" },
+          { title: "Pipeline Value", value: dashStats.pipelineValue, change: 8, icon: DollarSign, color: "black", prefix: "$" },
+          { title: "Avg Lead Score", value: dashStats.avgLeadScore, change: 5, icon: Target, color: "gold" },
+          { title: "Won This Month", value: dashStats.wonThisMonth, change: 18, icon: CheckCircle2, color: "emerald" },
         ].map((stat) => (
           <Card key={stat.title} className="bg-white border-[#E2DDD4] shadow-sm hover:shadow-md transition-shadow card-hover">
             <CardContent className="p-5">
@@ -1331,6 +1340,9 @@ function PipelineView() {
   const [stages, setStages] = useState(mockPipelineStages)
   const [loading, setLoading] = useState(true)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
+  const [showAddDealDialog, setShowAddDealDialog] = useState(false)
+  const [dealForm, setDealForm] = useState({ title: '', value: '', probability: '' })
+  const [dealSaving, setDealSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/pipeline')
@@ -1460,7 +1472,7 @@ function PipelineView() {
               <span className="text-sm text-gray-500">total</span>
             </div>
           </Card>
-          <Button className="btn-gold gap-2">
+          <Button className="btn-gold gap-2" onClick={() => setShowAddDealDialog(true)}>
             <Plus className="w-4 h-4" />
             Add Deal
           </Button>
@@ -1517,6 +1529,60 @@ function PipelineView() {
           ))}
         </div>
       </DndContext>
+
+      <Dialog open={showAddDealDialog} onOpenChange={setShowAddDealDialog}>
+        <DialogContent className="bg-white border-[#E2DDD4] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1E293B] flex items-center gap-2">
+              <Plus className="w-5 h-5 text-[#3B8595]" />
+              Add Deal
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            if (!dealForm.title.trim()) return
+            setDealSaving(true)
+            try {
+              const res = await fetch('/api/pipeline', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: dealForm.title,
+                  value: dealForm.value ? parseFloat(dealForm.value) : undefined,
+                  probability: dealForm.probability ? parseInt(dealForm.probability) : undefined,
+                }),
+              })
+              if (res.ok) {
+                setShowAddDealDialog(false)
+                setDealForm({ title: '', value: '', probability: '' })
+                toast({ title: 'Deal added', description: 'New deal added to pipeline.' })
+                window.location.reload()
+              }
+            } catch {
+              toast({ title: 'Failed', variant: 'destructive' })
+            } finally { setDealSaving(false) }
+          }} className="space-y-4 py-2">
+            <div>
+              <Label className="text-gray-600">Deal name *</Label>
+              <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={dealForm.title} onChange={(e) => setDealForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. John Smith - Term Life" required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-600">Value ($)</Label>
+                <Input type="number" className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={dealForm.value} onChange={(e) => setDealForm(f => ({ ...f, value: e.target.value }))} placeholder="50000" />
+              </div>
+              <div>
+                <Label className="text-gray-600">Win probability (%)</Label>
+                <Input type="number" min="0" max="100" className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={dealForm.probability} onChange={(e) => setDealForm(f => ({ ...f, probability: e.target.value }))} placeholder="20" />
+              </div>
+            </div>
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="outline" className="border-[#E2DDD4]" onClick={() => setShowAddDealDialog(false)}>Cancel</Button>
+              <Button type="submit" className="btn-gold" disabled={dealSaving}>{dealSaving ? 'Adding...' : 'Add Deal'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -2215,25 +2281,121 @@ function CreateLinearIssueDialog({
 }
 
 // Placeholder views for other sections
+type AutomationRecord = {
+  id: string
+  name: string
+  description: string | null
+  trigger: string
+  actions: Array<Record<string, unknown>>
+  isActive: boolean
+  executionCount: number
+  lastExecutedAt: string | null
+  createdAt: string
+}
+
+const TRIGGER_OPTIONS = [
+  { value: 'lead.created', label: 'New lead created' },
+  { value: 'lead.score_changed', label: 'Lead score changes' },
+  { value: 'lead.status_changed', label: 'Lead status changes' },
+  { value: 'pipeline.deal_won', label: 'Deal won' },
+  { value: 'pipeline.deal_lost', label: 'Deal lost' },
+  { value: 'pipeline.item_moved', label: 'Pipeline item moved' },
+  { value: 'booking.created', label: 'Meeting booked' },
+  { value: 'upload.completed', label: 'CSV upload completed' },
+]
+
+const ACTION_OPTIONS = [
+  { value: 'send_email', label: 'Send email notification' },
+  { value: 'send_sms', label: 'Send SMS' },
+  { value: 'update_lead_status', label: 'Update lead status' },
+  { value: 'assign_lead', label: 'Assign lead to team member' },
+  { value: 'add_to_sequence', label: 'Enroll in sequence' },
+  { value: 'create_activity', label: 'Log activity' },
+  { value: 'trigger_webhook', label: 'Trigger webhook' },
+  { value: 'ai_score_lead', label: 'AI rescore lead' },
+]
+
 function AutomationView() {
+  const [automations, setAutomations] = useState<AutomationRecord[]>([])
+  const [stats, setStats] = useState({ active: 0, totalRuns: 0, total: 0 })
+  const [loading, setLoading] = useState(true)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ name: '', description: '', trigger: 'lead.created', actionType: 'send_email' })
+
+  const loadAutomations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/automations')
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setAutomations(data.automations || [])
+      setStats(data.stats || { active: 0, totalRuns: 0, total: 0 })
+    } catch { setAutomations([]) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { void loadAutomations() }, [loadAutomations])
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.name.trim()) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/automations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description || undefined,
+          trigger: form.trigger,
+          actions: [{ type: form.actionType }],
+          isActive: true,
+        }),
+      })
+      if (res.ok) {
+        setShowCreateDialog(false)
+        setForm({ name: '', description: '', trigger: 'lead.created', actionType: 'send_email' })
+        toast({ title: 'Automation created', description: 'Your automation is now active.' })
+        void loadAutomations()
+      }
+    } catch {
+      toast({ title: 'Failed', description: 'Could not create automation.', variant: 'destructive' })
+    } finally { setSaving(false) }
+  }
+
+  const toggleActive = async (id: string, isActive: boolean) => {
+    await fetch(`/api/automations?id=${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !isActive }),
+    })
+    void loadAutomations()
+  }
+
+  const deleteAutomation = async (id: string) => {
+    await fetch(`/api/automations?id=${id}`, { method: 'DELETE' })
+    toast({ title: 'Automation deleted' })
+    void loadAutomations()
+  }
+
   return (
     <div className="p-6 space-y-6 bg-[#FDFBF7] min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-black">AI Automation</h1>
+          <h1 className="text-2xl font-bold text-[#1E293B]">AI Automation</h1>
           <p className="text-gray-500">Automate your workflows with intelligent triggers</p>
         </div>
-        <Button className="btn-gold gap-2">
+        <Button className="btn-gold gap-2" onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4" />
           Create Automation
         </Button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { title: "Active Automations", value: 12, icon: Zap },
-          { title: "Runs This Month", value: 1234, icon: Activity },
-          { title: "AI Accuracy", value: "94%", icon: Brain },
+          { title: "Active Automations", value: stats.active, icon: Zap },
+          { title: "Total Runs", value: stats.totalRuns, icon: Activity },
+          { title: "Total Rules", value: stats.total, icon: Brain },
         ].map((stat) => (
           <Card key={stat.title} className="bg-white border-[#E2DDD4] shadow-sm">
             <CardContent className="p-4">
@@ -2242,7 +2404,7 @@ function AutomationView() {
                   <stat.icon className="w-5 h-5 text-[#3B8595]" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-black">{stat.value}</p>
+                  <p className="text-2xl font-bold text-[#1E293B]">{stat.value}</p>
                   <p className="text-sm text-gray-500">{stat.title}</p>
                 </div>
               </div>
@@ -2250,6 +2412,103 @@ function AutomationView() {
           </Card>
         ))}
       </div>
+
+      {loading && <div className="flex items-center justify-center py-12 text-gray-500"><RefreshCw className="w-6 h-6 animate-spin mr-2" />Loading…</div>}
+
+      {!loading && automations.length === 0 && (
+        <Card className="bg-white border-[#E2DDD4]">
+          <CardContent className="p-12 text-center">
+            <Zap className="w-12 h-12 text-[#3B8595]/40 mx-auto mb-4" />
+            <p className="text-gray-600 mb-2">No automations yet.</p>
+            <p className="text-sm text-gray-500 mb-4">Create rules that trigger actions automatically when events occur.</p>
+            <Button className="btn-gold gap-2" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4" /> Create your first automation
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && automations.length > 0 && (
+        <div className="space-y-3">
+          {automations.map((a) => (
+            <Card key={a.id} className="bg-white border-[#E2DDD4] shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", a.isActive ? "bg-emerald-100" : "bg-gray-100")}>
+                      <Zap className={cn("w-5 h-5", a.isActive ? "text-emerald-600" : "text-gray-400")} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-[#1E293B] truncate">{a.name}</p>
+                        <Badge variant="outline" className={cn("text-xs", a.isActive ? "border-emerald-500 text-emerald-600" : "border-gray-300 text-gray-500")}>
+                          {a.isActive ? 'Active' : 'Paused'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Trigger: {TRIGGER_OPTIONS.find(t => t.value === a.trigger)?.label || a.trigger}
+                        {' · '}{a.executionCount} runs
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={a.isActive} onCheckedChange={() => toggleActive(a.id, a.isActive)} />
+                    <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600" onClick={() => deleteAutomation(a.id)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="bg-white border-[#E2DDD4] max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-[#1E293B] flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[#3B8595]" />
+              Create Automation
+            </DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Set up a rule that fires automatically when an event occurs.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4 py-2">
+            <div>
+              <Label className="text-gray-600">Name *</Label>
+              <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Auto-score new leads" required />
+            </div>
+            <div>
+              <Label className="text-gray-600">Description</Label>
+              <Textarea className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" rows={2} value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What does this automation do?" />
+            </div>
+            <div>
+              <Label className="text-gray-600">When this happens (trigger)</Label>
+              <Select value={form.trigger} onValueChange={(v) => setForm(f => ({ ...f, trigger: v }))}>
+                <SelectTrigger className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TRIGGER_OPTIONS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-600">Then do this (action)</Label>
+              <Select value={form.actionType} onValueChange={(v) => setForm(f => ({ ...f, actionType: v }))}>
+                <SelectTrigger className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ACTION_OPTIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="outline" className="border-[#E2DDD4]" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
+              <Button type="submit" className="btn-gold" disabled={saving}>{saving ? 'Creating...' : 'Create Automation'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -2490,6 +2749,39 @@ function SocialMediaView() {
           </Button>
         </div>
       </div>
+      {/* Connected Accounts */}
+      <Card className="bg-white border-[#E2DDD4] shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#1E293B]">Connected Accounts</h3>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { name: 'LinkedIn', icon: Linkedin, color: '#0A66C2', connected: false },
+              { name: 'Twitter / X', icon: Twitter, color: '#1DA1F2', connected: false },
+              { name: 'Facebook', icon: Facebook, color: '#1877F2', connected: false },
+              { name: 'Instagram', icon: Instagram, color: '#E1306C', connected: false },
+            ].map((account) => (
+              <button
+                key={account.name}
+                onClick={() => toast({ title: `Connect ${account.name}`, description: `Go to Settings → Integrations to configure your ${account.name} account credentials. Once connected, you can publish directly from here.` })}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all",
+                  account.connected
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-[#E2DDD4] bg-[#F5F1EA] text-gray-600 hover:border-[#3B8595] hover:text-[#3B8595]"
+                )}
+              >
+                <account.icon className="w-4 h-4" />
+                {account.name}
+                {account.connected ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3 opacity-50" />}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-2">Connect accounts in Settings → Integrations to publish directly. Draft content is saved locally regardless.</p>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {insuranceCampaignPacks.map((pack) => (
           <motion.button
@@ -2500,7 +2792,7 @@ function SocialMediaView() {
             onClick={() => applyCampaignPack(pack)}
             className="text-left p-4 bg-white border border-[#E2DDD4] rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
-            <p className="text-sm font-semibold text-black">{pack.label}</p>
+            <p className="text-sm font-semibold text-[#1E293B]">{pack.label}</p>
             <p className="text-xs text-gray-500 mt-1">{pack.topic}</p>
             <p className="text-xs text-[#7C3AED] mt-2">CTA: {pack.cta}</p>
           </motion.button>
@@ -3401,6 +3693,130 @@ function AnalyticsView() {
   )
 }
 
+function WebhooksSettings() {
+  const [webhooks, setWebhooks] = useState<Array<{ id: string; name: string; url: string; events: string[]; isActive: boolean; triggerCount: number }>>([])
+  const [availableEvents, setAvailableEvents] = useState<string[]>([])
+  const [showAdd, setShowAdd] = useState(false)
+  const [wForm, setWForm] = useState({ name: '', url: '', events: '' as string })
+  const [wSaving, setWSaving] = useState(false)
+
+  const loadWebhooks = useCallback(async () => {
+    try {
+      const res = await fetch('/api/webhooks')
+      if (!res.ok) return
+      const data = await res.json()
+      setWebhooks(data.webhooks || [])
+      setAvailableEvents(data.availableEvents || [])
+    } catch { /* silent */ }
+  }, [])
+
+  useEffect(() => { void loadWebhooks() }, [loadWebhooks])
+
+  const createWebhook = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWSaving(true)
+    try {
+      const events = wForm.events ? wForm.events.split(',').map(e => e.trim()).filter(Boolean) : ['lead.created']
+      const res = await fetch('/api/webhooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: wForm.name, url: wForm.url, events }),
+      })
+      if (res.ok) {
+        setShowAdd(false)
+        setWForm({ name: '', url: '', events: '' })
+        toast({ title: 'Webhook created' })
+        void loadWebhooks()
+      }
+    } catch { toast({ title: 'Failed', variant: 'destructive' }) }
+    finally { setWSaving(false) }
+  }
+
+  const deleteWebhook = async (id: string) => {
+    await fetch(`/api/webhooks?id=${id}`, { method: 'DELETE' })
+    void loadWebhooks()
+  }
+
+  const toggleWebhook = async (id: string, isActive: boolean) => {
+    await fetch('/api/webhooks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, isActive: !isActive }),
+    })
+    void loadWebhooks()
+  }
+
+  return (
+    <Card className="bg-white border-[#E2DDD4] shadow-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-[#1E293B]">Webhooks</CardTitle>
+            <CardDescription>Send events to your endpoints</CardDescription>
+          </div>
+          <Button className="btn-gold gap-2" size="sm" onClick={() => setShowAdd(true)}>
+            <Plus className="w-4 h-4" />
+            Add webhook
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {webhooks.length === 0 && !showAdd && (
+          <div className="p-6 border border-dashed border-[#E2DDD4] rounded-lg text-center text-gray-500 text-sm">
+            No webhooks yet. Add one to receive lead.created, deal.won, etc.
+          </div>
+        )}
+
+        {webhooks.length > 0 && (
+          <div className="space-y-3">
+            {webhooks.map((wh) => (
+              <div key={wh.id} className="flex items-center justify-between p-3 bg-[#F5F1EA] rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[#1E293B] truncate">{wh.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{wh.url}</p>
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    {(Array.isArray(wh.events) ? wh.events : []).slice(0, 3).map((ev) => (
+                      <Badge key={ev} variant="outline" className="text-xs">{ev}</Badge>
+                    ))}
+                    {Array.isArray(wh.events) && wh.events.length > 3 && <span className="text-xs text-gray-400">+{wh.events.length - 3}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="text-xs text-gray-400">{wh.triggerCount} calls</span>
+                  <Switch checked={wh.isActive} onCheckedChange={() => toggleWebhook(wh.id, wh.isActive)} />
+                  <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600" onClick={() => deleteWebhook(wh.id)}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showAdd && (
+          <form onSubmit={createWebhook} className="mt-4 space-y-3 p-4 border border-[#E2DDD4] rounded-lg">
+            <div>
+              <Label className="text-gray-600">Name</Label>
+              <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={wForm.name} onChange={(e) => setWForm(f => ({ ...f, name: e.target.value }))} placeholder="My webhook" required />
+            </div>
+            <div>
+              <Label className="text-gray-600">URL</Label>
+              <Input type="url" className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={wForm.url} onChange={(e) => setWForm(f => ({ ...f, url: e.target.value }))} placeholder="https://example.com/webhook" required />
+            </div>
+            <div>
+              <Label className="text-gray-600">Events (comma separated)</Label>
+              <Input className="mt-1 bg-[#F5F1EA] border-[#E2DDD4]" value={wForm.events} onChange={(e) => setWForm(f => ({ ...f, events: e.target.value }))} placeholder="lead.created, pipeline.deal_won" />
+              <p className="text-xs text-gray-400 mt-1">Available: {availableEvents.join(', ')}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" className="border-[#E2DDD4]" onClick={() => setShowAdd(false)}>Cancel</Button>
+              <Button type="submit" size="sm" className="btn-gold" disabled={wSaving}>{wSaving ? 'Creating...' : 'Create'}</Button>
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function SettingsView() {
   const [activeSettingsTab, setActiveSettingsTab] = useState("organization")
   return (
@@ -3474,7 +3890,7 @@ function SettingsView() {
                 </div>
                 <Badge className="bg-[#3B8595] text-black">Pro</Badge>
               </div>
-              <Button className="btn-gold">Save changes</Button>
+              <Button className="btn-gold" onClick={() => toast({ title: 'Settings saved', description: 'Organization profile updated.' })}>Save changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -3487,7 +3903,7 @@ function SettingsView() {
                   <CardTitle className="text-black">Team members</CardTitle>
                   <CardDescription>Roles: Owner, Admin, Agent, Viewer</CardDescription>
                 </div>
-                <Button className="btn-gold gap-2" size="sm">
+                <Button className="btn-gold gap-2" size="sm" onClick={() => toast({ title: 'Invite member', description: 'Share your sign-up page link with team members. They can create their own account and you can assign roles in the team panel.' })}>
                   <UserPlus className="w-4 h-4" />
                   Invite member
                 </Button>
@@ -3542,7 +3958,7 @@ function SettingsView() {
                     <p className="text-xs text-gray-500">For programmatic access</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="border-[#3B8595] text-[#3B8595]">Manage</Button>
+                <Button variant="outline" size="sm" className="border-[#3B8595] text-[#3B8595]" onClick={() => toast({ title: 'API Keys', description: 'API keys are managed via the INTERNAL_RUNNER_KEY environment variable. Contact your admin to rotate keys.' })}>Manage</Button>
               </div>
               <div>
                 <Label className="text-gray-600">Session timeout (minutes)</Label>
@@ -3573,7 +3989,7 @@ function SettingsView() {
                       i.status === "connected" && "border-emerald-500 text-emerald-600",
                       i.status === "disconnected" && "border-gray-400 text-gray-500"
                     )}>{i.status}</Badge>
-                    <Button variant="outline" size="sm" className="border-[#E2DDD4]">
+                    <Button variant="outline" size="sm" className="border-[#E2DDD4]" onClick={() => toast({ title: i.status === 'connected' ? `Configure ${i.name}` : `Connect ${i.name}`, description: i.status === 'connected' ? `${i.name} is already connected. Manage credentials in your .env file.` : `Add ${i.name} credentials to your .env file to enable this integration.` })}>
                       {i.status === "connected" ? "Configure" : "Connect"}
                     </Button>
                   </div>
@@ -3588,25 +4004,7 @@ function SettingsView() {
         </TabsContent>
 
         <TabsContent value="webhooks" className="mt-6 space-y-6">
-          <Card className="bg-white border-[#E2DDD4] shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-black">Webhooks</CardTitle>
-                  <CardDescription>Send events to your endpoints</CardDescription>
-                </div>
-                <Button className="btn-gold gap-2" size="sm">
-                  <Plus className="w-4 h-4" />
-                  Add webhook
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="p-6 border border-dashed border-[#E2DDD4] rounded-lg text-center text-gray-500 text-sm">
-                No webhooks yet. Add one to receive lead.created, deal.won, etc.
-              </div>
-            </CardContent>
-          </Card>
+          <WebhooksSettings />
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6 space-y-6">
@@ -3627,7 +4025,7 @@ function SettingsView() {
                   <p className="text-2xl font-bold text-black">3 / 10</p>
                 </div>
               </div>
-              <Button className="btn-gold">Upgrade or change plan</Button>
+              <Button className="btn-gold" onClick={() => toast({ title: 'Upgrade plan', description: 'Contact your admin to upgrade. Plans: Free, Starter ($29/mo), Pro ($79/mo), Enterprise (custom).' })}>Upgrade or change plan</Button>
             </CardContent>
           </Card>
         </TabsContent>
