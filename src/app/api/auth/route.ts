@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { randomBytes, createHash } from 'node:crypto'
+import { randomBytes, pbkdf2Sync, createHash } from 'node:crypto'
 
 function hashPassword(password: string, salt: string): string {
-  return createHash('sha256').update(password + salt).digest('hex')
+  // Derive a password hash using PBKDF2 to make brute-force attacks more expensive.
+  // Note: increase the iteration count over time as hardware gets faster.
+  const iterations = 100_000
+  const keyLength = 32 // 256-bit derived key
+  const derivedKey = pbkdf2Sync(password, salt, iterations, keyLength, 'sha256')
+  return derivedKey.toString('hex')
 }
 
 function generateToken(): string {
