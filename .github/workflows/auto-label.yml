@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
 
       - name: Label pull request
-        uses: actions/labeler@v5
+        uses: actions/labeler@6f7f39f7f1e76f8ad4ac2ffb5f3e30aea0a43d26 # v5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/labeler.yml

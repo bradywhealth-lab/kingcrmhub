@@ -17,16 +17,40 @@ permissions:
   contents: read
 
 jobs:
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
+            bun install
+          else
+            bun install --frozen-lockfile
+          fi
+
+      - name: Audit dependencies (fail on high/critical)
+        run: npm audit --audit-level=high
+
   lint:
     name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: latest
 
@@ -47,10 +71,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: latest
 
@@ -71,10 +95,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: latest
 
@@ -106,10 +130,10 @@ jobs:
       RUNNER_ORGANIZATION_ID: ci-org
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: latest
 

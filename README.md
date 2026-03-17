@@ -146,3 +146,4 @@ Built with ❤️ for the developer community. Supercharged by [Z.ai](https://ch
 For the full solo-maintainer operations guide and every GitHub workflow explanation, see:
 
 - `docs/automation/maintenance-workflows.md`
+- `docs/security.md`

@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v5
 
       - name: Detect dependency graph support
         id: graph
-        uses: actions/github-script@v8
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v8
         with:
           script: |
             try {
@@ -38,7 +38,7 @@ jobs:
 
       - name: Review dependencies
         if: steps.graph.outputs.enabled == 'true'
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@9b1aabf4ff4fe2fa72f5ed0a56f5a5a7217e87d2 # v4
         with:
           fail-on-severity: high
 

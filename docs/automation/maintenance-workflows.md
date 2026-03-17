@@ -11,6 +11,8 @@ This document explains exactly what automation was added, what each workflow doe
 - `.github/workflows/auto-label.yml`
 - `.github/workflows/issue-triage.yml`
 - `.github/workflows/stale.yml`
+- `.github/workflows/secret-scan.yml`
+- `.github/workflows/branch-protection.yml`
 - `.github/dependabot.yml`
 - `.github/labeler.yml`
 
@@ -23,12 +25,13 @@ This document explains exactly what automation was added, what each workflow doe
 
 ### What it does
 
-Runs four independent status-check jobs on every change:
+Runs five independent status-check jobs on every change:
 
-1. **`lint`**: install dependencies then run `bun run lint`
-2. **`typecheck`**: install dependencies then run `bun run typecheck` (a gate that blocks new TypeScript errors while allowing the current baseline debt)
-3. **`test`**: install dependencies then run `bun run test`
-4. **`build`**: install dependencies, run Prisma generate, then run `bun run build`
+1. **`dependency-audit`**: install dependencies then run `npm audit --audit-level=high`
+2. **`lint`**: install dependencies then run `bun run lint`
+3. **`typecheck`**: install dependencies then run `bun run typecheck` (a gate that blocks new TypeScript errors while allowing the current baseline debt)
+4. **`test`**: install dependencies then run `bun run test`
+5. **`build`**: install dependencies, run Prisma generate, then run `bun run build`
 
 Each job appears as a separate GitHub check, so branch protections can require them individually.
 For Dependabot-authored PRs, CI uses non-frozen `bun install` to avoid lockfile drift failures between `package-lock.json` and `bun.lock`.
@@ -162,7 +165,41 @@ For Dependabot-authored PRs, CI uses non-frozen `bun install` to avoid lockfile 
 - Keeps backlog clean and actionable.
 - Reduces noise for a solo maintainer.
 
-## 8) Dependabot (`dependabot.yml`)
+## 8) Secret scanning (`secret-scan.yml`)
+
+### Trigger
+
+- On `push` to `main` and `cursor/**`
+- On `pull_request` targeting `main`
+
+### What it does
+
+- Runs `gitleaks` in a dedicated workflow to detect leaked credentials and other sensitive tokens.
+- Fails the job whenever any secret finding is detected.
+
+### Why this helps
+
+- Catches accidental secret commits before merge.
+- Provides a dedicated, auditable security check for branch protection.
+
+## 9) Branch protection policy validation (`branch-protection.yml`)
+
+### Trigger
+
+- On `pull_request_target` to `main`
+- Manual `workflow_dispatch`
+
+### What it does
+
+- Verifies `main` branch protection configuration includes required security checks.
+- Fails if required checks are missing from the protected branch policy.
+
+### Why this helps
+
+- Prevents accidental weakening of merge gates.
+- Keeps security checks mandatory over time.
+
+## 10) Dependabot (`dependabot.yml`)
 
 ### Trigger
 
@@ -188,7 +225,7 @@ For Dependabot-authored PRs, CI uses non-frozen `bun install` to avoid lockfile 
 Recommended default loop:
 
 1. Dependabot opens update PRs.
-2. CI + Dependency Review + CodeQL validate risk.
+2. CI + dependency audit + Dependency Review + CodeQL + gitleaks validate risk.
 3. Auto-labeling adds scope labels.
 4. Merge only green PRs.
 5. Nightly workflow catches drift when no one is pushing code.
@@ -203,7 +240,11 @@ Recommended default loop:
   - `Status Checks / typecheck`
   - `Status Checks / test`
   - `Status Checks / build`
+  - `Status Checks / dependency-audit`
+  - `Secret Scan / gitleaks`
   - `Dependency Review / Block vulnerable dependency changes`
+  - `CodeQL / Analyze JavaScript/TypeScript`
+  - `Branch Protection Policy / enforce-security-required-checks`
 - Keep GitHub Security features enabled so CodeQL results are visible.
 
 ## Optional future upgrades

@@ -1,0 +1,55 @@
+name: Branch Protection Policy
+
+on:
+  pull_request_target:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enforce-security-required-checks:
+    name: enforce-security-required-checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required security checks for base branch
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = context.payload.pull_request?.base?.ref || "main";
+
+            const expectedChecks = [
+              "Status Checks / dependency-audit",
+              "Secret Scan / gitleaks",
+              "Dependency Review / Block vulnerable dependency changes",
+              "CodeQL / Analyze JavaScript/TypeScript",
+            ];
+
+            const { data: protection } = await github.rest.repos.getBranchProtection({
+              owner,
+              repo,
+              branch,
+            });
+
+            const contexts = new Set(protection.required_status_checks?.contexts || []);
+            const checks = new Set(
+              (protection.required_status_checks?.checks || []).map((check) => check.context)
+            );
+            const configured = new Set([...contexts, ...checks]);
+
+            const missing = expectedChecks.filter((name) => !configured.has(name));
+            if (missing.length > 0) {
+              core.setFailed(
+                [
+                  `Branch '${branch}' is missing required security checks in branch protection:`,
+                  ...missing.map((item) => `- ${item}`),
+                ].join("\n")
+              );
+              return;
+            }
+
+            core.info(`Branch '${branch}' protection includes all required security checks.`);

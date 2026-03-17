@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Mark stale issues and pull requests
-        uses: actions/stale@v10
+        uses: actions/stale@5ef3b7f5590d5fbdc9b63ecf4d8336f79f8f0fe8 # v10
         with:
           stale-issue-message: "This issue has been inactive for 30 days. It will close in 7 days unless updated."
           stale-pr-message: "This PR has been inactive for 21 days. It will close in 7 days unless updated."
