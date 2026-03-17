@@ -1,0 +1,39 @@
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/**"
+          - "src/components/**"
+          - "public/**"
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/lib/**"
+          - "src/app/api/**"
+          - "mini-services/**"
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "prisma/**"
+          - "prisma.config.ts"
+          - "scripts/apply-init-sql.mjs"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/*.test.ts"
+          - "vitest.config.ts"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "README.md"
+          - "docs/**"
+          - "**/*.md"
+
+automation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/release-gate.mjs"

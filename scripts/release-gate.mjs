@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process'
 
 const checks = [
   { label: 'Lint', command: 'npm', args: ['run', 'lint'] },
+  { label: 'Typecheck', command: 'npm', args: ['run', 'typecheck'] },
   { label: 'Build', command: 'npm', args: ['run', 'build'] },
   { label: 'Prisma generate', command: 'npm', args: ['run', 'db:generate'] },
   { label: 'Tests', command: 'npm', args: ['run', 'test'] },

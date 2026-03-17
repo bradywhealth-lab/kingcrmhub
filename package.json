@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "test": "vitest run",
     "lint": "eslint .",
+    "typecheck": "node scripts/typecheck-gate.mjs",
     "release-gate": "node scripts/release-gate.mjs",
     "db:push": "prisma db push",
     "db:apply:init": "node scripts/apply-init-sql.mjs",
