@@ -51,121 +51,121 @@
 }
 
 /* ============================================
-   ELITE DESIGN SYSTEM - LUXURY GOLD THEME
-   Light cream background with bright gold accents
+   ELITE DESIGN SYSTEM - SLATE TEAL THEME
+   Warm cream background with cool slate-teal accents
    ============================================ */
 
 :root {
   --radius: 0.5rem;
   
-  /* Luxury Gold & Cream Palette */
-  --gold: #D4AF37;
-  --gold-light: #F4D03F;
-  --gold-dark: #B8860B;
-  --gold-subtle: rgba(212, 175, 55, 0.15);
+  /* Primary Accent - Slate Teal (calm, professional, easy on the eyes) */
+  --gold: #3B8595;
+  --gold-light: #5BA3B3;
+  --gold-dark: #2A6A78;
+  --gold-subtle: rgba(59, 133, 149, 0.12);
   
-  /* Cream/Ivory Backgrounds */
-  --cream: #FEFCF6;
-  --cream-dark: #F8F4E8;
-  --cream-darker: #F0EBE0;
+  /* Cream/Ivory Backgrounds (kept warm and inviting) */
+  --cream: #FDFBF7;
+  --cream-dark: #F5F1EA;
+  --cream-darker: #ECE7DE;
   
-  /* Pure blacks and whites */
-  --black: #0A0A0A;
+  /* Slate tones */
+  --black: #1E293B;
   --white: #FFFFFF;
   
-  /* Base Theme - Light Cream with Gold Accents */
-  --background: #FEFCF6;
-  --foreground: #0A0A0A;
+  /* Base Theme - Warm Cream with Slate Teal Accents */
+  --background: #FDFBF7;
+  --foreground: #1E293B;
   --card: #FFFFFF;
-  --card-foreground: #0A0A0A;
+  --card-foreground: #1E293B;
   --popover: #FFFFFF;
-  --popover-foreground: #0A0A0A;
+  --popover-foreground: #1E293B;
   
-  /* Primary Accent - Bright Gold */
-  --primary: #D4AF37;
-  --primary-foreground: #0A0A0A;
+  /* Primary Accent - Slate Teal */
+  --primary: #3B8595;
+  --primary-foreground: #FFFFFF;
   
-  /* Secondary - Black */
-  --secondary: #0A0A0A;
+  /* Secondary - Warm Slate */
+  --secondary: #334155;
   --secondary-foreground: #FFFFFF;
   
   /* Muted - Cream tones */
-  --muted: #F8F4E8;
-  --muted-foreground: #6B6B6B;
-  --accent: #F0EBE0;
-  --accent-foreground: #0A0A0A;
+  --muted: #F5F1EA;
+  --muted-foreground: #64748B;
+  --accent: #ECE7DE;
+  --accent-foreground: #1E293B;
   
   /* Semantic Colors */
   --destructive: #DC2626;
   --success: #059669;
-  --warning: #D4AF37;
+  --warning: #D97706;
   --info: #0284C7;
   
   /* Borders & Inputs */
-  --border: #E8E4D9;
-  --input: #E8E4D9;
-  --ring: #D4AF37;
+  --border: #E2DDD4;
+  --input: #E2DDD4;
+  --ring: #3B8595;
   
-  /* Charts - Gold-centric palette */
-  --chart-1: #D4AF37;
-  --chart-2: #0A0A0A;
-  --chart-3: #B8860B;
-  --chart-4: #F4D03F;
-  --chart-5: #8B7355;
+  /* Charts - Balanced professional palette */
+  --chart-1: #3B8595;
+  --chart-2: #334155;
+  --chart-3: #059669;
+  --chart-4: #8B5CF6;
+  --chart-5: #D97706;
   
-  /* Sidebar - Premium dark for contrast */
-  --sidebar: #0A0A0A;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #D4AF37;
-  --sidebar-primary-foreground: #0A0A0A;
-  --sidebar-accent: #1A1A1A;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #2A2A2A;
-  --sidebar-ring: #D4AF37;
+  /* Sidebar - Deep slate for elegant contrast */
+  --sidebar: #1E293B;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #5BA3B3;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #E2E8F0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #3B8595;
 }
 
-/* Dark mode - Optional (user can toggle) */
+/* Dark mode */
 .dark {
-  --background: #0A0A0A;
-  --foreground: #FFFFFF;
-  --card: #141414;
-  --card-foreground: #FFFFFF;
-  --popover: #141414;
-  --popover-foreground: #FFFFFF;
+  --background: #0F172A;
+  --foreground: #E2E8F0;
+  --card: #1E293B;
+  --card-foreground: #E2E8F0;
+  --popover: #1E293B;
+  --popover-foreground: #E2E8F0;
   
-  --primary: #D4AF37;
-  --primary-foreground: #0A0A0A;
+  --primary: #5BA3B3;
+  --primary-foreground: #0F172A;
   
-  --secondary: #1A1A1A;
-  --secondary-foreground: #FFFFFF;
-  --muted: #1A1A1A;
-  --muted-foreground: #A0A0A0;
-  --accent: #2A2A2A;
-  --accent-foreground: #FFFFFF;
+  --secondary: #334155;
+  --secondary-foreground: #E2E8F0;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #334155;
+  --accent-foreground: #E2E8F0;
   
   --destructive: #EF4444;
   --success: #10B981;
-  --warning: #D4AF37;
+  --warning: #F59E0B;
   --info: #0EA5E9;
   
-  --border: #2A2A2A;
-  --input: #2A2A2A;
-  --ring: #D4AF37;
+  --border: #334155;
+  --input: #334155;
+  --ring: #5BA3B3;
   
-  --chart-1: #D4AF37;
-  --chart-2: #FFFFFF;
-  --chart-3: #B8860B;
-  --chart-4: #F4D03F;
-  --chart-5: #8B7355;
+  --chart-1: #5BA3B3;
+  --chart-2: #E2E8F0;
+  --chart-3: #10B981;
+  --chart-4: #A78BFA;
+  --chart-5: #F59E0B;
   
-  --sidebar: #0A0A0A;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #D4AF37;
-  --sidebar-primary-foreground: #0A0A0A;
-  --sidebar-accent: #1A1A1A;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #2A2A2A;
-  --sidebar-ring: #D4AF37;
+  --sidebar: #0F172A;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #5BA3B3;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #E2E8F0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #5BA3B3;
 }
 
 @layer base {
@@ -178,7 +178,7 @@
   }
 }
 
-/* Elite Scrollbar - Gold accent */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -189,25 +189,25 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gold);
+  background: #94A3B8;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gold-dark);
+  background: var(--gold);
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #1A1A1A;
+  background: #1E293B;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #B8860B;
+  background: #475569;
 }
 
-/* AI Glow Effects - Gold */
+/* AI Glow Effects */
 .ai-glow {
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4), 0 0 40px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 0 20px rgba(59, 133, 149, 0.3), 0 0 40px rgba(59, 133, 149, 0.15);
 }
 
 .ai-glow-success {
@@ -215,31 +215,31 @@
 }
 
 .ai-glow-warning {
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4), 0 0 40px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.4), 0 0 40px rgba(217, 119, 6, 0.2);
 }
 
 /* Glass Effect */
 .glass {
-  background: rgba(254, 252, 246, 0.9);
+  background: rgba(253, 251, 247, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(59, 133, 149, 0.15);
 }
 
 .dark .glass {
-  background: rgba(20, 20, 20, 0.9);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(91, 163, 179, 0.2);
 }
 
-/* Gradient Text - Gold */
+/* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, #D4AF37, #F4D03F);
+  background: linear-gradient(135deg, #3B8595, #5BA3B3);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Animated Gradient Border - Gold */
+/* Animated Gradient Border */
 .gradient-border {
   position: relative;
   background: var(--card);
@@ -251,7 +251,7 @@
   inset: 0;
   border-radius: inherit;
   padding: 2px;
-  background: linear-gradient(135deg, #D4AF37, #F4D03F, #D4AF37);
+  background: linear-gradient(135deg, #3B8595, #5BA3B3, #3B8595);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -259,24 +259,24 @@
   pointer-events: none;
 }
 
-/* Gold Button Style */
+/* Primary Button Style */
 .btn-gold {
-  background: linear-gradient(135deg, #D4AF37, #F4D03F);
-  color: #0A0A0A;
+  background: linear-gradient(135deg, #3B8595, #5BA3B3);
+  color: #FFFFFF;
   font-weight: 600;
   border: none;
   transition: all 0.2s ease;
 }
 
 .btn-gold:hover {
-  background: linear-gradient(135deg, #B8860B, #D4AF37);
+  background: linear-gradient(135deg, #2A6A78, #3B8595);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 4px 12px rgba(59, 133, 149, 0.35);
 }
 
-/* Black Button Style */
+/* Dark Button Style */
 .btn-black {
-  background: #0A0A0A;
+  background: #334155;
   color: #FFFFFF;
   font-weight: 500;
   border: none;
@@ -284,9 +284,9 @@
 }
 
 .btn-black:hover {
-  background: #1A1A1A;
+  background: #1E293B;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(30, 41, 59, 0.3);
 }
 
 /* Shimmer Loading Effect */
@@ -313,9 +313,9 @@
 .dark .animate-shimmer {
   background: linear-gradient(
     90deg,
-    #1A1A1A 25%,
-    #2A2A2A 50%,
-    #1A1A1A 75%
+    #1E293B 25%,
+    #334155 50%,
+    #1E293B 75%
   );
   background-size: 200% 100%;
 }
@@ -324,11 +324,11 @@
 @keyframes pulse-ai {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    box-shadow: 0 0 20px rgba(59, 133, 149, 0.3);
   }
   50% {
     opacity: 0.9;
-    box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 30px rgba(59, 133, 149, 0.5);
   }
 }
 
@@ -345,27 +345,27 @@
 .card-hover:hover {
   transform: translateY(-2px);
   border-color: var(--gold);
-  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.15);
+  box-shadow: 0 8px 24px rgba(59, 133, 149, 0.12);
 }
 
-/* Status Badge Colors - Gold Theme */
+/* Status Badge Colors */
 .status-new {
-  background: #0A0A0A;
+  background: #334155;
   color: #FFFFFF;
 }
 
 .status-hot {
-  background: linear-gradient(135deg, #D4AF37, #F4D03F);
-  color: #0A0A0A;
+  background: linear-gradient(135deg, #3B8595, #5BA3B3);
+  color: #FFFFFF;
 }
 
 .status-qualified {
-  background: #D4AF37;
-  color: #0A0A0A;
+  background: #3B8595;
+  color: #FFFFFF;
 }
 
 .status-nurture {
-  background: #8B7355;
+  background: #64748B;
   color: #FFFFFF;
 }
 
@@ -385,20 +385,20 @@
 }
 
 .status-negotiation {
-  background: #1A1A1A;
-  color: #D4AF37;
+  background: #7C3AED;
+  color: #FFFFFF;
 }
 
-/* Kanban Column Colors - Gold Theme */
-.kanban-new { border-top: 3px solid #0A0A0A; }
-.kanban-contacted { border-top: 3px solid #6B7280; }
-.kanban-qualified { border-top: 3px solid #D4AF37; }
+/* Kanban Column Colors */
+.kanban-new { border-top: 3px solid #334155; }
+.kanban-contacted { border-top: 3px solid #64748B; }
+.kanban-qualified { border-top: 3px solid #3B8595; }
 .kanban-proposal { border-top: 3px solid #0284C7; }
-.kanban-negotiation { border-top: 3px solid #8B7355; }
+.kanban-negotiation { border-top: 3px solid #7C3AED; }
 .kanban-won { border-top: 3px solid #059669; }
 .kanban-lost { border-top: 3px solid #DC2626; }
 
-/* Focus States - Accessibility with Gold ring */
+/* Focus States */
 .focus-ring:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
@@ -414,7 +414,7 @@
   text-wrap: balance;
 }
 
-/* Gold underline for links */
+/* Accent underline for links */
 .link-gold {
   position: relative;
   color: var(--gold-dark);
@@ -436,7 +436,7 @@
   width: 100%;
 }
 
-/* Premium card with gold border */
+/* Premium card */
 .card-premium {
   background: var(--white);
   border: 1px solid var(--border);
@@ -452,16 +452,16 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #D4AF37, #F4D03F, #D4AF37);
+  background: linear-gradient(90deg, #3B8595, #5BA3B3, #3B8595);
 }
 
-/* Luxury divider */
+/* Divider */
 .divider-gold {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+  background: linear-gradient(90deg, transparent, #3B8595, transparent);
 }
 
-/* Score indicator with gold */
+/* Score indicator */
 .score-indicator {
   position: relative;
   width: 100%;
@@ -477,7 +477,7 @@
   left: 0;
   top: 0;
   height: 100%;
-  background: linear-gradient(90deg, #0A0A0A, #D4AF37);
+  background: linear-gradient(90deg, #334155, #3B8595);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
