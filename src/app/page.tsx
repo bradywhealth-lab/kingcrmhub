@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   LayoutDashboard, Users, GitBranch, Brain, Share2, Settings,
@@ -174,7 +175,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // Sidebar Component
-function Sidebar({ activeView, setActiveView }: { activeView: string; setActiveView: (v: string) => void }) {
+function Sidebar({ activeView, setActiveView, userName, userRole, onSignOut }: { activeView: string; setActiveView: (v: string) => void; userName?: string | null; userRole?: string | null; onSignOut?: () => void }) {
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   
   const menuItems = [
@@ -258,7 +259,7 @@ function Sidebar({ activeView, setActiveView }: { activeView: string; setActiveV
           !sidebarOpen && "justify-center"
         )}>
           <Avatar className="w-9 h-9 border-2 border-[#3B8595]">
-            <AvatarFallback className="bg-[#3B8595] text-black font-semibold">JD</AvatarFallback>
+            <AvatarFallback className="bg-[#3B8595] text-white font-semibold">{(userName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <AnimatePresence mode="wait">
             {sidebarOpen && (
@@ -268,11 +269,16 @@ function Sidebar({ activeView, setActiveView }: { activeView: string; setActiveV
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <p className="text-sm font-medium text-white truncate">John Doe</p>
-                <p className="text-xs text-[#3B8595] truncate">Admin</p>
+                <p className="text-sm font-medium text-white truncate">{userName || 'User'}</p>
+                <p className="text-xs text-[#3B8595] truncate capitalize">{userRole || 'Agent'}</p>
               </motion.div>
             )}
           </AnimatePresence>
+          {sidebarOpen && onSignOut && (
+            <button onClick={onSignOut} className="text-slate-400 hover:text-white p-1" title="Sign out">
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </motion.aside>
@@ -3388,6 +3394,36 @@ function AddLeadDialog({
 
 // Main App
 export default function EliteCRM() {
+  const router = useRouter()
+  const [authChecked, setAuthChecked] = useState(false)
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string | null; role: string; organizationId: string } | null>(null)
+  const [currentOrg, setCurrentOrg] = useState<{ id: string; name: string; slug: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/auth')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          setCurrentUser(data.user)
+          setCurrentOrg(data.organization || null)
+        } else if (process.env.NODE_ENV === 'production' || !process.env.NEXT_PUBLIC_SKIP_AUTH) {
+          router.push('/auth')
+          return
+        }
+        setAuthChecked(true)
+      })
+      .catch(() => setAuthChecked(true))
+  }, [router])
+
+  const handleSignOut = useCallback(async () => {
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'signout' }),
+    })
+    router.push('/auth')
+  }, [router])
+
   const [activeView, setActiveView] = useState("dashboard")
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false)
@@ -3534,9 +3570,20 @@ export default function EliteCRM() {
     }
   }
   
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-3 border-[#3B8595]/30 border-t-[#3B8595] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#64748B]">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} />
+      <Sidebar activeView={activeView} setActiveView={setActiveView} userName={currentUser?.name || currentUser?.email} userRole={currentUser?.role} onSignOut={handleSignOut} />
       <div
         className="transition-all duration-300"
         style={{ marginLeft: sidebarOpen ? 260 : 80 }}
