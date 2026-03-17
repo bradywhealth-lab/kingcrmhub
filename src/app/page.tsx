@@ -43,6 +43,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from "recharts"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CommandPalette, useCommandPalette } from "@/components/command-palette"
+import { AutomationView } from "@/components/automation/automation-view"
 import { triggerWinCelebration, triggerSmallCelebration } from "@/lib/celebrations"
 import { toast } from "@/hooks/use-toast"
 
@@ -2215,45 +2216,6 @@ function CreateLinearIssueDialog({
 }
 
 // Placeholder views for other sections
-function AutomationView() {
-  return (
-    <div className="p-6 space-y-6 bg-[#FDFBF7] min-h-screen">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-black">AI Automation</h1>
-          <p className="text-gray-500">Automate your workflows with intelligent triggers</p>
-        </div>
-        <Button className="btn-gold gap-2">
-          <Plus className="w-4 h-4" />
-          Create Automation
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { title: "Active Automations", value: 12, icon: Zap },
-          { title: "Runs This Month", value: 1234, icon: Activity },
-          { title: "AI Accuracy", value: "94%", icon: Brain },
-        ].map((stat) => (
-          <Card key={stat.title} className="bg-white border-[#E2DDD4] shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#3B8595]/20 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-[#3B8595]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-black">{stat.value}</p>
-                  <p className="text-sm text-gray-500">{stat.title}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function SocialMediaView() {
   type QueueItem = {
     id: string
