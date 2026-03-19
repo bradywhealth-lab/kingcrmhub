@@ -25,21 +25,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: |
-          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
-            bun install
-          else
-            bun install --frozen-lockfile
-          fi
+        run: npm ci
 
       - name: Run lint
-        run: bun run lint
+        run: npm run lint
 
   typecheck:
     name: typecheck
@@ -49,21 +45,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: |
-          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
-            bun install
-          else
-            bun install --frozen-lockfile
-          fi
+        run: npm ci
 
-      - name: Run typecheck (strict, no baseline)
-        run: bunx tsc --noEmit --project tsconfig.typecheck.json --pretty false
+      - name: Run typecheck
+        run: npm run typecheck
 
   test:
     name: test
@@ -73,21 +65,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: |
-          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
-            bun install
-          else
-            bun install --frozen-lockfile
-          fi
+        run: npm ci
 
       - name: Run tests
-        run: bun run test
+        run: npm run test
 
   build:
     name: build
@@ -108,21 +96,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: |
-          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
-            bun install
-          else
-            bun install --frozen-lockfile
-          fi
+        run: npm ci
 
       - name: Generate Prisma client
-        run: bun run db:generate
+        run: npm run db:generate
 
       - name: Run build
-        run: bun run build
+        run: npm run build

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { zaiChatJson } from '@/lib/zai'
+import { buildKnowledgeCitations, type KnowledgeCitation, type PlaybookCitation } from './citations'
 
 const carrierPlaybookSchema = z.object({
   leadId: z.string().min(1),
@@ -33,14 +34,7 @@ type PlaybookResponse = {
     emailBody: string
   }
   nextActions: string[]
-  citations: Array<{
-    carrierId: string | null
-    carrierName: string
-    documentId: string
-    documentName: string
-    chunkIndex: number
-    snippet: string
-  }>
+  citations: PlaybookCitation[]
 }
 
 function safeJsonParse<T>(input: string): T | null {
@@ -117,18 +111,9 @@ type RetrievedChunk = {
   content: string
 }
 
-type KnowledgeCitation = {
-  carrierId: string | null
-  carrierName: string
-  documentId: string
-  documentName: string
-  chunkIndex: number
-  snippet: string
-}
 function isRetrievedChunk(value: RetrievedChunk | null): value is RetrievedChunk {
   return value !== null
 }
-
 function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[a-z0-9]{3,}/g) || []).slice(0, 500)
 }
@@ -218,20 +203,6 @@ function calibrateConfidence(baseLeadScore: number, evidenceCount: number, topEv
   const evidenceSignal = Math.min(0.2, evidenceCount * 0.03)
   const qualitySignal = Math.min(0.12, Math.max(0, topEvidenceScore) * 0.8)
   return Math.max(0.5, Math.min(0.96, scoreSignal + evidenceSignal + qualitySignal))
-}
-
-export function buildKnowledgeCitations(knowledgeContext: KnowledgeCitation[]): PlaybookResponse['citations'] {
-  return knowledgeContext
-    .filter((citation) => citation.snippet.trim().length >= 50)
-    .map((citation) => ({
-      carrierId: citation.carrierId,
-      carrierName: citation.carrierName,
-      documentId: citation.documentId,
-      documentName: citation.documentName,
-      chunkIndex: citation.chunkIndex,
-      snippet: citation.snippet,
-    }))
-    .slice(0, 6)
 }
 
 function normalizeCitations(

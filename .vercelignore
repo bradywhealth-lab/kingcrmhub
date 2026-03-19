@@ -1,0 +1,15 @@
+.claude
+.cursor
+.github
+.next
+coverage
+db
+docs
+download
+upload
+dev.db
+prisma/dev.db
+*.log
+cursor_sessionhandoff.md
+pastinsurafuzecursorchats
+worklog.md

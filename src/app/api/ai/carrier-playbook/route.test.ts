@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildKnowledgeCitations } from './route'
+import { buildKnowledgeCitations } from './citations'
 
 describe('buildKnowledgeCitations', () => {
   it('keeps only schema fields and drops short snippets', () => {
