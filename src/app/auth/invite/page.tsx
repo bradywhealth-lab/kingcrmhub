@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export default function InviteAcceptancePage() {
+function InviteAcceptanceContent() {
   const router = useRouter()
   const params = useSearchParams()
   const token = params.get('token') || ''
@@ -74,5 +74,28 @@ export default function InviteAcceptancePage() {
         </Card>
       </div>
     </main>
+  )
+}
+
+function InviteAcceptanceFallback() {
+  return (
+    <main className="min-h-screen bg-[#EFF4FB] text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-xl items-center justify-center px-6 py-16">
+        <Card className="w-full border-[#D7DFEA] bg-white shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold text-black">Accept Team Invitation</CardTitle>
+            <CardDescription>Loading your invite details…</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    </main>
+  )
+}
+
+export default function InviteAcceptancePage() {
+  return (
+    <Suspense fallback={<InviteAcceptanceFallback />}>
+      <InviteAcceptanceContent />
+    </Suspense>
   )
 }

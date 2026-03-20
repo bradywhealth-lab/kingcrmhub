@@ -13,16 +13,27 @@ const rlsTxStorage = new AsyncLocalStorage<PrismaClient>()
 let usingLocalSqlite = false
 
 function buildPostgresConnectionString(databaseUrl: string): string {
-  const url = new URL(databaseUrl)
-  const shouldRelaxTls =
-    process.env.NODE_ENV !== 'production' &&
-    url.hostname.includes('supabase.com')
+  try {
+    const url = new URL(databaseUrl)
+    const hostname = url.hostname.toLowerCase()
+    const isSupabaseHost =
+      hostname.endsWith('.supabase.com') ||
+      hostname.endsWith('.supabase.co') ||
+      hostname === 'supabase.com' ||
+      hostname === 'supabase.co'
 
-  if (shouldRelaxTls) {
-    url.searchParams.set('sslmode', 'no-verify')
+    const shouldRelaxTls =
+      process.env.NODE_ENV !== 'production' &&
+      isSupabaseHost
+
+    if (shouldRelaxTls) {
+      url.searchParams.set('sslmode', 'no-verify')
+    }
+
+    return url.toString()
+  } catch {
+    return databaseUrl
   }
-
-  return url.toString()
 }
 
 function createPrismaClient(): PrismaClient {
