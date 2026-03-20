@@ -22,8 +22,10 @@ function buildPostgresConnectionString(databaseUrl: string): string {
       hostname === 'supabase.com' ||
       hostname === 'supabase.co'
     const isSupabasePoolerHost =
-      hostname.includes('.pooler.supabase.com') ||
-      hostname.includes('.pooler.supabase.co')
+      hostname === 'pooler.supabase.com' ||
+      hostname === 'pooler.supabase.co' ||
+      hostname.endsWith('.pooler.supabase.com') ||
+      hostname.endsWith('.pooler.supabase.co')
 
     const shouldRelaxTls =
       isSupabasePoolerHost ||
@@ -70,9 +72,7 @@ function getBaseClient(): PrismaClient {
   }
 
   const client = createPrismaClient()
-  if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.prisma = client
-  }
+  globalForPrisma.prisma = client
   return client
 }
 
