@@ -1,5 +1,14 @@
 import { defineConfig } from "prisma/config";
 
+// Load .env.local for DATABASE_URL
+import { config } from "dotenv";
+import path from "path";
+
+// Try loading from .env.local first, then fall back to .env
+const envPath = path.resolve(process.cwd(), ".env.local");
+config({ path: envPath });
+config();
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
