@@ -21,13 +21,19 @@ function buildPostgresConnectionString(databaseUrl: string): string {
       hostname.endsWith('.supabase.co') ||
       hostname === 'supabase.com' ||
       hostname === 'supabase.co'
+    const isSupabasePoolerHost =
+      hostname.includes('.pooler.supabase.com') ||
+      hostname.includes('.pooler.supabase.co')
 
     const shouldRelaxTls =
-      process.env.NODE_ENV !== 'production' &&
-      isSupabaseHost
+      isSupabasePoolerHost ||
+      (process.env.NODE_ENV !== 'production' && isSupabaseHost)
 
     if (shouldRelaxTls) {
       url.searchParams.set('sslmode', 'no-verify')
+      url.searchParams.delete('sslcert')
+      url.searchParams.delete('sslkey')
+      url.searchParams.delete('sslrootcert')
     }
 
     return url.toString()
