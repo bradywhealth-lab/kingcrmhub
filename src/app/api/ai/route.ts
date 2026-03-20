@@ -21,16 +21,12 @@ function extractJsonObject(text: string | null): Record<string, unknown> | null 
 }
 
 
-function isChatMessageArray(value: unknown): value is Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
-  return Array.isArray(value) && value.every((item) => {
-    if (!item || typeof item !== 'object') return false
-    const candidate = item as { role?: unknown; content?: unknown }
-    return (
-      typeof candidate.content === 'string' &&
-      (candidate.role === 'system' || candidate.role === 'user' || candidate.role === 'assistant')
-    )
-  })
-}
+const chatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string().min(1),
+})
+
+const chatMessagesSchema = z.array(chatMessageSchema).nonempty()
 
 // AI API using z-ai-web-dev-sdk
 export async function POST(request: NextRequest) {
@@ -204,7 +200,14 @@ Provide 3-5 insights in JSON format:
       
       case 'chat': {
         const { messages, context } = data
-        const safeMessages = isChatMessageArray(messages) ? messages : []
+        const messagesResult = chatMessagesSchema.safeParse(messages)
+        if (!messagesResult.success) {
+          return NextResponse.json(
+            { error: 'Invalid messages: must be a non-empty array of {role: "user"|"assistant", content: string}' },
+            { status: 400 },
+          )
+        }
+        const safeMessages = messagesResult.data
 
         const systemPrompt = `You are an AI assistant for EliteCRM, a sophisticated CRM system.
 You help users manage leads, analyze data, and optimize their sales process.
