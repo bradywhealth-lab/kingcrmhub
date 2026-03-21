@@ -30,7 +30,7 @@ export async function retrieveSimilarEvents(
 ): Promise<RetrievedEvent[]> {
   // Generate embedding for query
   const queryText = JSON.stringify(queryInput)
-  const queryEmbedding = generateEmbedding(queryText)
+  const queryEmbedding = await generateEmbedding(queryText)
 
   // Get user's profile
   const profile = await db.userAIProfile.findUnique({

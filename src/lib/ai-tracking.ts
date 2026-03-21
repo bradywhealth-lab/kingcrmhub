@@ -56,7 +56,7 @@ export async function trackAIEvent(input: TrackEventInput) {
 
   // Generate embedding for the event (combines input and output for semantic similarity)
   const eventText = JSON.stringify({ input: input.input, output: input.output })
-  const embedding = generateEmbedding(eventText)
+  const embedding = await generateEmbedding(eventText)
 
   const event = await db.userLearningEvent.create({
     data: {
