@@ -9,6 +9,8 @@ import { Pinecone as PineconeSDK } from '@pinecone-database/pinecone'
 
 // Configuration
 const PINECONE_INDEX = process.env.PINECONE_INDEX || 'kingcrm-ai-events'
+// PINECONE_ENVIRONMENT is kept for reference but not used in SDK v7
+// SDK v7 automatically determines the environment from the index configuration
 const PINECONE_ENVIRONMENT = process.env.PINECONE_ENVIRONMENT || 'us-east-1-aws'
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY
 
@@ -109,20 +111,23 @@ export class PineconeClient {
       const index = this.getIndex()
       const namespace = this.getNamespace(metadata.organizationId)
 
-      await index.upsert([
-        {
-          id: eventId,
-          values: embedding,
-          metadata: {
-            userId: metadata.userId,
-            eventType: metadata.eventType,
-            entityType: metadata.entityType,
-            entityId: metadata.entityId,
-            outcome: metadata.outcome || '',
-            createdAt: metadata.createdAt
+      await index.upsert({
+        records: [
+          {
+            id: eventId,
+            values: embedding,
+            metadata: {
+              userId: metadata.userId,
+              eventType: metadata.eventType,
+              entityType: metadata.entityType,
+              entityId: metadata.entityId,
+              outcome: metadata.outcome || '',
+              createdAt: metadata.createdAt
+            }
           }
-        }
-      ], { namespace })
+        ],
+        namespace
+      })
 
       console.log(`Upserted event ${eventId} to Pinecone namespace ${namespace}`)
     } catch (error) {
@@ -149,7 +154,7 @@ export class PineconeClient {
       const index = this.getIndex()
 
       // Group by organization for namespace efficiency
-      const byOrg = new Map<string, Array<{id: string, values: number[], metadata: object}>>()
+      const byOrg = new Map<string, Array<{id: string, values: number[], metadata: Record<string, string | number | boolean> }>>()
 
       for (const event of events) {
         const namespace = this.getNamespace(event.metadata.organizationId)
@@ -171,8 +176,9 @@ export class PineconeClient {
       }
 
       // Upsert to each namespace
-      for (const [namespace, records] of byOrg.entries()) {
-        await index.upsert(records, { namespace })
+      const entries = Array.from(byOrg.entries())
+      for (const [namespace, records] of entries) {
+        await index.upsert({ records, namespace })
         console.log(`Batch upserted ${records.length} events to Pinecone namespace ${namespace}`)
       }
     } catch (error) {
@@ -261,7 +267,7 @@ export class PineconeClient {
       const index = this.getIndex()
       const namespace = this.getNamespace(organizationId)
 
-      await index.deleteOne(eventId, { namespace })
+      await index.deleteOne({ id: eventId, namespace })
       console.log(`Deleted event ${eventId} from Pinecone namespace ${namespace}`)
     } catch (error) {
       console.error('Failed to delete event from Pinecone:', error)
