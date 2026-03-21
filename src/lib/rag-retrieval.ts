@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { generateEmbedding, cosineSimilarity } from './embeddings'
+import { PineconeClient, PineconeSearchResult } from './pinecone-client'
 
 export interface RetrievedEvent {
   id: string
@@ -16,18 +17,33 @@ export interface RetrievedEvent {
  * This enables RAG (Retrieval Augmented Generation) by finding
  * historically similar interactions that can inform new content generation.
  *
+ * Priority order:
+ * 1. Pinecone vector search (if enabled and available)
+ * 2. PostgreSQL fallback with local similarity calculation
+ *
  * @param userId - User to search events for
  * @param queryInput - Input context to find similar events for
  * @param eventType - Optional event type filter
  * @param limit - Maximum number of results (default: 5)
+ * @param options - Optional configuration for retrieval behavior
  * @returns Ranked list of similar events with similarity scores
  */
 export async function retrieveSimilarEvents(
   userId: string,
   queryInput: Record<string, unknown>,
   eventType?: string,
-  limit = 5
+  limit = 5,
+  options?: {
+    usePinecone?: boolean
+    minSimilarity?: number
+    organizationId?: string
+  }
 ): Promise<RetrievedEvent[]> {
+  // Extract options with defaults
+  const usePinecone = options?.usePinecone !== false // Default to true (opt-out)
+  const minSimilarity = options?.minSimilarity ?? 0.5
+  const organizationId = options?.organizationId
+
   // Generate embedding for query
   const queryText = JSON.stringify(queryInput)
   const queryEmbedding = await generateEmbedding(queryText)
@@ -35,11 +51,84 @@ export async function retrieveSimilarEvents(
   // Get user's profile
   const profile = await db.userAIProfile.findUnique({
     where: { userId },
+    include: {
+      user: {
+        select: {
+          organizationId: true,
+        },
+      },
+    },
   })
 
-  if (!profile) return []
+  if (!profile || !profile.user) return []
 
-  // Get recent events with embeddings
+  const orgId = organizationId || profile.user.organizationId
+  if (!orgId) {
+    console.warn('No organization ID found for user, skipping retrieval')
+    return []
+  }
+
+  // Try Pinecone first if enabled and available
+  if (usePinecone && PineconeClient.isAvailable()) {
+    try {
+      const pineconeResults = await PineconeClient.searchSimilar(
+        queryEmbedding,
+        userId,
+        orgId,
+        eventType ? { eventType } : undefined,
+        limit * 2 // Fetch more to account for filtering
+      )
+
+      if (pineconeResults.length > 0) {
+        // Extract event IDs from Pinecone format (orgId_eventId)
+        const eventIds = pineconeResults.map((r) => {
+          // ID format: ${organizationId}_${eventId}
+          // Use substring to correctly extract eventId after orgId_ prefix
+          return r.eventId.substring(orgId.length + 1)
+        })
+
+        // Fetch full event details from PostgreSQL
+        const events = await db.userLearningEvent.findMany({
+          where: {
+            id: { in: eventIds },
+          },
+        })
+
+        // Merge Pinecone scores with event data
+        const results: RetrievedEvent[] = events
+          .map((event) => {
+            const pineconeResult = pineconeResults.find(
+              (pr) => pr.eventId === `${orgId}_${event.id}`
+            )
+
+            if (!pineconeResult || pineconeResult.score < minSimilarity) {
+              return null
+            }
+
+            return {
+              id: event.id,
+              eventType: event.eventType,
+              input: event.input as Record<string, unknown>,
+              output: event.output as Record<string, unknown>,
+              outcome: event.outcome,
+              similarity: pineconeResult.score,
+            }
+          })
+          .filter((e): e is RetrievedEvent => e !== null)
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, limit)
+
+        if (results.length > 0) {
+          return results
+        }
+      }
+    } catch (error) {
+      console.error('Pinecone search failed, falling back to PostgreSQL:', error)
+      // Fall through to PostgreSQL fallback
+    }
+  }
+
+  // PostgreSQL fallback: Get recent events with embeddings
   const events = await db.userLearningEvent.findMany({
     where: {
       userProfileId: profile.id,
@@ -66,7 +155,7 @@ export async function retrieveSimilarEvents(
         similarity,
       }
     })
-    .filter((e): e is RetrievedEvent => e !== null && e.similarity > 0.5)
+    .filter((e): e is RetrievedEvent => e !== null && e.similarity >= minSimilarity)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit)
 
