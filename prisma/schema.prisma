@@ -1146,9 +1146,13 @@ model UserLearningEvent {
   createdAt DateTime  @default(now())
   outcomeAt DateTime?
 
+  // Pinecone Vector ID
+  pineconeId String? @unique
+
   @@index([userProfileId])
   @@index([eventType])
   @@index([createdAt])
+  @@index([pineconeId])
 }
 
 model ScrapingSourcePerformance {
