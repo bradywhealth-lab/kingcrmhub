@@ -88,6 +88,7 @@ model Lead {
   lastName  String?
   email     String?
   phone     String?
+  smsOptOut Boolean @default(false) // SMS communication opt-out
   company   String?
   title     String?
   website   String?
