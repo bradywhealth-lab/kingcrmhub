@@ -11,11 +11,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { handleIncomingSMS, updateMessageStatus } from '@/lib/sms'
+import twilio from 'twilio'
 
-/**
- * Helper to parse URL-encoded form data
- */
-async function parseFormData(request: NextRequest): Promise<Record<string, string>> {
+async function parseFormData(request: NextRequest): Promise<{ data: Record<string, string>; params: URLSearchParams }> {
   const text = await request.text()
   const params = new URLSearchParams(text)
   const result: Record<string, string> = {}
@@ -24,12 +22,26 @@ async function parseFormData(request: NextRequest): Promise<Record<string, strin
     result[key] = value
   }
 
-  return result
+  return { data: result, params }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await parseFormData(request)
+    const authToken = process.env.TWILIO_AUTH_TOKEN?.trim()
+    if (!authToken) {
+      return NextResponse.json({ error: 'Twilio not configured' }, { status: 500 })
+    }
+
+    const signature = request.headers.get('x-twilio-signature')
+    if (!signature) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 401 })
+    }
+
+    const { data, params } = await parseFormData(request)
+    const valid = twilio.validateRequest(authToken, signature, request.url, Object.fromEntries(params))
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 401 })
+    }
 
     // Determine webhook type based on presence of certain fields
     // MessageSid + MessageStatus = status callback

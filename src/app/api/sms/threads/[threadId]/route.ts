@@ -10,11 +10,11 @@ import { db } from '@/lib/db'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { threadId: string } }
+  { params }: { params: Promise<{ threadId: string }> }
 ) {
   return withRequestOrgContext(request, async ({ organizationId }) => {
     try {
-      const { threadId } = params
+      const { threadId } = await params
 
       // Verify thread belongs to org
       const thread = await db.messageThread.findUnique({

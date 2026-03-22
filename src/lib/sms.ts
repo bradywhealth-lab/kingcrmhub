@@ -5,7 +5,7 @@
  * Manages message threading and activity tracking.
  */
 
-import Twilio from 'twilio'
+import twilio from 'twilio'
 
 // Configuration
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID
@@ -36,19 +36,21 @@ export interface SMSTemplateContext {
 }
 
 // Twilio client (lazy initialization)
-let twilioClient: Twilio.Twilio | null = null
+type TwilioClient = ReturnType<typeof twilio>
+
+let twilioClient: TwilioClient | null = null
 
 /**
  * Get or initialize Twilio client
  */
-function getTwilioClient(): Twilio.Twilio | null {
+function getTwilioClient(): TwilioClient | null {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
     console.warn('Twilio credentials not configured')
     return null
   }
 
   if (!twilioClient) {
-    twilioClient = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
   }
 
   return twilioClient
@@ -157,7 +159,10 @@ export async function sendSMS(
         direction: 'outbound',
         status: mapTwilioStatus(twilioMessage.status),
         body: messageBody,
-        attachments: options.mediaUrls ? { mediaUrls: options.mediaUrls } : null,
+        attachments: {
+          twilioSid: twilioMessage.sid,
+          ...(options.mediaUrls ? { mediaUrls: options.mediaUrls } : {}),
+        },
         fromAddress: TWILIO_FROM_NUMBER,
         toAddress: lead.phone,
         sentAt: new Date(twilioMessage.dateCreated || Date.now())
@@ -436,7 +441,7 @@ export async function updateMessageStatus(payload: {
     const message = await db.message.findFirst({
       where: {
         channel: 'sms',
-        metadata: {
+        attachments: {
           path: ['twilioSid'],
           equals: payload.MessageSid
         }

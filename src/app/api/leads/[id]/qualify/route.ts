@@ -137,11 +137,11 @@ async function calculateLeadScore(lead: {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRequestOrgContext(request, async ({ organizationId }) => {
     try {
-      const { id } = params
+      const { id } = await params
 
       // Fetch lead with related data
       const lead = await db.lead.findUnique({

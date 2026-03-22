@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://insurafuze-king-crm.vercel.app/sitemap.xml

@@ -1,28 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { POST } from './route'
-import { db } from '@/lib/db'
+import { trackAIEvent } from '@/lib/ai-tracking'
 
-// Mock db
-vi.mock('@/lib/db', () => ({
-  db: {
-    user: {
-      findUnique: vi.fn(),
-    },
-    userAIProfile: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-    userLearningEvent: {
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-  },
+vi.mock('@/lib/ai-tracking', () => ({
+  trackAIEvent: vi.fn(),
 }))
 
 // Mock request context
 vi.mock('@/lib/request-context', () => ({
-  withRequestOrgContext: vi.fn((_, fn) => fn({ userId: 'test-user', organizationId: 'test-org' })),
+  withRequestOrgContext: vi.fn((_, fn) => fn({ userId: 'test-user', organizationId: 'org-audit-fixture' })),
 }))
 
 // Mock rate limit
@@ -51,15 +37,10 @@ describe('/api/ai/track', () => {
   })
 
   it('should track an AI event successfully', async () => {
-    const mockProfile = { id: 'profile-1', userId: 'user-1' }
-    const mockEvent = { id: 'event-1', eventType: 'sms_sent' }
-    const mockUser = { id: 'user-1', organizationId: 'test-org' }
-
-    ;(db.user.findUnique as any).mockResolvedValue(mockUser)
-    ;(db.userAIProfile.findUnique as any).mockResolvedValue(mockProfile)
-    ;(db.userLearningEvent.create as any).mockResolvedValue(mockEvent)
-    ;(db.userLearningEvent.update as any).mockResolvedValue(mockEvent)
-    ;(db.userAIProfile.update as any).mockResolvedValue(mockProfile)
+    ;(trackAIEvent as any).mockResolvedValue({
+      eventId: 'event-1',
+      pineconeId: 'pc-1',
+    })
 
     const request = new Request('http://localhost:3000/api/ai/track', {
       method: 'POST',
@@ -80,20 +61,25 @@ describe('/api/ai/track', () => {
     expect(response.status).toBe(200)
     expect(data.event).toBeDefined()
     expect(data.event.id).toBe('event-1')
-    expect(db.userLearningEvent.create).toHaveBeenCalled()
+    expect(data.event.pineconeId).toBe('pc-1')
+    expect(trackAIEvent).toHaveBeenCalledWith(
+      'test-user',
+      'sms_sent',
+      'lead',
+      'lead-1',
+      { template: 'follow-up-1' },
+      { smsText: 'Hey, just checking in...' },
+      {
+        leadProfession: 'Construction',
+        sourceType: 'website',
+      }
+    )
   })
 
   it('should create profile if it does not exist', async () => {
-    const mockProfile = { id: 'profile-1', userId: 'user-1' }
-    const mockEvent = { id: 'event-1', eventType: 'sms_sent' }
-    const mockUser = { id: 'user-1', organizationId: 'test-org' }
-
-    ;(db.user.findUnique as any).mockResolvedValue(mockUser)
-    ;(db.userAIProfile.findUnique as any).mockResolvedValue(null)
-    ;(db.userAIProfile.create as any).mockResolvedValue(mockProfile)
-    ;(db.userLearningEvent.create as any).mockResolvedValue(mockEvent)
-    ;(db.userLearningEvent.update as any).mockResolvedValue(mockEvent)
-    ;(db.userAIProfile.update as any).mockResolvedValue(mockProfile)
+    ;(trackAIEvent as any).mockResolvedValue({
+      eventId: 'event-2',
+    })
 
     const request = new Request('http://localhost:3000/api/ai/track', {
       method: 'POST',
@@ -109,8 +95,17 @@ describe('/api/ai/track', () => {
     const response = await POST(request as any)
 
     expect(response.status).toBe(200)
-    expect(db.userAIProfile.create).toHaveBeenCalledWith({
-      data: { userId: 'test-user' },
-    })
+    expect(trackAIEvent).toHaveBeenCalledWith(
+      'test-user',
+      'sms_sent',
+      'lead',
+      'lead-1',
+      { template: 'follow-up-1' },
+      { smsText: 'Hey, just checking in...' },
+      {
+        leadProfession: 'Construction',
+        sourceType: 'website',
+      }
+    )
   })
 })

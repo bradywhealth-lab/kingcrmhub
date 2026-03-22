@@ -26,16 +26,16 @@ describe('getOrgContext', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.NODE_ENV = 'production'
+    Object.assign(process.env, { NODE_ENV: 'production' })
     delete process.env.INTERNAL_RUNNER_KEY
   })
 
   afterAll(() => {
-    process.env.NODE_ENV = originalNodeEnv
+    Object.assign(process.env, { NODE_ENV: originalNodeEnv })
     if (originalRunnerKey === undefined) {
       delete process.env.INTERNAL_RUNNER_KEY
     } else {
-      process.env.INTERNAL_RUNNER_KEY = originalRunnerKey
+      Object.assign(process.env, { INTERNAL_RUNNER_KEY: originalRunnerKey })
     }
   })
 
@@ -83,7 +83,7 @@ describe('getOrgContext', () => {
   })
 
   it('allows x-organization-id override only for trusted internal runner requests', async () => {
-    process.env.INTERNAL_RUNNER_KEY = 'runner-secret'
+    Object.assign(process.env, { INTERNAL_RUNNER_KEY: 'runner-secret' })
     mockDb.organization.findUnique.mockResolvedValueOnce({ id: 'org_internal' })
 
     const request = new NextRequest('http://localhost/api/test', {
@@ -100,7 +100,7 @@ describe('getOrgContext', () => {
   })
 
   it('rejects x-organization-id override when internal key is invalid', async () => {
-    process.env.INTERNAL_RUNNER_KEY = 'runner-secret'
+    Object.assign(process.env, { INTERNAL_RUNNER_KEY: 'runner-secret' })
 
     const request = new NextRequest('http://localhost/api/test', {
       headers: {

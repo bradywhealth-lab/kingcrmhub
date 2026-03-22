@@ -18,7 +18,7 @@ vi.mock('@/lib/db', () => ({
 
 // Mock request context
 vi.mock('@/lib/request-context', () => ({
-  withRequestOrgContext: vi.fn((_, fn) => fn({ userId: 'test-user', organizationId: 'test-org' })),
+  withRequestOrgContext: vi.fn((_, fn) => fn({ userId: 'test-user', organizationId: 'org-audit-fixture' })),
 }))
 
 // Mock rate limit

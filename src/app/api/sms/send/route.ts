@@ -7,7 +7,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { db } from '@/lib/db'
 import { sendSMS } from '@/lib/sms'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { enforceRateLimit } from '@/lib/rate-limit'
@@ -17,17 +16,21 @@ const sendSMSSchema = z.object({
   leadId: z.string().cuid(),
   body: z.string().min(1).max(1600),
   templateId: z.string().cuid().optional(),
-  templateContext: z.record(z.string()).optional(),
+  templateContext: z.record(z.string(), z.string()).optional(),
   mediaUrls: z.array(z.string().url()).optional()
 })
 
 export async function POST(request: NextRequest) {
-  // Rate limit
-  const limited = enforceRateLimit(request, { key: 'sms-send', limit: 30, windowMs: 60_000 })
-  if (limited) return limited
-
   return withRequestOrgContext(request, async ({ organizationId, userId }) => {
     try {
+      const limited = enforceRateLimit(request, {
+        key: 'sms-send',
+        limit: 5,
+        windowMs: 60_000,
+        identifier: organizationId,
+      })
+      if (limited) return limited
+
       // Parse and validate request body
       const body = await request.json()
       const validatedData = sendSMSSchema.parse(body)
@@ -35,7 +38,7 @@ export async function POST(request: NextRequest) {
       // Send SMS
       const result = await sendSMS(validatedData.leadId, validatedData.body, {
         organizationId,
-        userId,
+        userId: userId ?? undefined,
         templateId: validatedData.templateId,
         templateContext: validatedData.templateContext as any,
         mediaUrls: validatedData.mediaUrls
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return NextResponse.json(
-          { error: 'Invalid request', details: error.errors },
+          { error: 'Invalid request', details: error.issues },
           { status: 400 }
         )
       }

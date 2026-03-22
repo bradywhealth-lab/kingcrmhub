@@ -3,7 +3,8 @@
  * This test verifies that pgvector is properly enabled and functional
  */
 
-import { db } from '../../src/lib/db';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { db } from '../../../src/lib/db';
 
 describe('pgvector Extension Migration', () => {
   beforeAll(async () => {
