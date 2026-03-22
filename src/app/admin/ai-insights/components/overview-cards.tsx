@@ -14,11 +14,18 @@ import { useEffect, useState } from 'react'
 interface MetricData {
   summary: {
     totalProfiles: number
-    totalEvents: number
-    successfulEvents: number
-    successRate: number
+    activeLearners: number
+    totalInteractions: number
+    totalSuccessful: number
+    avgSuccessRate: number
   }
-  insights: Array<{ id: string }>
+  insights: Array<{
+    userId: string
+    totalInteractions: number
+    successfulPredictions: number
+    successRate: number
+    hasLearnedPatterns: boolean
+  }>
 }
 
 interface MetricCardProps {
@@ -98,19 +105,19 @@ export function OverviewCards() {
       />
       <MetricCard
         title="Total Events"
-        value={data.summary.totalEvents}
+        value={data.summary.totalInteractions}
         icon={Activity}
         description="Tracked interactions"
       />
       <MetricCard
         title="Success Rate"
-        value={`${data.summary.successRate}%`}
+        value={`${(data.summary.avgSuccessRate * 100).toFixed(1)}%`}
         icon={TrendingUp}
         description="Successful outcomes"
       />
       <MetricCard
         title="Patterns Found"
-        value={data.insights.length}
+        value={data.insights.filter((i) => i.hasLearnedPatterns).length}
         icon={Zap}
         description="Active insights"
       />

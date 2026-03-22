@@ -9,13 +9,17 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 interface InsightsData {
-  topEventTypes?: Array<{
-    eventType: string
-    count: number
+  insights?: Array<{
+    topEventTypes?: string[]
   }>
+}
+
+interface EventTypeCount {
+  eventType: string
+  count: number
 }
 
 export function TopPatterns() {
@@ -43,6 +47,24 @@ export function TopPatterns() {
     fetchData()
   }, [])
 
+  // Aggregate top event types from all user insights
+  const topEventTypes = useMemo(() => {
+    if (!data?.insights) return []
+
+    const eventTypeCounts = new Map<string, number>()
+
+    data.insights.forEach((user) => {
+      user.topEventTypes?.forEach((eventType) => {
+        eventTypeCounts.set(eventType, (eventTypeCounts.get(eventType) || 0) + 1)
+      })
+    })
+
+    return Array.from(eventTypeCounts.entries())
+      .map(([eventType, count]) => ({ eventType, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+  }, [data])
+
   return (
     <Card>
       <CardHeader>
@@ -52,9 +74,9 @@ export function TopPatterns() {
       <CardContent>
         {loading ? (
           <TopPatternsSkeleton />
-        ) : data?.topEventTypes && data.topEventTypes.length > 0 ? (
+        ) : topEventTypes.length > 0 ? (
           <div className="space-y-4">
-            {data.topEventTypes.slice(0, 5).map((type, index) => (
+            {topEventTypes.map((type, index) => (
               <div key={type.eventType} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
