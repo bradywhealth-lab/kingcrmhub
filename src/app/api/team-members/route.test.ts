@@ -17,6 +17,7 @@ const mockDb = vi.hoisted(() => ({
 
 const mockAuth = vi.hoisted(() => ({
   createSessionToken: vi.fn(() => 'invite_token'),
+  hashSessionToken: vi.fn(() => 'hashed_invite_token'),
 }))
 
 vi.mock('@/lib/db', () => ({
