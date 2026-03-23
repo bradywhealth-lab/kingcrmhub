@@ -29,7 +29,8 @@ vi.mock('@/lib/rate-limit', () => ({
   enforceRateLimit: vi.fn(() => null),
 }))
 
-vi.mock('@/lib/security', () => mockSecurity)
+vi.mock("@/lib/security", () => mockSecurity)
+vi.mock("@/lib/auth", () => ({ hashSessionToken: vi.fn(() => "hashed_key") }))
 
 import { DELETE, GET, POST } from './route'
 

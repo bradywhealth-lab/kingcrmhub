@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
@@ -32,10 +31,6 @@ function getRequestOrigin(request: NextRequest): string | null {
   } catch {
     return null
   }
-}
-
-export function hashSessionToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
 }
 
 export function isUnsafeMethod(method: string): boolean {

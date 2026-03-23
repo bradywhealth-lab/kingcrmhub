@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { AUTH_COOKIE_NAME } from '@/lib/auth'
-import { hashSessionToken } from '@/lib/security'
+import { hashSessionToken } from '@/lib/auth'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {

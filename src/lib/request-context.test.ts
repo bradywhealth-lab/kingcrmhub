@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { hashSessionToken } from '@/lib/security'
+import { hashSessionToken } from '@/lib/auth'
 
 const mockDb = vi.hoisted(() => ({
   userSession: {

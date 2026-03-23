@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
-import { hashSessionToken } from '@/lib/security'
+import { hashSessionToken } from '@/lib/auth'
 import { z } from 'zod'
 
 const createSchema = z.object({

@@ -1,8 +1,12 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
-import { hashSessionToken } from '@/lib/security'
+
+// Moved here from security.ts to keep node:crypto out of the Edge middleware bundle
+export function hashSessionToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
 
 const AUTH_COOKIE_NAME = 'session-token'
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
@@ -211,4 +215,4 @@ export async function invalidateSessionToken(token: string) {
   })
 }
 
-export { AUTH_COOKIE_NAME, SESSION_TTL_MS, hashSessionToken }
+export { AUTH_COOKIE_NAME, SESSION_TTL_MS }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
-import { applySecurityHeaders, enforceSameOrigin, hashSessionToken } from '@/lib/security'
+import { applySecurityHeaders, enforceSameOrigin } from '@/lib/security'
+import { hashSessionToken } from '@/lib/auth'
 
 describe('security helpers', () => {
   const originalNodeEnv = process.env.NODE_ENV
