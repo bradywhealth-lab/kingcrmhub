@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Plus,
   Search,
   Settings,
@@ -51,6 +52,7 @@ function Sidebar({
     { id: "uploads", icon: Upload, label: "CSV Uploads" },
     { id: "linear", icon: SquareKanban, label: "Linear" },
     { id: "automation", icon: Zap, label: "AI Automation" },
+    { id: "assistant", icon: MessageSquare, label: "AI Assistant" },
     { id: "social", icon: Share2, label: "Social Media" },
     { id: "settings", icon: Settings, label: "Settings" },
   ]

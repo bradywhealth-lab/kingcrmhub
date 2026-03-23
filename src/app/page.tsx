@@ -46,6 +46,7 @@ import { WorkspaceOverlays } from "@/components/app/workspace-overlays"
 import { useWorkspaceOverlays } from "@/components/app/use-workspace-overlays"
 import { useWorkspaceSession } from "@/components/app/use-workspace-session"
 import { SettingsView } from "@/components/settings/settings-view"
+import { AiAssistantView } from "@/components/ai/ai-assistant-view"
 import { triggerWinCelebration, triggerSmallCelebration } from "@/lib/celebrations"
 import { toast } from "@/hooks/use-toast"
 import { readApiJsonOrText } from "@/lib/api-client"
@@ -3228,6 +3229,7 @@ export default function EliteCRM() {
       case "linear": return <LinearView onCreateIssue={() => openLinearIssueDialog()} />
       case "uploads": return <UploadsView onUploadCSV={() => setShowUploadDialog(true)} refreshKey={uploadsRefreshKey} />
       case "automation": return <AutomationView />
+      case "assistant": return <AiAssistantView />
       case "social": return <SocialMediaView />
       case "settings": return <SettingsView />
       default: return <DashboardView />
