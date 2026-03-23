@@ -11,6 +11,31 @@ function readUserPreferences(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 }
 
+function serializeAuthUser(user: {
+  id: string
+  email: string
+  name: string | null
+  role: string
+  organizationId: string
+  preferences: unknown
+  organization: {
+    id: string
+    name: string
+    slug: string
+    plan: string
+  }
+}) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    organizationId: user.organizationId,
+    organization: user.organization,
+    preferences: user.preferences,
+  }
+}
+
 const authSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('signup'),
@@ -166,7 +191,7 @@ export async function POST(request: NextRequest) {
 
       const response = NextResponse.json({
         authenticated: true,
-        user: result.user,
+        user: serializeAuthUser(result.user),
         mustChangePassword: false,
       })
       response.cookies.set(AUTH_COOKIE_NAME, result.token, buildSessionCookieOptions(result.expiresAt))
@@ -328,7 +353,7 @@ export async function POST(request: NextRequest) {
 
       const response = NextResponse.json({
         authenticated: true,
-        user: result,
+        user: serializeAuthUser(result),
         mustChangePassword: false,
       })
       response.cookies.set(AUTH_COOKIE_NAME, token, buildSessionCookieOptions(expiresAt))
@@ -378,15 +403,7 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       authenticated: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        organizationId: user.organizationId,
-        organization: user.organization,
-        preferences: user.preferences,
-      },
+      user: serializeAuthUser(user),
       mustChangePassword: readUserPreferences(user.preferences).requirePasswordChange === true,
     })
     response.cookies.set(AUTH_COOKIE_NAME, token, buildSessionCookieOptions(expiresAt))

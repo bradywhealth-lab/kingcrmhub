@@ -14,62 +14,64 @@ datasource db {
 // ============================================
 
 model Organization {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  logo        String?
-  plan        String   @default("free") // free, starter, pro, enterprise
-  settings    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  users       User[]
-  leads       Lead[]
-  pipelines   Pipeline[]
-  automations Automation[]
-  sequences   Sequence[]
-  activities  Activity[]
-  campaigns   Campaign[]
-  integrations Integration[]
-  socialAccounts SocialAccount[]
-  contentQueue ContentQueue[]
-  templates   Template[]
-  tags        Tag[]
-  customFields CustomField[]
-  webhooks    Webhook[]
-  aiInsights  AIInsight[]
-  aiModels    AIModelConfig[]
-  csvUploads  CSVUpload[]
-  teamMembers TeamMember[]
-  auditLogs   AuditLog[]
-  predictiveModels PredictiveModel[]
-  carriers    Carrier[]
-  carrierDocuments CarrierDocument[]
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  plan      String   @default("free") // free, starter, pro, enterprise
+  settings  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                 User[]
+  leads                 Lead[]
+  pipelines             Pipeline[]
+  automations           Automation[]
+  sequences             Sequence[]
+  activities            Activity[]
+  campaigns             Campaign[]
+  integrations          Integration[]
+  socialAccounts        SocialAccount[]
+  contentQueue          ContentQueue[]
+  templates             Template[]
+  tags                  Tag[]
+  customFields          CustomField[]
+  webhooks              Webhook[]
+  aiInsights            AIInsight[]
+  aiModels              AIModelConfig[]
+  csvUploads            CSVUpload[]
+  teamMembers           TeamMember[]
+  auditLogs             AuditLog[]
+  predictiveModels      PredictiveModel[]
+  carriers              Carrier[]
+  carrierDocuments      CarrierDocument[]
   carrierDocumentChunks CarrierDocumentChunk[]
-  scrapeJobs  ScrapeJob[]
-  scrapedContacts ScrapedContact[]
+  scrapeJobs            ScrapeJob[]
+  scrapedContacts       ScrapedContact[]
+  scrapingPerformance   ScrapingSourcePerformance[]
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?
-  name         String?
-  avatar       String?
-  role         String   @default("member") // owner, admin, member
+  id             String       @id @default(cuid())
+  email          String       @unique
+  passwordHash   String?
+  name           String?
+  avatar         String?
+  role           String       @default("member") // owner, admin, member
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  preferences  Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  leads        Lead[]
-  activities   Activity[]
-  sequences    Sequence[]
-  teamMember   TeamMember?
-  assignments  LeadAssignment[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  preferences    Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  leads          Lead[]
+  activities     Activity[]
+  sequences      Sequence[]
+  teamMember     TeamMember?
+  assignments    LeadAssignment[]
   teamActivities TeamActivity[]
-  sessions     UserSession[]
+  sessions       UserSession[]
+  aiProfile      UserAIProfile?
 }
 
 // ============================================
@@ -77,76 +79,78 @@ model User {
 // ============================================
 
 model Lead {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   // Contact Info
-  firstName      String?
-  lastName       String?
-  email          String?
-  phone          String?
-  company        String?
-  title          String?
-  website        String?
-  linkedin       String?
-  address        String?
-  city           String?
-  state          String?
-  zip            String?
-  country        String?
-  
+  firstName String?
+  lastName  String?
+  email     String?
+  phone     String?
+  smsOptOut Boolean @default(false) // SMS communication opt-out
+  company   String?
+  title     String?
+  website   String?
+  linkedin  String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  country   String?
+
   // Lead Details
-  source         String?  // website, referral, linkedin, facebook, google, manual, api
-  status         String   @default("new") // new, contacted, qualified, proposal, negotiation, won, lost
-  pipelineStage  String?  // References PipelineStage via raw query
+  source         String? // website, referral, linkedin, facebook, google, manual, api
+  status         String  @default("new") // new, contacted, qualified, proposal, negotiation, won, lost
+  pipelineStage  String? // References PipelineStage via raw query
   estimatedValue Float?
-  probability    Int?     @default(0)
-  
+  probability    Int?    @default(0)
+
   // AI-Powered Fields
-  aiScore        Int      @default(0)  // 0-100 lead quality score
-  aiConfidence   Float?   // AI confidence level
-  aiInsights     Json?    // AI-generated insights
-  aiTags         Json?    // AI-suggested tags
-  aiNextAction   String?  // AI-recommended next action
+  aiScore        Int       @default(0) // 0-100 lead quality score
+  aiConfidence   Float? // AI confidence level
+  aiInsights     Json? // AI-generated insights
+  aiTags         Json? // AI-suggested tags
+  aiNextAction   String? // AI-recommended next action
   aiLastAnalyzed DateTime?
-  
+
   // Engagement Tracking
-  lastContactedAt DateTime?
-  lastRespondedAt DateTime?
-  engagementScore Int      @default(0)
-  totalInteractions Int    @default(0)
-  
+  lastContactedAt   DateTime?
+  lastRespondedAt   DateTime?
+  engagementScore   Int       @default(0)
+  totalInteractions Int       @default(0)
+
   // CSV Upload Tracking
-  csvUploadId    String?
-  csvUpload      CSVUpload? @relation(fields: [csvUploadId], references: [id], onDelete: SetNull)
-  rowNumber      Int?       // Row number in original CSV
-  
+  csvUploadId String?
+  csvUpload   CSVUpload? @relation(fields: [csvUploadId], references: [id], onDelete: SetNull)
+  rowNumber   Int? // Row number in original CSV
+
   // Assignment
-  assignedToId   String?
-  assignedTo     User?    @relation(fields: [assignedToId], references: [id])
-  
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+
   // Custom Fields (stored as JSON)
-  customFields   Json?
-  
+  customFields Json?
+
   // Notes & Tags
-  notes          Note[]
-  tags           LeadTag[]
-  
+  notes      Note[]
+  tags       LeadTag[]
+  profession String?
+
   // Timestamps
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  activities     Activity[]
+  activities          Activity[]
   sequenceEnrollments SequenceEnrollment[]
-  pipelineItems  PipelineItem[]
-  assignments    LeadAssignment[]
-  scoreHistory   LeadScoreHistory[]
-  quotes         Quote[]
-  messageThreads MessageThread[]
-  scrapedContacts ScrapedContact[]
-  
+  pipelineItems       PipelineItem[]
+  assignments         LeadAssignment[]
+  scoreHistory        LeadScoreHistory[]
+  quotes              Quote[]
+  messageThreads      MessageThread[]
+  scrapedContacts     ScrapedContact[]
+
   @@index([organizationId])
   @@index([status])
   @@index([aiScore])
@@ -163,14 +167,14 @@ model Note {
 }
 
 model Tag {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
-  color          String   @default("#6366f1")
+  color          String       @default("#6366f1")
   leads          LeadTag[]
-  createdAt      DateTime @default(now())
-  
+  createdAt      DateTime     @default(now())
+
   @@unique([organizationId, name])
 }
 
@@ -179,21 +183,21 @@ model LeadTag {
   tagId  String
   lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
   tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+
   @@id([leadId, tagId])
 }
 
 model CustomField {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
-  type           String   // text, number, select, multiselect, date, boolean
-  options        Json?    // For select/multiselect
-  required       Boolean  @default(false)
-  order          Int      @default(0)
-  createdAt      DateTime @default(now())
-  
+  type           String // text, number, select, multiselect, date, boolean
+  options        Json? // For select/multiselect
+  required       Boolean      @default(false)
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+
   @@unique([organizationId, name])
 }
 
@@ -202,57 +206,57 @@ model CustomField {
 // ============================================
 
 model Pipeline {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   description    String?
   stages         PipelineStage[]
   items          PipelineItem[]
-  isDefault      Boolean  @default(false)
-  order          Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isDefault      Boolean         @default(false)
+  order          Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 model PipelineStage {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   pipelineId  String
-  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  pipeline    Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   name        String
-  color       String   @default("#6366f1")
-  order       Int      @default(0)
-  probability Int?     // Default probability for this stage
+  color       String         @default("#6366f1")
+  order       Int            @default(0)
+  probability Int? // Default probability for this stage
   items       PipelineItem[]
-  createdAt   DateTime @default(now())
-  
+  createdAt   DateTime       @default(now())
+
   @@index([pipelineId])
 }
 
 model PipelineItem {
-  id             String   @id @default(cuid())
-  pipelineId     String
-  pipeline       Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  stageId        String
-  stage          PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
-  leadId         String?
-  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  
+  id         String        @id @default(cuid())
+  pipelineId String
+  pipeline   Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stageId    String
+  stage      PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  leadId     String?
+  lead       Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   // Item Details
-  title          String
-  value          Float?
-  probability    Int?
-  expectedClose  DateTime?
-  position       Int      @default(0)
-  
+  title         String
+  value         Float?
+  probability   Int?
+  expectedClose DateTime?
+  position      Int       @default(0)
+
   // AI Predictions
   aiWinProbability Float?
   aiExpectedValue  Float?
   aiRecommendation String?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([pipelineId])
   @@index([stageId])
 }
@@ -262,85 +266,85 @@ model PipelineItem {
 // ============================================
 
 model Automation {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   description    String?
-  trigger        String   // lead_created, lead_scored, stage_changed, form_submitted, etc.
-  triggerConfig  Json?    // Configuration for the trigger
-  conditions     Json?    // Conditions to match
-  actions        Json     // Array of actions to execute
-  isActive       Boolean  @default(true)
-  executionCount Int      @default(0)
+  trigger        String // lead_created, lead_scored, stage_changed, form_submitted, etc.
+  triggerConfig  Json? // Configuration for the trigger
+  conditions     Json? // Conditions to match
+  actions        Json // Array of actions to execute
+  isActive       Boolean         @default(true)
+  executionCount Int             @default(0)
   lastExecutedAt DateTime?
   logs           AutomationLog[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 model AutomationLog {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   automationId String
   automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
-  triggeredBy  String?  // User ID or system
-  entityType   String?  // lead, etc.
+  triggeredBy  String? // User ID or system
+  entityType   String? // lead, etc.
   entityId     String?
   input        Json?
   output       Json?
   success      Boolean
   error        String?
-  duration     Int?     // ms
-  createdAt    DateTime @default(now())
-  
+  duration     Int? // ms
+  createdAt    DateTime   @default(now())
+
   @@index([automationId])
 }
 
 model Sequence {
-  id             String   @id @default(cuid())
+  id             String               @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdById    String?
-  createdBy      User?    @relation(fields: [createdById], references: [id])
+  createdBy      User?                @relation(fields: [createdById], references: [id])
   name           String
   description    String?
-  type           String   @default("email") // email, sms, mixed
-  isActive       Boolean  @default(true)
+  type           String               @default("email") // email, sms, mixed
+  isActive       Boolean              @default(true)
   steps          SequenceStep[]
   enrollments    SequenceEnrollment[]
-  totalEnrolled  Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  totalEnrolled  Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 }
 
 model SequenceStep {
-  id           String   @id @default(cuid())
-  sequenceId   String
-  sequence     Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  order        Int
-  type         String   // email, sms, task, delay
-  delayDays    Int      @default(0)
-  delayHours   Int      @default(0)
-  subject      String?  // For emails
-  content      String
-  aiGenerated  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  
+  id          String   @id @default(cuid())
+  sequenceId  String
+  sequence    Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  order       Int
+  type        String // email, sms, task, delay
+  delayDays   Int      @default(0)
+  delayHours  Int      @default(0)
+  subject     String? // For emails
+  content     String
+  aiGenerated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
   @@index([sequenceId])
 }
 
 model SequenceEnrollment {
-  id         String   @id @default(cuid())
-  sequenceId String
-  sequence   Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  leadId     String
-  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  currentStep Int     @default(0)
-  status     String   @default("active") // active, completed, paused, unsubscribed
-  startedAt  DateTime @default(now())
-  nextStepAt DateTime?
+  id          String    @id @default(cuid())
+  sequenceId  String
+  sequence    Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  currentStep Int       @default(0)
+  status      String    @default("active") // active, completed, paused, unsubscribed
+  startedAt   DateTime  @default(now())
+  nextStepAt  DateTime?
   completedAt DateTime?
-  
+
   @@unique([sequenceId, leadId])
 }
 
@@ -349,26 +353,26 @@ model SequenceEnrollment {
 // ============================================
 
 model Activity {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String?
-  user           User?    @relation(fields: [userId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
   leadId         String?
-  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  
-  type           String   // call, email, sms, meeting, note, status_change, ai_analysis, etc.
-  title          String
-  description    String?
-  metadata       Json?
-  
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  type        String // call, email, sms, meeting, note, status_change, ai_analysis, etc.
+  title       String
+  description String?
+  metadata    Json?
+
   // AI Enhancement
-  aiSummary      String?
-  aiSentiment    String?  // positive, neutral, negative
-  aiActionItems  Json?
-  
-  createdAt      DateTime @default(now())
-  
+  aiSummary     String?
+  aiSentiment   String? // positive, neutral, negative
+  aiActionItems Json?
+
+  createdAt DateTime @default(now())
+
   @@index([organizationId])
   @@index([leadId])
   @@index([userId])
@@ -380,57 +384,57 @@ model Activity {
 // ============================================
 
 model Campaign {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   description    String?
-  type           String   // email, social, ads, mixed
-  status         String   @default("draft") // draft, active, paused, completed
+  type           String // email, social, ads, mixed
+  status         String       @default("draft") // draft, active, paused, completed
   startDate      DateTime?
   endDate        DateTime?
   budget         Float?
-  metrics        Json?    // impressions, clicks, conversions, etc.
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  metrics        Json? // impressions, clicks, conversions, etc.
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model ContentQueue {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  type           String   // post, article, video, story
-  platform       String   // linkedin, twitter, facebook, instagram, tiktok
+  type           String // post, article, video, story
+  platform       String // linkedin, twitter, facebook, instagram, tiktok
   title          String?
   content        String
   mediaUrls      Json?
   hashtags       Json?
-  aiGenerated    Boolean  @default(false)
-  status         String   @default("draft") // draft, scheduled, published, failed
+  aiGenerated    Boolean      @default(false)
+  status         String       @default("draft") // draft, scheduled, published, failed
   scheduledFor   DateTime?
   publishedAt    DateTime?
   publishedUrl   String?
-  engagement     Json?    // likes, comments, shares, etc.
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  engagement     Json? // likes, comments, shares, etc.
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model SocialAccount {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  platform       String   // linkedin, twitter, facebook, instagram, tiktok
+  platform       String // linkedin, twitter, facebook, instagram, tiktok
   accountId      String
   accountName    String?
-  accessToken    String   // Encrypted
-  refreshToken   String?  // Encrypted
+  accessToken    String // Encrypted
+  refreshToken   String? // Encrypted
   tokenExpiresAt DateTime?
   profileData    Json?
-  isActive       Boolean  @default(true)
+  isActive       Boolean      @default(true)
   lastSyncedAt   DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
   @@unique([organizationId, platform, accountId])
 }
 
@@ -439,47 +443,47 @@ model SocialAccount {
 // ============================================
 
 model ScrapeJob {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  name           String?
-  sourceUrl      String
-  urls           Json?    // array of urls
-  type           String   @default("website") // website, directory, sitemap
-  status         String   @default("pending") // pending, running, completed, partial, failed
-  config         Json?    // maxPages, followLinks, respectRobots, useHeadless, delayMs, selectors
-  stats          Json?    // pagesScraped, contactsFound, leadsCreated, duplicates, errors
-  error          String?
-  startedAt      DateTime?
-  completedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  name        String?
+  sourceUrl   String
+  urls        Json? // array of urls
+  type        String    @default("website") // website, directory, sitemap
+  status      String    @default("pending") // pending, running, completed, partial, failed
+  config      Json? // maxPages, followLinks, respectRobots, useHeadless, delayMs, selectors
+  stats       Json? // pagesScraped, contactsFound, leadsCreated, duplicates, errors
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  contacts       ScrapedContact[]
+  contacts ScrapedContact[]
 
   @@index([organizationId])
   @@index([status])
 }
 
 model ScrapedContact {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   scrapeJobId    String
-  scrapeJob      ScrapeJob @relation(fields: [scrapeJobId], references: [id], onDelete: Cascade)
+  scrapeJob      ScrapeJob    @relation(fields: [scrapeJobId], references: [id], onDelete: Cascade)
 
-  sourceUrl      String
-  rawData        Json?
-  email          String?
-  phone          String?
-  firstName      String?
-  lastName       String?
-  company        String?
-  title          String?
-  leadId         String?
-  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  createdAt      DateTime @default(now())
+  sourceUrl String
+  rawData   Json?
+  email     String?
+  phone     String?
+  firstName String?
+  lastName  String?
+  company   String?
+  title     String?
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
 
   @@index([scrapeJobId])
   @@index([organizationId])
@@ -487,61 +491,61 @@ model ScrapedContact {
 }
 
 model Carrier {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  name           String
-  slug           String
-  logoUrl        String?
-  website        String?
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  name      String
+  slug      String
+  logoUrl   String?
+  website   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  documents      CarrierDocument[]
+  documents CarrierDocument[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
 }
 
 model CarrierDocument {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   carrierId      String
-  carrier        Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  carrier        Carrier      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
 
-  type           String   // brochure, underwriting_guidelines, application, other
-  name           String
-  description    String?
-  fileUrl        String
-  storagePath    String?
-  fileType       String?
-  fileSize       Int?
-  version        String?
-  extractedText  String?
-  indexedAt      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  type          String // brochure, underwriting_guidelines, application, other
+  name          String
+  description   String?
+  fileUrl       String
+  storagePath   String?
+  fileType      String?
+  fileSize      Int?
+  version       String?
+  extractedText String?
+  indexedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  chunks         CarrierDocumentChunk[]
+  chunks CarrierDocumentChunk[]
 
   @@index([organizationId])
   @@index([carrierId])
 }
 
 model CarrierDocumentChunk {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   organizationId    String
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   carrierDocumentId String
   carrierDocument   CarrierDocument @relation(fields: [carrierDocumentId], references: [id], onDelete: Cascade)
   chunkIndex        Int
   content           String
   contentPreview    String?
   metadata          Json?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime        @default(now())
 
   @@unique([carrierDocumentId, chunkIndex])
   @@index([organizationId])
@@ -553,51 +557,51 @@ model CarrierDocumentChunk {
 // ============================================
 
 model Integration {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  type           String   // email, calendar, crm, slack, zapier, etc.
+  type           String // email, calendar, crm, slack, zapier, etc.
   name           String
-  config         Json?    // API keys, endpoints, etc. (encrypted)
-  credentials    String?  // Encrypted credentials
-  isActive       Boolean  @default(true)
+  config         Json? // API keys, endpoints, etc. (encrypted)
+  credentials    String? // Encrypted credentials
+  isActive       Boolean      @default(true)
   lastSyncedAt   DateTime?
-  syncStatus     String?  // synced, error, pending
+  syncStatus     String? // synced, error, pending
   syncError      String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
   @@unique([organizationId, type])
 }
 
 model Webhook {
-  id             String   @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  url            String
-  events         Json     // Array of event types
-  secret         String?
-  isActive       Boolean  @default(true)
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  url             String
+  events          Json // Array of event types
+  secret          String?
+  isActive        Boolean      @default(true)
   lastTriggeredAt DateTime?
-  triggerCount   Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  triggerCount    Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model Template {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  type           String   // email, sms, proposal, contract
+  type           String // email, sms, proposal, contract
   name           String
-  subject        String?  // For emails
+  subject        String? // For emails
   content        String
-  variables      Json?    // Available template variables
-  aiGenerated    Boolean  @default(false)
-  useCount       Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  variables      Json? // Available template variables
+  aiGenerated    Boolean      @default(false)
+  useCount       Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 // ============================================
@@ -605,45 +609,45 @@ model Template {
 // ============================================
 
 model AIModelConfig {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  modelType      String   // lead_scoring, content_gen, sentiment, chat
+  modelType      String // lead_scoring, content_gen, sentiment, chat
   modelName      String
-  config         Json?    // Model parameters
-  customPrompts  Json?    // Custom prompts for the organization
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  config         Json? // Model parameters
+  customPrompts  Json? // Custom prompts for the organization
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model AIInsight {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  type           String   // trend, prediction, recommendation, alert
-  category       String?  // leads, pipeline, content, performance
+  type           String // trend, prediction, recommendation, alert
+  category       String? // leads, pipeline, content, performance
   title          String
   description    String
   data           Json?
   confidence     Float?
-  actionable     Boolean  @default(true)
-  dismissed      Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  
+  actionable     Boolean      @default(true)
+  dismissed      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
   @@index([organizationId])
   @@index([type])
 }
 
 model AIFeedback {
-  id           String   @id @default(cuid())
-  entityType   String   // lead_score, content, insight, chat
-  entityId     String
-  rating       Int      // 1-5 or -1/1 for thumbs
-  feedback     String?
-  corrections  Json?    // User corrections for learning
-  createdAt    DateTime @default(now())
-  
+  id          String   @id @default(cuid())
+  entityType  String // lead_score, content, insight, chat
+  entityId    String
+  rating      Int // 1-5 or -1/1 for thumbs
+  feedback    String?
+  corrections Json? // User corrections for learning
+  createdAt   DateTime @default(now())
+
   @@index([entityType])
   @@index([entityId])
 }
@@ -653,43 +657,43 @@ model AIFeedback {
 // ============================================
 
 model CSVUpload {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   // File Information
-  fileName       String
-  fileSize       Int      // bytes
-  fileType       String   // text/csv, etc.
-  uploadedBy     String?  // User ID
-  
+  fileName   String
+  fileSize   Int // bytes
+  fileType   String // text/csv, etc.
+  uploadedBy String? // User ID
+
   // Processing Status
-  status         String   @default("pending") // pending, processing, completed, failed
-  totalRows      Int      @default(0)
-  processedRows  Int      @default(0)
-  successfulRows Int      @default(0)
-  failedRows     Int      @default(0)
-  duplicateRows  Int      @default(0)
-  
+  status         String @default("pending") // pending, processing, completed, failed
+  totalRows      Int    @default(0)
+  processedRows  Int    @default(0)
+  successfulRows Int    @default(0)
+  failedRows     Int    @default(0)
+  duplicateRows  Int    @default(0)
+
   // Column Mapping
-  columnMapping  Json?    // How columns were mapped to lead fields
-  
+  columnMapping Json? // How columns were mapped to lead fields
+
   // Processing Details
-  errors         Json?    // Array of error messages with row numbers
-  warnings       Json?    // Array of warning messages
-  
+  errors   Json? // Array of error messages with row numbers
+  warnings Json? // Array of warning messages
+
   // Source info for leads
-  defaultSource  String?  // Default lead source for this upload
-  
+  defaultSource String? // Default lead source for this upload
+
   // AI Processing
-  aiAutoScored   Boolean  @default(false) // Whether AI scored all leads
-  
-  createdAt      DateTime @default(now())
-  completedAt    DateTime?
-  
+  aiAutoScored Boolean @default(false) // Whether AI scored all leads
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
   // Relations
-  leads          Lead[]
-  
+  leads Lead[]
+
   @@index([organizationId])
   @@index([status])
 }
@@ -699,73 +703,73 @@ model CSVUpload {
 // ============================================
 
 model TeamMember {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId         String       @unique
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Role & Permissions
-  role           String   @default("agent") // owner, admin, agent, viewer
-  permissions    Json?    // Custom permissions override
-  
+  role        String @default("agent") // owner, admin, agent, viewer
+  permissions Json? // Custom permissions override
+
   // Assignment Limits
-  maxLeads       Int?     // Maximum leads assignable
-  currentLeads   Int      @default(0)
-  
+  maxLeads     Int? // Maximum leads assignable
+  currentLeads Int  @default(0)
+
   // Performance Tracking
-  totalLeadsWon  Int      @default(0)
-  totalRevenue   Float    @default(0)
-  avgResponseTime Int?    // minutes
-  
+  totalLeadsWon   Int   @default(0)
+  totalRevenue    Float @default(0)
+  avgResponseTime Int? // minutes
+
   // Status
-  isActive       Boolean  @default(true)
-  lastActiveAt   DateTime?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  isActive     Boolean   @default(true)
+  lastActiveAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([organizationId, userId])
   @@index([organizationId])
 }
 
 model LeadAssignment {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   leadId         String
-  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead           Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
   assignedToId   String
-  assignedTo     User     @relation(fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignedTo     User    @relation(fields: [assignedToId], references: [id], onDelete: Cascade)
   assignedById   String?
-  
+
   // Assignment Details
-  reason         String?  // manual, auto_round_robin, auto_score_based
-  priority       String   @default("normal") // low, normal, high, urgent
-  
+  reason   String? // manual, auto_round_robin, auto_score_based
+  priority String  @default("normal") // low, normal, high, urgent
+
   // Status
-  status         String   @default("active") // active, transferred, completed
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  status String @default("active") // active, transferred, completed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([leadId])
   @@index([assignedToId])
 }
 
 model TeamActivity {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type           String   // login, lead_viewed, lead_updated, deal_won, etc.
-  description    String
-  entityType     String?  // lead, deal, etc.
-  entityId       String?
-  metadata       Json?
-  
-  createdAt      DateTime @default(now())
-  
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String // login, lead_viewed, lead_updated, deal_won, etc.
+  description String
+  entityType  String? // lead, deal, etc.
+  entityId    String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
   @@index([organizationId])
   @@index([userId])
 }
@@ -775,52 +779,52 @@ model TeamActivity {
 // ============================================
 
 model LeadScoreHistory {
-  id             String   @id @default(cuid())
-  leadId         String
-  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
   // Score Details
-  score          Int
-  confidence     Float?
-  
+  score      Int
+  confidence Float?
+
   // Factors that contributed to score
-  factors        Json?    // { email_quality: 15, title_match: 20, etc. }
-  
+  factors Json? // { email_quality: 15, title_match: 20, etc. }
+
   // AI Model Info
-  modelVersion   String?
-  modelType      String?  // rule_based, ml_v1, ml_v2
-  
+  modelVersion String?
+  modelType    String? // rule_based, ml_v1, ml_v2
+
   // Context
-  triggeredBy    String?  // manual, auto, import
-  
-  createdAt      DateTime @default(now())
-  
+  triggeredBy String? // manual, auto, import
+
+  createdAt DateTime @default(now())
+
   @@index([leadId])
   @@index([createdAt])
 }
 
 model PredictiveModel {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  name           String
-  version        String
-  type          String   // win_probability, conversion, churn
-  
+
+  name    String
+  version String
+  type    String // win_probability, conversion, churn
+
   // Model Config
-  features       Json     // Features used for prediction
-  weights        Json?    // Feature weights
-  accuracy       Float?   // Model accuracy score
-  
+  features Json // Features used for prediction
+  weights  Json? // Feature weights
+  accuracy Float? // Model accuracy score
+
   // Training Info
-  trainedOn      DateTime?
+  trainedOn       DateTime?
   trainingSamples Int?
-  
-  isActive       Boolean  @default(true)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -828,81 +832,81 @@ model PredictiveModel {
 // ============================================
 
 model Quote {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   leadId         String?
-  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  
+  lead           Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   // Quote Details
-  quoteNumber    String
-  title          String
-  status         String   @default("draft") // draft, sent, viewed, accepted, rejected, expired
-  
+  quoteNumber String
+  title       String
+  status      String @default("draft") // draft, sent, viewed, accepted, rejected, expired
+
   // Pricing
-  subtotal       Float    @default(0)
-  discount       Float    @default(0)
-  tax            Float    @default(0)
-  total          Float    @default(0)
-  currency       String   @default("USD")
-  
+  subtotal Float  @default(0)
+  discount Float  @default(0)
+  tax      Float  @default(0)
+  total    Float  @default(0)
+  currency String @default("USD")
+
   // Validity
-  validUntil     DateTime?
-  
+  validUntil DateTime?
+
   // E-Signature
-  signatureId    String?
-  signedAt       DateTime?
-  signedBy       String?
-  signedByName   String?
-  
+  signatureId  String?
+  signedAt     DateTime?
+  signedBy     String?
+  signedByName String?
+
   // Tracking
-  sentAt         DateTime?
-  viewedAt       DateTime?
-  viewCount      Int      @default(0)
-  
+  sentAt    DateTime?
+  viewedAt  DateTime?
+  viewCount Int       @default(0)
+
   // AI Generated
-  aiGenerated    Boolean  @default(false)
-  aiSuggestions  Json?
-  
-  items          QuoteLineItem[]
-  versions       QuoteVersion[]
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  aiGenerated   Boolean @default(false)
+  aiSuggestions Json?
+
+  items    QuoteLineItem[]
+  versions QuoteVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([quoteNumber])
 }
 
 model QuoteLineItem {
-  id          String   @id @default(cuid())
-  quoteId     String
-  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  
+  id      String @id @default(cuid())
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
   description String
-  quantity    Int      @default(1)
+  quantity    Int    @default(1)
   unitPrice   Float
-  discount    Float    @default(0)
+  discount    Float  @default(0)
   total       Float
-  
-  order       Int      @default(0)
-  
+
+  order Int @default(0)
+
   @@index([quoteId])
 }
 
 model QuoteVersion {
-  id          String   @id @default(cuid())
-  quoteId     String
-  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  version     Int
-  
+  id      String @id @default(cuid())
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  version Int
+
   // Snapshot
-  content     Json     // Full quote content at this version
-  
+  content Json // Full quote content at this version
+
   // Change info
-  changedBy   String?
-  changeNote  String?
-  
-  createdAt   DateTime @default(now())
-  
+  changedBy  String?
+  changeNote String?
+
+  createdAt DateTime @default(now())
+
   @@unique([quoteId, version])
 }
 
@@ -911,71 +915,71 @@ model QuoteVersion {
 // ============================================
 
 model MessageThread {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   leadId         String?
-  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  
+  lead           Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   // Thread Info
-  subject        String?
-  lastMessageAt  DateTime @default(now())
-  unreadCount    Int      @default(0)
-  
+  subject       String?
+  lastMessageAt DateTime @default(now())
+  unreadCount   Int      @default(0)
+
   // Participants
   participantEmail String?
   participantPhone String?
-  
+
   // Channel
-  primaryChannel String  // email, sms, whatsapp, messenger
-  
+  primaryChannel String // email, sms, whatsapp, messenger
+
   // AI
-  aiSummary      String?
-  aiSentiment    String?
-  
-  messages       Message[]
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  aiSummary   String?
+  aiSentiment String?
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([leadId])
   @@index([organizationId])
 }
 
 model Message {
-  id             String   @id @default(cuid())
-  threadId       String
-  thread         MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  
+  id       String        @id @default(cuid())
+  threadId String
+  thread   MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
   // Channel
-  channel        String   // email, sms, whatsapp, messenger
-  
+  channel String // email, sms, whatsapp, messenger
+
   // Direction
-  direction      String   // inbound, outbound
-  status         String   @default("sent") // pending, sent, delivered, read, failed
-  
+  direction String // inbound, outbound
+  status    String @default("sent") // pending, sent, delivered, read, failed
+
   // Content
-  subject        String?
-  body           String
-  attachments    Json?
-  
+  subject     String?
+  body        String
+  attachments Json?
+
   // Sender/Recipient
-  fromAddress    String?
-  fromName       String?
-  toAddress      String?
-  toName         String?
-  
+  fromAddress String?
+  fromName    String?
+  toAddress   String?
+  toName      String?
+
   // Timestamps
-  sentAt         DateTime?
-  deliveredAt    DateTime?
-  readAt         DateTime?
-  
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+
   // AI Processing
-  aiProcessed    Boolean  @default(false)
-  aiCategory     String?  // inquiry, response, spam, etc.
+  aiProcessed      Boolean @default(false)
+  aiCategory       String? // inquiry, response, spam, etc.
   aiSuggestedReply String?
-  
-  createdAt      DateTime @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   @@index([threadId])
 }
 
@@ -984,31 +988,31 @@ model Message {
 // ============================================
 
 model AuditLog {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   // Action
-  action         String   // create, update, delete, view, export, login
-  entityType     String   // lead, quote, user, etc.
-  entityId       String?
-  
+  action     String // create, update, delete, view, export, login
+  entityType String // lead, quote, user, etc.
+  entityId   String?
+
   // Changes
-  oldValue       Json?
-  newValue       Json?
-  
+  oldValue Json?
+  newValue Json?
+
   // Actor
   actorId        String?
   actorEmail     String?
   actorIp        String?
   actorUserAgent String?
-  
+
   // Context
-  description    String
-  metadata       Json?
-  
-  createdAt      DateTime @default(now())
-  
+  description String
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
   @@index([organizationId])
   @@index([entityType, entityId])
   @@index([createdAt])
@@ -1019,32 +1023,32 @@ model AuditLog {
 // ============================================
 
 model UserSession {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Session Info
-  token          String   @unique
-  device         String?
-  browser        String?
-  os             String?
-  ip             String?
-  
+  token   String  @unique
+  device  String?
+  browser String?
+  os      String?
+  ip      String?
+
   // Location (approximate)
-  city           String?
-  country        String?
-  
+  city    String?
+  country String?
+
   // Status
-  isActive       Boolean  @default(true)
-  lastActiveAt   DateTime @default(now())
-  
+  isActive     Boolean  @default(true)
+  lastActiveAt DateTime @default(now())
+
   // Currently Viewing
-  viewingType    String?  // lead, pipeline, dashboard
-  viewingId      String?
-  
-  createdAt      DateTime @default(now())
-  expiresAt      DateTime
-  
+  viewingType String? // lead, pipeline, dashboard
+  viewingId   String?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
   @@index([userId])
   @@index([token])
 }
@@ -1054,30 +1058,130 @@ model UserSession {
 // ============================================
 
 model Commission {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
-  
-  leadId         String?
-  policyNumber   String?
-  carrier        String?
-  product        String?
-  clientName     String
-  
-  type           String   @default("new_business") // new_business, renewal, override, bonus
-  status         String   @default("pending") // pending, paid, clawed_back
-  
-  premiumAmount  Float?
-  commissionRate Float?
+
+  leadId       String?
+  policyNumber String?
+  carrier      String?
+  product      String?
+  clientName   String
+
+  type   String @default("new_business") // new_business, renewal, override, bonus
+  status String @default("pending") // pending, paid, clawed_back
+
+  premiumAmount    Float?
+  commissionRate   Float?
   commissionAmount Float
-  
-  effectiveDate  DateTime?
-  paidDate       DateTime?
-  
-  notes          String?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+
+  effectiveDate DateTime?
+  paidDate      DateTime?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([organizationId])
   @@index([status])
+}
+
+// ============================================
+// AI PERSONALIZED LEARNING
+// ============================================
+
+model UserAIProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Communication Style (learned from user's outputs)
+  writingStyle  Json?
+  emailPatterns Json?
+  smsPatterns   Json?
+
+  // Domain Knowledge (accumulated expertise)
+  carrierPreferences Json?
+  industryKnowledge  Json?
+  successfulSources  Json?
+
+  // Performance Tracking
+  totalInteractions     Int      @default(0)
+  successfulPredictions Int      @default(0)
+  lastUpdatedAt         DateTime @default(now())
+
+  learningHistory UserLearningEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserLearningEvent {
+  id            String        @id @default(cuid())
+  userProfileId String
+  userProfile   UserAIProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  // Event Details
+  eventType  String
+  entityType String
+  entityId   String
+
+  // Input/Output
+  input  Json
+  output Json
+
+  // Outcome
+  outcome      String?
+  outcomeDelay Int?
+
+  // User Feedback
+  userRating     Int?
+  userCorrection Json?
+
+  // Metadata
+  leadProfession String?
+  sourceType     String?
+
+  // Vector Embedding (for RAG retrieval)
+  embedding Unsupported("vector(1536)")?
+
+  createdAt DateTime  @default(now())
+  outcomeAt DateTime?
+
+  // Pinecone Vector ID
+  pineconeId String? @unique
+
+  @@index([userProfileId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model ScrapingSourcePerformance {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  sourceDomain String
+  sourceType   String
+
+  totalScraped   Int    @default(0)
+  leadsCreated   Int    @default(0)
+  leadsConverted Int    @default(0)
+  conversionRate Float?
+
+  avgLeadScore      Float?
+  commonProfessions Json?
+
+  weeklyStats  Json?
+  monthlyStats Json?
+
+  lastScrapedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([organizationId, sourceDomain])
+  @@index([organizationId])
+  @@index([conversionRate])
 }

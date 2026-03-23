@@ -14,6 +14,24 @@ const webhookSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
+function serializeWebhook(hook: {
+  id: string
+  organizationId: string
+  name: string
+  url: string
+  events: unknown
+  isActive: boolean
+  lastTriggeredAt: Date | null
+  triggerCount: number
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    ...hook,
+    events: Array.isArray(hook.events) ? hook.events : [],
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     return withRequestOrgContext(request, async (context) => {
@@ -22,10 +40,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       })
       return NextResponse.json({
-        webhooks: hooks.map((hook) => ({
-          ...hook,
-          events: Array.isArray(hook.events) ? hook.events : [],
-        })),
+        webhooks: hooks.map(serializeWebhook),
       })
     })
   } catch (error) {
@@ -53,7 +68,7 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      return NextResponse.json({ webhook: hook })
+      return NextResponse.json({ webhook: serializeWebhook(hook) })
     })
   } catch (error) {
     console.error('Webhooks POST error:', error)
@@ -85,7 +100,7 @@ export async function PATCH(request: NextRequest) {
       })
       if (updated.count === 0) return NextResponse.json({ error: 'Webhook not found' }, { status: 404 })
       const webhook = await db.webhook.findUnique({ where: { id } })
-      return NextResponse.json({ webhook })
+      return NextResponse.json({ webhook: webhook ? serializeWebhook(webhook) : null })
     })
   } catch (error) {
     console.error('Webhooks PATCH error:', error)

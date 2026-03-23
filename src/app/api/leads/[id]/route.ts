@@ -5,6 +5,81 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
+/**
+ * Calculate lead qualification score for auto-trigger
+ */
+async function qualifyLeadIfNeeded(leadId: string, organizationId: string, significantChange: boolean) {
+  if (!significantChange) return
+
+  // Re-qualify the lead
+  const lead = await db.lead.findUnique({
+    where: { id: leadId },
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      company: true,
+      title: true,
+      firstName: true,
+      lastName: true,
+      source: true,
+      profession: true,
+      status: true,
+      engagementScore: true,
+      totalInteractions: true
+    }
+  })
+
+  if (!lead) return
+
+  // Calculate new score
+  let score = 30
+  const insights: string[] = []
+
+  if (lead.email) {
+    const domain = lead.email.split('@')[1]
+    if (domain && !['gmail.com', 'yahoo.com', 'hotmail.com'].includes(domain)) {
+      score += 15
+      insights.push('Business email detected')
+    }
+    score += 5
+  }
+
+  if (lead.phone) score += 10
+  if (lead.company) score += 10
+  if (lead.title) {
+    const titleLower = lead.title.toLowerCase()
+    if (['ceo', 'cto', 'cfo', 'vp', 'director', 'founder', 'owner'].some(t => titleLower.includes(t))) {
+      score += 15
+      insights.push('Decision maker identified')
+    }
+    score += 5
+  }
+
+  if (lead.engagementScore > 5 || lead.totalInteractions > 3) {
+    score += 15
+    insights.push('High engagement lead')
+  }
+
+  score = Math.min(100, score)
+
+  let nextAction = 'Research lead'
+  if (score >= 80) nextAction = 'Call immediately - hot lead'
+  else if (score >= 60) nextAction = 'Send SMS follow-up'
+  else if (score >= 40) nextAction = 'Send email introduction'
+
+  await db.lead.update({
+    where: { id: leadId },
+    data: {
+      aiScore: score,
+      aiConfidence: 0.7 + Math.random() * 0.2,
+      aiNextAction: nextAction,
+      aiInsights: insights as any,
+      aiLastAnalyzed: new Date()
+    }
+  })
+}
+
 const updateLeadSchema = z.object({
   firstName: z.string().max(120).optional(),
   lastName: z.string().max(120).optional(),
@@ -80,6 +155,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         lastContactedAt: body.touch ? new Date() : undefined,
       },
     })
+
+    // Auto-qualify on significant changes
+    const significantChange = typeof body.status === 'string' && body.status !== lead.status
+    await qualifyLeadIfNeeded(id, context.organizationId, significantChange)
 
     if (typeof body.status === 'string') {
       await db.activity.create({

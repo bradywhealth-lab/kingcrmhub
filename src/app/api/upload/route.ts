@@ -15,6 +15,13 @@ const FIELD_ALIASES: Record<string, string[]> = {
   linkedin: ['linkedin', 'linkedinurl', 'linkedinprofile'],
   estimatedValue: ['estimatedvalue', 'value', 'dealvalue', 'annualpremium'],
 }
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+const ALLOWED_CSV_MIME_TYPES = new Set([
+  'text/csv',
+  'application/csv',
+  'application/vnd.ms-excel',
+  'text/plain',
+])
 
 type ParsedCsv = {
   headers: string[]
@@ -199,8 +206,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'file is required' }, { status: 400 })
       }
 
+      if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+        return NextResponse.json({ error: 'CSV file must be between 1B and 10MB' }, { status: 400 })
+      }
+
       if (!file.name.toLowerCase().endsWith('.csv')) {
         return NextResponse.json({ error: 'Only .csv files are supported' }, { status: 400 })
+      }
+
+      if (file.type && !ALLOWED_CSV_MIME_TYPES.has(file.type.toLowerCase())) {
+        return NextResponse.json({ error: 'Invalid CSV file type' }, { status: 400 })
       }
 
       const csvText = await file.text()

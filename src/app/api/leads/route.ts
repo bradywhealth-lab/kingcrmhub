@@ -20,6 +20,77 @@ const createLeadSchema = z.object({
   customFields: z.record(z.string(), z.unknown()).optional(),
 })
 
+/**
+ * Extracts profession from company/title for industry targeting.
+ * Maps common industry keywords to standardized categories.
+ */
+function extractProfession(company: string | null, title: string | null): string | null {
+  if (!company && !title) return null
+
+  const combined = `${company || ''} ${title || ''}`.toLowerCase()
+
+  // Common industry keywords mapping
+  const industryMap: Record<string, string> = {
+    construction: 'Construction',
+    contracting: 'Construction',
+    contractor: 'Construction',
+    healthcare: 'Healthcare',
+    medical: 'Healthcare',
+    hospital: 'Healthcare',
+    clinic: 'Healthcare',
+    doctor: 'Healthcare',
+    physician: 'Healthcare',
+    nurse: 'Healthcare',
+    tech: 'Technology',
+    software: 'Technology',
+    developer: 'Technology',
+    engineer: 'Technology',
+    'it ': 'Technology',
+    'information technology': 'Technology',
+    finance: 'Finance',
+    financial: 'Finance',
+    banking: 'Finance',
+    insurance: 'Insurance',
+    'real estate': 'Real Estate',
+    realty: 'Real Estate',
+    property: 'Real Estate',
+    manufacturing: 'Manufacturing',
+    production: 'Manufacturing',
+    factory: 'Manufacturing',
+    education: 'Education',
+    school: 'Education',
+    university: 'Education',
+    teacher: 'Education',
+    retail: 'Retail',
+    store: 'Retail',
+    shop: 'Retail',
+    restaurant: 'Restaurant',
+    food: 'Restaurant',
+    legal: 'Legal',
+    law: 'Legal',
+    lawyer: 'Legal',
+    attorney: 'Legal',
+    accounting: 'Accounting',
+    cpa: 'Accounting',
+    consultant: 'Consulting',
+    consulting: 'Consulting',
+    marketing: 'Marketing',
+    advertising: 'Marketing',
+    'sales ': 'Sales',
+    brokerage: 'Insurance',
+    broker: 'Insurance',
+    agent: 'Insurance',
+  }
+
+  for (const [keyword, industry] of Object.entries(industryMap)) {
+    if (combined.includes(keyword)) {
+      return industry
+    }
+  }
+
+  return null
+}
+
 // GET /api/leads - Get all leads for organization
 export async function GET(request: NextRequest) {
   try {
@@ -83,7 +154,10 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return parsed.response
     const body = parsed.data
     const organizationId = context.organizationId
-    
+
+    // Extract profession from company/title for targeting
+    const profession = extractProfession(body.company || null, body.title || null)
+
     const lead = await db.lead.create({
       data: {
         organizationId,
@@ -99,6 +173,7 @@ export async function POST(request: NextRequest) {
         status: 'new',
         estimatedValue: body.estimatedValue,
         customFields: body.customFields as Prisma.InputJsonValue | undefined,
+        profession,
         aiScore: 0, // Will be calculated by AI
       }
     })

@@ -77,6 +77,8 @@ export async function getOrgContext(request: NextRequest): Promise<OrgContext | 
   return null
 }
 
+export const getRequestOrgContext = getOrgContext
+
 export async function withRequestOrgContext<T>(
   request: NextRequest,
   handler: (context: OrgContext) => Promise<T>,

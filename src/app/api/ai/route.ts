@@ -10,6 +10,11 @@ const aiRequestSchema = z.object({
   data: z.record(z.string(), z.unknown()).default({}),
 })
 
+const chatMessageSchema = z.object({
+  role: z.enum(['system', 'user', 'assistant']),
+  content: z.string(),
+})
+
 function extractJsonObject(text: string | null): Record<string, unknown> | null {
   if (!text) return null
   const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -193,6 +198,10 @@ Provide 3-5 insights in JSON format:
 
         case 'chat': {
           const { messages, context } = data
+          const parsedMessages = z.array(chatMessageSchema).safeParse(messages)
+          if (!parsedMessages.success) {
+            return NextResponse.json({ error: 'Invalid chat messages payload' }, { status: 400 })
+          }
 
           const systemPrompt = `You are an AI assistant for EliteCRM, a sophisticated CRM system.
 You help users manage leads, analyze data, and optimize their sales process.
@@ -201,7 +210,7 @@ Context: ${JSON.stringify(context)}`
 
           const responseText = await zaiChatMessages([
             { role: 'system', content: systemPrompt },
-            ...messages,
+            ...parsedMessages.data,
           ])
 
           return NextResponse.json({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
@@ -137,7 +137,11 @@ export async function PATCH(request: NextRequest) {
       updateData.publishedAt = body.publishedAt ? new Date(body.publishedAt) : null
     }
     if (body.publishedUrl !== undefined) updateData.publishedUrl = body.publishedUrl || null
-    if (body.mediaUrls !== undefined) updateData.mediaUrls = Array.isArray(body.mediaUrls) ? body.mediaUrls : null
+    if (body.mediaUrls !== undefined) {
+      updateData.mediaUrls = Array.isArray(body.mediaUrls)
+        ? body.mediaUrls as Prisma.InputJsonValue
+        : Prisma.JsonNull
+    }
 
     const updated = await db.contentQueue.updateMany({
       where: { id, organizationId: context.organizationId },

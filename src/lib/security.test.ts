@@ -6,7 +6,7 @@ describe('security helpers', () => {
   const originalNodeEnv = process.env.NODE_ENV
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv
+    Object.assign(process.env, { NODE_ENV: originalNodeEnv })
   })
 
   it('hashes session tokens deterministically', () => {
@@ -29,8 +29,10 @@ describe('security helpers', () => {
   })
 
   it('allows local same-origin posts in development even when APP_BASE_URL points elsewhere', () => {
-    process.env.NODE_ENV = 'development'
-    process.env.APP_BASE_URL = 'https://insurafuze-king-crm.vercel.app'
+    Object.assign(process.env, {
+      NODE_ENV: 'development',
+      APP_BASE_URL: 'https://insurafuze-king-crm.vercel.app',
+    })
 
     const request = new NextRequest('http://localhost:3000/api/auth', {
       method: 'POST',

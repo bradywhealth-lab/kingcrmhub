@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
+import { trackAIEvent } from '@/lib/ai-tracking'
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,6 +56,21 @@ export async function GET(request: NextRequest) {
     }))
 
     const summary = `You have ${leadsToCall.length} prioritized leads and ${meetings.length} meetings in focus. Top lead score is ${leadsToCall[0]?.aiScore ?? 0}.`
+
+    // Track the insights generation event
+    await trackAIEvent(
+      context.userId || 'unknown',
+      'insights_generated',
+      'daily_summary',
+      context.organizationId,
+      { limit },
+      {
+        leadsToCall: leadsToCall.length,
+        meetings: meetings.length,
+        topScore: leadsToCall[0]?.aiScore ?? 0,
+        summary,
+      }
+    ).catch(console.error)
 
     return NextResponse.json({
       date: new Date().toISOString(),

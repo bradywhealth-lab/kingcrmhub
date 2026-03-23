@@ -6,6 +6,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { trackScrapingPerformance } from '@/lib/scraping-tracker'
 
 const DEFAULT_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
@@ -327,7 +328,7 @@ async function runScrapeJob(jobId: string, organizationId: string) {
       }
 
       const status = errors.length > 0 && leadsCreated === 0 ? 'failed' : errors.length > 0 ? 'partial' : 'completed'
-      await db.scrapeJob.update({
+      const updatedJob = await db.scrapeJob.update({
         where: { id: jobId },
         data: {
           status,
@@ -342,6 +343,30 @@ async function runScrapeJob(jobId: string, organizationId: string) {
           },
         },
       })
+
+      // Track scraping performance for learning
+      try {
+        const sourceUrl = updatedJob.sourceUrl || ''
+        const sourceDomain = sourceUrl ? new URL(sourceUrl).hostname : 'unknown'
+
+        // Extract professions from leads
+        const professions = unique
+          .map((c) => c.title || c.company)
+          .filter(Boolean)
+          .slice(0, 10) as string[]
+
+        await trackScrapingPerformance({
+          organizationId,
+          sourceDomain,
+          sourceType: updatedJob.type || 'website',
+          totalScraped: visited.size,
+          leadsCreated,
+          avgLeadScore: undefined, // Could calculate if leads have scores
+          professions,
+        })
+      } catch (trackError) {
+        console.warn('Failed to track scraping performance:', trackError)
+      }
     })
   } finally {
     runningJobs.delete(jobId)

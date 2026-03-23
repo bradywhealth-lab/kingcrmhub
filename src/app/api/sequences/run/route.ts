@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { isInternalRunnerAuthorized } from '@/lib/internal-runner'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { sendSMS } from '@/lib/sms'
 
 /**
  * POST /api/sequences/run
@@ -45,12 +46,27 @@ export async function POST(request: NextRequest) {
       const personalized = currentStep.content
         .replaceAll('{{firstName}}', enrollment.lead.firstName || 'there')
         .replaceAll('{{company}}', enrollment.lead.company || 'your company')
+        .replaceAll('{{lastName}}', enrollment.lead.lastName || '')
 
+      // Execute step based on type
+      if (currentStep.type === 'sms' && enrollment.lead.phone) {
+        // Send SMS via Twilio
+        const smsResult = await sendSMS(enrollment.leadId, personalized, {
+          organizationId: enrollment.sequence.organizationId
+        })
+
+        if (!smsResult.success) {
+          console.error(`SMS failed for lead ${enrollment.leadId}:`, smsResult.error)
+          // Continue to next step even if SMS fails
+        }
+      }
+
+      // Create activity record for the step
       await db.activity.create({
         data: {
           organizationId: enrollment.sequence.organizationId,
           leadId: enrollment.leadId,
-          type: 'sequence_step',
+          type: currentStep.type === 'sms' ? 'sms' : 'sequence_step',
           title: `Sequence step: ${currentStep.type}`,
           description: personalized.slice(0, 200),
           metadata: {

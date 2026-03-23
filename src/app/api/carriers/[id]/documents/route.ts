@@ -7,6 +7,15 @@ import { enforceRateLimit } from '@/lib/rate-limit'
 type Params = { params: Promise<{ id: string }> }
 const CHUNK_SIZE = 900
 const CHUNK_OVERLAP = 150
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+const ALLOWED_UPLOAD_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/png',
+  'image/jpeg',
+])
+const ALLOWED_UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg']
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
@@ -39,8 +48,18 @@ export async function POST(request: NextRequest, { params }: Params) {
     const version = String(formData.get('version') || '')
 
     if (!file) return NextResponse.json({ error: 'file is required' }, { status: 400 })
-    if (file.size <= 0 || file.size > 25 * 1024 * 1024) {
-      return NextResponse.json({ error: 'file must be between 1B and 25MB' }, { status: 400 })
+    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: 'file must be between 1B and 10MB' }, { status: 400 })
+    }
+
+    const normalizedName = file.name.toLowerCase()
+    const hasAllowedExtension = ALLOWED_UPLOAD_EXTENSIONS.some((ext) => normalizedName.endsWith(ext))
+    const hasAllowedMimeType = ALLOWED_UPLOAD_TYPES.has((file.type || '').toLowerCase())
+    if (!hasAllowedExtension || !hasAllowedMimeType) {
+      return NextResponse.json(
+        { error: 'Unsupported file type. Allowed types: pdf, doc, docx, png, jpg' },
+        { status: 400 }
+      )
     }
 
     const bytes = await file.arrayBuffer()

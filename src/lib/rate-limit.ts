@@ -4,6 +4,7 @@ type RateLimitOptions = {
   key: string
   limit: number
   windowMs: number
+  identifier?: string
 }
 
 type RateEntry = {
@@ -52,8 +53,8 @@ export function enforceRateLimit(request: NextRequest, options: RateLimitOptions
   const now = Date.now()
   compactExpiredEntries(now)
 
-  const ip = getClientIp(request)
-  const bucketKey = `${options.key}:${ip}`
+  const bucketIdentity = options.identifier?.trim() || getClientIp(request)
+  const bucketKey = `${options.key}:${bucketIdentity}`
   const existing = buckets.get(bucketKey)
 
   if (!existing || existing.resetAt <= now) {

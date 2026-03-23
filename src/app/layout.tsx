@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { initSentry } from "@/lib/observability/sentry";
+
+initSentry()
 
 export const metadata: Metadata = {
   title: "InsuraFuze CRM",
