@@ -155,6 +155,20 @@ export async function POST(request: NextRequest) {
     const body = parsed.data
     const organizationId = context.organizationId
 
+    // Dedup check: prevent duplicate email within the same organization
+    if (body.email) {
+      const existing = await db.lead.findFirst({
+        where: { organizationId, email: body.email.toLowerCase() },
+        select: { id: true, firstName: true, lastName: true },
+      })
+      if (existing) {
+        return NextResponse.json(
+          { error: `A lead with email ${body.email} already exists (${existing.firstName || ''} ${existing.lastName || ''}).`.trim() },
+          { status: 409 }
+        )
+      }
+    }
+
     // Extract profession from company/title for targeting
     const profession = extractProfession(body.company || null, body.title || null)
 

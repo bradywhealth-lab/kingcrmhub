@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { withRequestOrgContext } from '@/lib/request-context'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const apiKey = process.env.OPENAI_API_KEY || ''
+const openai = new OpenAI({ apiKey })
 
 const SYSTEM_PROMPT = `You are an elite AI sales assistant built into King CRM — an insurance sales platform. Your job is to help the user close more deals, qualify leads faster, write high-converting outreach, and make smarter pipeline decisions.
 
@@ -34,6 +35,13 @@ export async function POST(request: NextRequest) {
 
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
         return NextResponse.json({ error: 'messages array is required' }, { status: 400 })
+      }
+
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: 'AI chat is not configured. Add OPENAI_API_KEY to your environment variables.' },
+          { status: 503 }
+        )
       }
 
       const systemContent = context
