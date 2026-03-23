@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
 import { getOrgContext } from '@/lib/request-context'
+import { resolveAIConfig, createChatStream } from '@/lib/ai-providers'
 
 const SYSTEM_PROMPT = `You are an elite AI sales assistant built into King CRM — an insurance sales platform. Your job is to help the user close more deals, qualify leads faster, write high-converting outreach, and make smarter pipeline decisions.
 
@@ -22,18 +22,10 @@ Always be concise unless depth is required. Bullet points over walls of text. Nu
 
 export async function POST(request: NextRequest) {
   try {
-    // Auth check without wrapping in RLS transaction (streaming needs to outlive the handler)
+    // Auth check without RLS wrapper (streaming outlives handler)
     const ctx = await getOrgContext(request)
     if (!ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'AI chat is not configured. Add OPENAI_API_KEY to your environment variables.' },
-        { status: 503 }
-      )
     }
 
     const body = await request.json() as {
@@ -47,49 +39,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'messages array is required' }, { status: 400 })
     }
 
-    const openai = new OpenAI({ apiKey })
+    // Resolve AI provider for this org (BYOK → platform key → Groq free)
+    const config = await resolveAIConfig(ctx.organizationId)
+
+    if (!config.apiKey) {
+      return NextResponse.json(
+        { error: 'No AI provider configured. Go to Settings → AI to set up your provider or add an API key.' },
+        { status: 503 }
+      )
+    }
 
     const systemContent = context
       ? `${SYSTEM_PROMPT}\n\n--- CRM CONTEXT ---\n${context}`
       : SYSTEM_PROMPT
 
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      stream: true,
-      messages: [
-        { role: 'system', content: systemContent },
-        ...messages,
-      ],
-      max_tokens: 1500,
-      temperature: 0.7,
-    })
+    const chatMessages = [
+      { role: 'system' as const, content: systemContent },
+      ...messages,
+    ]
 
-    const encoder = new TextEncoder()
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const delta = chunk.choices[0]?.delta?.content
-            if (delta) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`))
-            }
-          }
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Stream error'
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
-          controller.close()
-        }
-      },
-    })
+    const readable = await createChatStream(config, chatMessages)
 
     return new Response(readable, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
+        'X-AI-Provider': config.provider,
       },
     })
   } catch (error) {

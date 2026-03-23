@@ -429,7 +429,7 @@ export function AiAssistantView() {
                 <h2 className="font-semibold text-black text-sm">
                   {activeChat.title === "New conversation" ? "AI Sales Assistant" : activeChat.title}
                 </h2>
-                <p className="text-xs text-gray-400">Powered by GPT-4o · King CRM</p>
+                <p className="text-xs text-gray-400">AI-powered · King CRM</p>
               </div>
             </div>
 

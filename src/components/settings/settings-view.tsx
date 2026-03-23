@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
+  Bot,
   Building2,
   Calendar,
   DollarSign,
@@ -33,6 +34,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
+import { AISettingsPanel } from '@/components/settings/ai-settings-panel'
 
 function OrganizationSettingsPanel() {
   const [loading, setLoading] = useState(true)
@@ -1374,6 +1376,10 @@ export function SettingsView() {
             <Webhook className="h-4 w-4" />
             Webhooks
           </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+            <Bot className="h-4 w-4" />
+            AI
+          </TabsTrigger>
           <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
             <DollarSign className="h-4 w-4" />
             Billing
@@ -1407,6 +1413,10 @@ export function SettingsView() {
 
         <TabsContent value="webhooks" className="mt-6 space-y-6">
           <WebhooksSettingsPanel />
+        </TabsContent>
+
+        <TabsContent value="ai" className="mt-6 space-y-6">
+          <AISettingsPanel />
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6 space-y-6">
