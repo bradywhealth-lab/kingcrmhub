@@ -89,3 +89,4 @@ prompt/
 *.swp
 *.swo
 .worktrees/
+node_modules
