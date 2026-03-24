@@ -75,13 +75,34 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
     }
   }
 
-  // Free tier: Groq
-  const groqKey = process.env.GROQ_API_KEY || ''
+  // Free tier: Groq (platform key) → OpenAI (platform key) → no provider
+  const groqKey = process.env.GROQ_API_KEY?.trim()
+  if (groqKey) {
+    return {
+      provider: 'groq',
+      model: 'llama-3.3-70b-versatile',
+      apiKey: groqKey,
+      label: 'Groq Llama 3.3 (free)',
+    }
+  }
+
+  // Last resort: check for any platform key
+  const openaiKey = process.env.OPENAI_API_KEY?.trim()
+  if (openaiKey) {
+    return {
+      provider: 'openai',
+      model: 'gpt-4o',
+      apiKey: openaiKey,
+      label: 'OpenAI (platform fallback)',
+    }
+  }
+
+  // No keys available at all
   return {
     provider: 'groq',
     model: 'llama-3.3-70b-versatile',
-    apiKey: groqKey,
-    label: 'Groq Llama 3.3 (free)',
+    apiKey: '',
+    label: 'No AI provider configured',
   }
 }
 
