@@ -6,6 +6,12 @@ import { getAuthSecret } from '@/lib/auth-env'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Let API routes pass through — they handle their own auth
+  if (pathname.startsWith('/api/')) {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Get and validate session using NextAuth's JWT token handler
   const token = await getToken({
     req: request,
