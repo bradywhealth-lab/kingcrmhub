@@ -67,6 +67,7 @@
     "@supabase/supabase-js": "^2.100.0",
     "@tanstack/react-query": "^5.95.2",
     "@tanstack/react-table": "^8.21.3",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^6.0.135",
     "better-sqlite3": "^12.8.0",
     "canvas-confetti": "^1.9.4",
