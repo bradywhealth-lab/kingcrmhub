@@ -90,3 +90,5 @@ prompt/
 *.swo
 .worktrees/
 node_modules
+"enviroment variables.txt"
+.next.bak-*

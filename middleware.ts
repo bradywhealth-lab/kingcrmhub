@@ -1,31 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { applySecurityHeaders } from '@/lib/security'
+import { getAuthSecret } from '@/lib/auth-env'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const sessionToken = request.cookies.get('session-token')?.value?.trim()
-  const isAuthenticated = Boolean(sessionToken)
-  const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/')
-  const isApiRoute = pathname.startsWith('/api/')
 
-  let response: NextResponse
+  // Get and validate session using NextAuth's JWT token handler
+  const token = await getToken({
+    req: request,
+    secret: getAuthSecret(),
+    cookieName: 'session-token',
+  })
 
-  if (!isApiRoute && !isAuthRoute && !isAuthenticated) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth'
-    response = NextResponse.redirect(url)
-  } else if (isAuthRoute && pathname !== '/auth/password' && isAuthenticated) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    response = NextResponse.redirect(url)
-  } else if (pathname === '/auth/password' && !isAuthenticated) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth'
-    response = NextResponse.redirect(url)
-  } else {
-    response = NextResponse.next()
+  const isAuthenticated = !!token
+
+  // Auth page - redirect authenticated users to dashboard
+  if (pathname.startsWith('/auth')) {
+    if (isAuthenticated) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
   }
 
+  // Protected routes - require authentication
+  if (!isAuthenticated) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth'
+    return NextResponse.redirect(url)
+  }
+
+  const response = NextResponse.next()
   return applySecurityHeaders(request, response)
 }
 
