@@ -8,7 +8,6 @@ import { getAuthSecret } from '@/lib/auth-env'
 import {
   AUTH_COOKIE_NAME,
   SESSION_TTL_MS,
-  createSessionToken,
   hashSessionToken,
   readUserPreferences,
   readSessionClientDetails,
@@ -264,9 +263,8 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
     secret: getAuthSecret(),
     adapter: createPrismaAuthAdapter(request),
     session: {
-      strategy: 'database',
+      strategy: 'jwt',
       maxAge: Math.floor(SESSION_TTL_MS / 1000),
-      generateSessionToken: createSessionToken,
     },
     providers: [
       CredentialsProvider({
@@ -310,22 +308,43 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
       },
     },
     callbacks: {
-      async session({ session, user }) {
+      async jwt({ token, user }) {
+        if (!user) return token
+
         const u = user as typeof user & {
           role: string
           organizationId: string
           organization: { id: string; name: string; slug: string; plan: string }
           preferences: unknown
         }
-        session.user.id = u.id
-        session.user.email = u.email
-        session.user.name = u.name
-        session.user.image = u.image
-        session.user.role = u.role
-        session.user.organizationId = u.organizationId
-        session.user.organization = u.organization
-        session.user.preferences = u.preferences
-        session.user.mustChangePassword = readUserPreferences(u.preferences).requirePasswordChange === true
+
+        token.sub = u.id
+        token.email = u.email
+        token.name = u.name
+        token.picture = u.image
+        token.role = u.role
+        token.organizationId = u.organizationId
+        token.organization = u.organization
+        token.preferences = u.preferences
+
+        return token
+      },
+      async session({ session, token }) {
+        const t = token as typeof token & {
+          role: string
+          organizationId: string
+          organization: { id: string; name: string; slug: string; plan: string }
+          preferences: unknown
+        }
+        session.user.id = typeof t.sub === 'string' ? t.sub : ''
+        session.user.email = typeof t.email === 'string' ? t.email : ''
+        session.user.name = typeof t.name === 'string' ? t.name : null
+        session.user.image = typeof t.picture === 'string' ? t.picture : null
+        session.user.role = t.role
+        session.user.organizationId = t.organizationId
+        session.user.organization = t.organization
+        session.user.preferences = t.preferences
+        session.user.mustChangePassword = readUserPreferences(t.preferences).requirePasswordChange === true
         return session
       },
     },
