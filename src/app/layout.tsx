@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { initSentry } from "@/lib/observability/sentry";
+import { Analytics } from "@vercel/analytics/next";
 
 initSentry()
 
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className="antialiased bg-background text-foreground">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
