@@ -263,7 +263,7 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
     secret: getAuthSecret(),
     adapter: createPrismaAuthAdapter(request),
     session: {
-      strategy: 'jwt',
+      strategy: 'database',
       maxAge: Math.floor(SESSION_TTL_MS / 1000),
     },
     providers: [
@@ -329,22 +329,47 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
 
         return token
       },
-      async session({ session, token }) {
+      async session({ session, token, user }) {
         const t = token as typeof token & {
           role: string
           organizationId: string
           organization: { id: string; name: string; slug: string; plan: string }
           preferences: unknown
         }
-        session.user.id = typeof t.sub === 'string' ? t.sub : ''
-        session.user.email = typeof t.email === 'string' ? t.email : ''
-        session.user.name = typeof t.name === 'string' ? t.name : null
-        session.user.image = typeof t.picture === 'string' ? t.picture : null
-        session.user.role = t.role
-        session.user.organizationId = t.organizationId
-        session.user.organization = t.organization
-        session.user.preferences = t.preferences
-        session.user.mustChangePassword = readUserPreferences(t.preferences).requirePasswordChange === true
+        const u = user as typeof user & {
+          id?: string
+          email?: string | null
+          name?: string | null
+          image?: string | null
+          role?: string
+          organizationId?: string
+          organization?: { id: string; name: string; slug: string; plan: string }
+          preferences?: unknown
+        }
+
+        const id = typeof t?.sub === 'string' ? t.sub : typeof u?.id === 'string' ? u.id : ''
+        const email = typeof t?.email === 'string' ? t.email : typeof u?.email === 'string' ? u.email : ''
+        const name = typeof t?.name === 'string' ? t.name : typeof u?.name === 'string' ? u.name : null
+        const image = typeof t?.picture === 'string' ? t.picture : typeof u?.image === 'string' ? u.image : null
+        const role = typeof t?.role === 'string' ? t.role : typeof u?.role === 'string' ? u.role : ''
+        const organizationId =
+          typeof t?.organizationId === 'string'
+            ? t.organizationId
+            : typeof u?.organizationId === 'string'
+              ? u.organizationId
+              : ''
+        const organization = t?.organization ?? u?.organization ?? { id: '', name: '', slug: '', plan: '' }
+        const preferences = t?.preferences ?? u?.preferences ?? {}
+
+        session.user.id = id
+        session.user.email = email
+        session.user.name = name
+        session.user.image = image
+        session.user.role = role
+        session.user.organizationId = organizationId
+        session.user.organization = organization
+        session.user.preferences = preferences
+        session.user.mustChangePassword = readUserPreferences(preferences).requirePasswordChange === true
         return session
       },
     },
