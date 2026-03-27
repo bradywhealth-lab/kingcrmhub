@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
-import { AUTH_COOKIE_NAME } from '@/lib/auth'
-import { hashSessionToken } from '@/lib/auth'
+import { AUTH_COOKIE_NAME, getCurrentSessionFromToken, hashSessionToken } from '@/lib/auth'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
@@ -11,7 +10,12 @@ export async function GET(request: NextRequest) {
       if (!context.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
       const currentToken = request.cookies.get(AUTH_COOKIE_NAME)?.value?.trim() || null
-      const currentTokenHash = currentToken ? hashSessionToken(currentToken) : null
+      const currentSession = currentToken ? await getCurrentSessionFromToken(currentToken) : null
+      const currentTokenHash = currentSession
+        ? hashSessionToken(currentSession.sessionToken)
+        : currentToken
+          ? hashSessionToken(currentToken)
+          : null
 
       const sessions = await db.userSession.findMany({
         where: {
