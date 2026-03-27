@@ -1,5 +1,6 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
+import { decode as decodeJwt } from 'next-auth/jwt'
 import { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
@@ -148,7 +149,20 @@ export function readSessionClientDetails(request: NextRequest) {
 }
 
 export async function getCurrentSessionFromToken(token: string) {
-  const tokenHash = hashSessionToken(token)
+  let lookupToken = token
+
+  const authSecret = process.env.NEXTAUTH_SECRET?.trim()
+  if (authSecret) {
+    const decoded = await decodeJwt({
+      token,
+      secret: authSecret,
+    }).catch(() => null)
+    if (decoded && typeof decoded.sessionToken === 'string' && decoded.sessionToken.length > 0) {
+      lookupToken = decoded.sessionToken
+    }
+  }
+
+  const tokenHash = hashSessionToken(lookupToken)
 
   const session = await db.userSession.findFirst({
     where: {
@@ -197,7 +211,7 @@ export async function getCurrentSessionFromToken(token: string) {
 
   return {
     sessionId: session.id,
-    sessionToken: token,
+    sessionToken: lookupToken,
     sessionTokenHash: session.token,
     expiresAt: session.expiresAt,
     user: session.user,

@@ -8,7 +8,10 @@ import { getAuthSecret } from '@/lib/auth-env'
 import {
   AUTH_COOKIE_NAME,
   SESSION_TTL_MS,
+  createSessionToken,
+  createUserSession,
   hashSessionToken,
+  invalidateSessionToken,
   readUserPreferences,
   readSessionClientDetails,
   serializeAuthUser,
@@ -263,7 +266,7 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
     secret: getAuthSecret(),
     adapter: createPrismaAuthAdapter(request),
     session: {
-      strategy: 'database',
+      strategy: 'jwt',
       maxAge: Math.floor(SESSION_TTL_MS / 1000),
     },
     providers: [
@@ -318,6 +321,13 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
           preferences: unknown
         }
 
+        const existingSessionToken =
+          typeof token.sessionToken === 'string' && token.sessionToken.length > 0 ? token.sessionToken : null
+        const sessionToken = existingSessionToken ?? createSessionToken()
+        if (!existingSessionToken) {
+          await createUserSession(u.id, sessionToken, request)
+        }
+
         token.sub = u.id
         token.email = u.email
         token.name = u.name
@@ -326,6 +336,7 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
         token.organizationId = u.organizationId
         token.organization = u.organization
         token.preferences = u.preferences
+        token.sessionToken = sessionToken
 
         return token
       },
@@ -371,6 +382,14 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
         session.user.preferences = preferences
         session.user.mustChangePassword = readUserPreferences(preferences).requirePasswordChange === true
         return session
+      },
+    },
+    events: {
+      async signOut(message) {
+        const token = message?.token as { sessionToken?: unknown } | undefined
+        const sessionToken =
+          typeof token?.sessionToken === 'string' && token.sessionToken.length > 0 ? token.sessionToken : null
+        if (sessionToken) await invalidateSessionToken(sessionToken)
       },
     },
   }
