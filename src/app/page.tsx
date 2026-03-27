@@ -49,7 +49,7 @@ import { SettingsView } from "@/components/settings/settings-view"
 import { AiAssistantView } from "@/components/ai/ai-assistant-view"
 import { triggerWinCelebration, triggerSmallCelebration } from "@/lib/celebrations"
 import { toast } from "@/hooks/use-toast"
-import { readApiJsonOrText } from "@/lib/api-client"
+import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 
 // ============================================
 // ELITE CRM - MODERN OCEAN THEME
@@ -1697,7 +1697,7 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/upload?limit=100')
+        const res = await fetch(buildApiPath('/api/upload?limit=100'))
         const { data, text } = await readApiJsonOrText(res)
         if (cancelled) return
         if (!data) {

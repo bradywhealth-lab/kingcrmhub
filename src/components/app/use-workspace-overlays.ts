@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useCommandPalette } from "@/components/command-palette"
 import { toast } from "@/hooks/use-toast"
-import { readApiJsonOrText } from "@/lib/api-client"
+import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 
 export function useWorkspaceOverlays() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
@@ -51,7 +51,7 @@ export function useWorkspaceOverlays() {
 
   const loadScrapeJobs = useCallback(async () => {
     try {
-      const response = await fetch("/api/scrape?limit=10")
+      const response = await fetch(buildApiPath("/api/scrape?limit=10"))
       const payload = await response.json()
       if (!payload.error) setScrapeJobs(payload.jobs || [])
     } catch {
@@ -71,7 +71,7 @@ export function useWorkspaceOverlays() {
 
     setScraping(true)
     try {
-      const response = await fetch("/api/scrape", {
+      const response = await fetch(buildApiPath("/api/scrape"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,7 +118,7 @@ export function useWorkspaceOverlays() {
     formData.append("aiAutoScore", "true")
 
     try {
-      const response = await fetch("/api/upload", { method: "POST", body: formData })
+      const response = await fetch(buildApiPath("/api/upload"), { method: "POST", body: formData })
       const { data: result, text } = await readApiJsonOrText(response)
       if (!result) {
         throw new Error(`Upload API returned non-JSON (${response.status}). ${text?.slice(0, 120) || ""}`.trim())
