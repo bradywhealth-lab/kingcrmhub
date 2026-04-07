@@ -112,7 +112,7 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden" style={{ background: '#fafaf8' }}>
+    <main className="min-h-screen overflow-hidden" style={{ background: '#fcf8ec' }}>
 
       {/* Top nav bar */}
       <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-8 py-5">
@@ -167,7 +167,7 @@ export default function AuthPage() {
             <div className="mt-8 flex items-center gap-3">
               <div className="flex -space-x-2">
                 {['#557df5','#3a5fd9','#6b91f7','#4a6ee0'].map((c, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-white text-xs font-bold" style={{ background: c, borderColor: '#fafaf8' }}>
+                  <div key={i} className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-white text-xs font-bold" style={{ background: c, borderColor: '#fcf8ec' }}>
                     {['J','M','S','R'][i]}
                   </div>
                 ))}
