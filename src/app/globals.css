@@ -44,128 +44,86 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
-  --color-gold: var(--gold);
-  --color-gold-light: var(--gold-light);
-  --color-cream: var(--cream);
-  --color-cream-dark: var(--cream-dark);
 }
 
 /* ============================================
-   ELITE DESIGN SYSTEM - MODERN OCEAN THEME
-   Light slate background with cobalt and teal accents
+   KING CRM HUB - ELITE DESIGN SYSTEM
+   Cream background with cobalt blue accents
+   Landing page aesthetic applied globally
    ============================================ */
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   
-  /* Luxury Gold & Cream Palette */
-  --gold: #2563EB;
-  --gold-light: #14B8A6;
-  --gold-dark: #0EA5E9;
-  --gold-subtle: rgba(212, 175, 55, 0.15);
+  /* Primary Palette - Cobalt Blue */
+  --cobalt: #557df5;
+  --cobalt-dark: #3a5fd9;
+  --cobalt-light: #6b91f7;
+  --cobalt-subtle: rgba(85, 125, 245, 0.12);
   
-  /* Cream/Ivory Backgrounds */
-  --cream: #F5F7FB;
-  --cream-dark: #EEF2F7;
-  --cream-darker: #F0EBE0;
+  /* Cream Background System */
+  --cream: #fcf8ec;
+  --cream-light: #fcfcfc;
+  --cream-warm: #f5f0e6;
+  --cream-border: rgba(31, 42, 54, 0.08);
   
-  /* Pure blacks and whites */
-  --black: #0F172A;
-  --white: #FFFFFF;
-  
-  /* Base Theme - Light Cream with Gold Accents */
-  --background: #F5F7FB;
-  --foreground: #0F172A;
-  --card: #FFFFFF;
-  --card-foreground: #0F172A;
-  --popover: #FFFFFF;
-  --popover-foreground: #0F172A;
-  
-  /* Primary Accent - Bright Gold */
-  --primary: #2563EB;
-  --primary-foreground: #0F172A;
-  
-  /* Secondary - Black */
-  --secondary: #0F172A;
-  --secondary-foreground: #FFFFFF;
-  
-  /* Muted - Cream tones */
-  --muted: #EEF2F7;
-  --muted-foreground: #6B6B6B;
-  --accent: #F0EBE0;
-  --accent-foreground: #0F172A;
+  /* Text Colors */
+  --navy: #1f2a36;
+  --navy-light: rgba(31, 42, 54, 0.55);
+  --navy-muted: rgba(31, 42, 54, 0.45);
   
   /* Semantic Colors */
-  --destructive: #DC2626;
-  --success: #059669;
-  --warning: #2563EB;
-  --info: #0284C7;
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --warning: #ea580c;
+  --warning-light: #fff7ed;
+  --destructive: #dc2626;
+  --destructive-light: #fef2f2;
+  --info: #557df5;
+  
+  /* Base Theme */
+  --background: #fcf8ec;
+  --foreground: #1f2a36;
+  --card: #fcfcfc;
+  --card-foreground: #1f2a36;
+  --popover: #fcfcfc;
+  --popover-foreground: #1f2a36;
+  
+  /* Primary - Cobalt */
+  --primary: #557df5;
+  --primary-foreground: #ffffff;
+  
+  /* Secondary - Navy */
+  --secondary: #1f2a36;
+  --secondary-foreground: #ffffff;
+  
+  /* Muted - Cream tones */
+  --muted: #f5f0e6;
+  --muted-foreground: rgba(31, 42, 54, 0.55);
+  --accent: rgba(85, 125, 245, 0.08);
+  --accent-foreground: #1f2a36;
   
   /* Borders & Inputs */
-  --border: #D7DFEA;
-  --input: #D7DFEA;
-  --ring: #2563EB;
+  --border: rgba(31, 42, 54, 0.12);
+  --input: rgba(31, 42, 54, 0.15);
+  --ring: #557df5;
   
-  /* Charts - Gold-centric palette */
-  --chart-1: #2563EB;
-  --chart-2: #0F172A;
-  --chart-3: #0EA5E9;
-  --chart-4: #14B8A6;
-  --chart-5: #64748B;
+  /* Charts - Cobalt palette */
+  --chart-1: #557df5;
+  --chart-2: #3a5fd9;
+  --chart-3: #6b91f7;
+  --chart-4: #4a6ee0;
+  --chart-5: #1f2a36;
   
-  /* Sidebar - Premium dark for contrast */
-  --sidebar: #0F172A;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #2563EB;
-  --sidebar-primary-foreground: #0F172A;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #334155;
-  --sidebar-ring: #2563EB;
-}
-
-/* Dark mode - Optional (user can toggle) */
-.dark {
-  --background: #0F172A;
-  --foreground: #FFFFFF;
-  --card: #141414;
-  --card-foreground: #FFFFFF;
-  --popover: #141414;
-  --popover-foreground: #FFFFFF;
-  
-  --primary: #2563EB;
-  --primary-foreground: #0F172A;
-  
-  --secondary: #1E293B;
-  --secondary-foreground: #FFFFFF;
-  --muted: #1E293B;
-  --muted-foreground: #A0A0A0;
-  --accent: #334155;
-  --accent-foreground: #FFFFFF;
-  
-  --destructive: #EF4444;
-  --success: #10B981;
-  --warning: #2563EB;
-  --info: #0EA5E9;
-  
-  --border: #334155;
-  --input: #334155;
-  --ring: #2563EB;
-  
-  --chart-1: #2563EB;
-  --chart-2: #FFFFFF;
-  --chart-3: #0EA5E9;
-  --chart-4: #14B8A6;
-  --chart-5: #64748B;
-  
-  --sidebar: #0F172A;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #2563EB;
-  --sidebar-primary-foreground: #0F172A;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #334155;
-  --sidebar-ring: #2563EB;
+  /* Sidebar */
+  --sidebar: #1f2a36;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #557df5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(85, 125, 245, 0.15);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #557df5;
 }
 
 @layer base {
@@ -178,269 +136,109 @@
   }
 }
 
-/* Elite Scrollbar - Cobalt accent */
+/* ============================================
+   SCROLLBAR - Cobalt accent
+   ============================================ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--cream-dark);
+  background: var(--cream-warm);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gold);
+  background: var(--cobalt);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gold-dark);
+  background: var(--cobalt-dark);
 }
 
-.dark ::-webkit-scrollbar-track {
-  background: #1E293B;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #0EA5E9;
-}
-
-/* AI Glow Effects - Cobalt */
-.ai-glow {
-  box-shadow: 0 0 20px rgba(37, 99, 235, 0.4), 0 0 40px rgba(20, 184, 166, 0.18);
-}
-
-.ai-glow-success {
-  box-shadow: 0 0 20px rgba(5, 150, 105, 0.4), 0 0 40px rgba(5, 150, 105, 0.2);
-}
-
-.ai-glow-warning {
-  box-shadow: 0 0 20px rgba(37, 99, 235, 0.4), 0 0 40px rgba(20, 184, 166, 0.18);
-}
-
-/* Glass Effect */
-.glass {
-  background: rgba(245, 247, 251, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(37, 99, 235, 0.16);
-}
-
-.dark .glass {
-  background: rgba(20, 20, 20, 0.9);
-  border: 1px solid rgba(20, 184, 166, 0.22);
-}
-
-/* Gradient Text - Cobalt */
-.gradient-text {
-  background: linear-gradient(135deg, #2563EB, #14B8A6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Animated Gradient Border - Cobalt */
-.gradient-border {
-  position: relative;
-  background: var(--card);
-}
-
-.gradient-border::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 2px;
-  background: linear-gradient(135deg, #2563EB, #14B8A6, #2563EB);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Primary Button Style */
-.btn-gold {
-  background: linear-gradient(135deg, #2563EB, #14B8A6);
-  color: #FFFFFF;
+/* ============================================
+   BUTTONS - Primary cobalt gradient
+   ============================================ */
+.btn-primary {
+  background: linear-gradient(135deg, #557df5, #3a5fd9);
+  color: #ffffff;
   font-weight: 600;
   border: none;
+  border-radius: 0.75rem;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(85, 125, 245, 0.35);
 }
 
-.btn-gold:hover {
-  background: linear-gradient(135deg, #0EA5E9, #2563EB);
+.btn-primary:hover {
+  background: linear-gradient(135deg, #6b91f7, #557df5);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 6px 20px rgba(85, 125, 245, 0.45);
 }
 
-/* Black Button Style */
-.btn-black {
-  background: #0F172A;
-  color: #FFFFFF;
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--navy);
+  color: #ffffff;
   font-weight: 500;
   border: none;
+  border-radius: 0.75rem;
   transition: all 0.2s ease;
 }
 
-.btn-black:hover {
-  background: #1E293B;
+.btn-secondary:hover {
+  background: rgba(31, 42, 54, 0.9);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Shimmer Loading Effect */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+.btn-outline {
+  background: transparent;
+  color: var(--cobalt);
+  font-weight: 500;
+  border: 1.5px solid var(--cobalt);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
 }
 
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--cream-dark) 25%,
-    var(--cream) 50%,
-    var(--cream-dark) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+.btn-outline:hover {
+  background: var(--cobalt-subtle);
 }
 
-.dark .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    #1E293B 25%,
-    #334155 50%,
-    #1E293B 75%
-  );
-  background-size: 200% 100%;
+.btn-ghost {
+  background: transparent;
+  color: var(--navy);
+  font-weight: 500;
+  border: none;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
 }
 
-/* Pulse Animation for AI elements */
-@keyframes pulse-ai {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
-  }
-  50% {
-    opacity: 0.9;
-    box-shadow: 0 0 30px rgba(20, 184, 166, 0.5);
-  }
+.btn-ghost:hover {
+  background: rgba(31, 42, 54, 0.05);
 }
 
-.animate-pulse-ai {
-  animation: pulse-ai 2s ease-in-out infinite;
+/* ============================================
+   CARDS - Clean with subtle borders
+   ============================================ */
+.card-elite {
+  background: var(--cream-light);
+  border: 1px solid var(--cream-border);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
 }
 
-/* Card Hover Effects */
-.card-hover {
-  transition: all 0.2s ease-in-out;
-  border: 1px solid var(--border);
+.card-elite:hover {
+  border-color: rgba(85, 125, 245, 0.3);
+  box-shadow: 0 8px 24px rgba(31, 42, 54, 0.08);
 }
 
-.card-hover:hover {
-  transform: translateY(-2px);
-  border-color: var(--gold);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
-}
-
-/* Status Badge Colors - Ocean Theme */
-.status-new {
-  background: #0F172A;
-  color: #FFFFFF;
-}
-
-.status-hot {
-  background: linear-gradient(135deg, #2563EB, #14B8A6);
-  color: #0F172A;
-}
-
-.status-qualified {
-  background: #2563EB;
-  color: #0F172A;
-}
-
-.status-nurture {
-  background: #64748B;
-  color: #FFFFFF;
-}
-
-.status-sold {
-  background: #059669;
-  color: #FFFFFF;
-}
-
-.status-lost {
-  background: #DC2626;
-  color: #FFFFFF;
-}
-
-.status-proposal {
-  background: #0284C7;
-  color: #FFFFFF;
-}
-
-.status-negotiation {
-  background: #1E293B;
-  color: #2563EB;
-}
-
-/* Kanban Column Colors - Ocean Theme */
-.kanban-new { border-top: 3px solid #0F172A; }
-.kanban-contacted { border-top: 3px solid #6B7280; }
-.kanban-qualified { border-top: 3px solid #2563EB; }
-.kanban-proposal { border-top: 3px solid #0284C7; }
-.kanban-negotiation { border-top: 3px solid #64748B; }
-.kanban-won { border-top: 3px solid #059669; }
-.kanban-lost { border-top: 3px solid #DC2626; }
-
-/* Focus States - Accessibility with Cobalt ring */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
-/* Transitions */
-.transition-smooth {
-  transition: all 0.2s ease-in-out;
-}
-
-/* Text Utilities */
-.text-balance {
-  text-wrap: balance;
-}
-
-/* Accent underline for links */
-.link-gold {
-  position: relative;
-  color: var(--gold-dark);
-  text-decoration: none;
-}
-
-.link-gold::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: var(--gold);
-  transition: width 0.2s ease;
-}
-
-.link-gold:hover::after {
-  width: 100%;
-}
-
-/* Premium card with accent border */
 .card-premium {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--cream-light);
+  border: 1px solid var(--cream-border);
+  border-radius: 1rem;
   position: relative;
   overflow: hidden;
 }
@@ -452,21 +250,185 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #2563EB, #14B8A6, #2563EB);
+  background: linear-gradient(90deg, #557df5, #6b91f7, #557df5);
 }
 
-/* Accent divider */
-.divider-gold {
+/* ============================================
+   INPUTS - Rounded with cream background
+   ============================================ */
+.input-elite {
+  background: var(--cream-light);
+  border: 1px solid rgba(31, 42, 54, 0.15);
+  border-radius: 0.75rem;
+  color: var(--navy);
+  transition: all 0.2s ease;
+}
+
+.input-elite:focus {
+  border-color: var(--cobalt);
+  box-shadow: 0 0 0 3px rgba(85, 125, 245, 0.15);
+  outline: none;
+}
+
+.input-elite::placeholder {
+  color: rgba(31, 42, 54, 0.35);
+}
+
+/* ============================================
+   STATUS BADGES
+   ============================================ */
+.badge-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-new { background: var(--navy); color: white; }
+.badge-contacted { background: rgba(31, 42, 54, 0.6); color: white; }
+.badge-qualified { background: var(--cobalt); color: white; }
+.badge-proposal { background: #0284c7; color: white; }
+.badge-negotiation { background: #64748b; color: white; }
+.badge-won { background: var(--success); color: white; }
+.badge-lost { background: var(--destructive); color: white; }
+
+/* ============================================
+   AI GLOW EFFECTS
+   ============================================ */
+.ai-glow {
+  box-shadow: 0 0 20px rgba(85, 125, 245, 0.35), 0 0 40px rgba(85, 125, 245, 0.15);
+}
+
+.ai-glow-success {
+  box-shadow: 0 0 20px rgba(22, 163, 74, 0.35), 0 0 40px rgba(22, 163, 74, 0.15);
+}
+
+/* ============================================
+   GRADIENT TEXT
+   ============================================ */
+.gradient-text {
+  background: linear-gradient(135deg, #557df5, #3a5fd9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   GLASS EFFECT
+   ============================================ */
+.glass {
+  background: rgba(252, 248, 236, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(85, 125, 245, 0.15);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--cream-warm) 25%, var(--cream-light) 50%, var(--cream-warm) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes pulse-cobalt {
+  0%, 100% { box-shadow: 0 0 20px rgba(85, 125, 245, 0.35); }
+  50% { box-shadow: 0 0 30px rgba(85, 125, 245, 0.5); }
+}
+
+.animate-pulse-cobalt {
+  animation: pulse-cobalt 2s ease-in-out infinite;
+}
+
+/* ============================================
+   KANBAN STYLES
+   ============================================ */
+.kanban-column {
+  background: var(--cream-light);
+  border: 1px solid var(--cream-border);
+  border-radius: 0.75rem;
+}
+
+.kanban-card {
+  background: white;
+  border: 1px solid var(--cream-border);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.kanban-card:hover {
+  border-color: rgba(85, 125, 245, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(31, 42, 54, 0.08);
+}
+
+/* ============================================
+   SIDEBAR NAVIGATION
+   ============================================ */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background: rgba(85, 125, 245, 0.15);
+  color: white;
+}
+
+.nav-item.active {
+  background: var(--cobalt);
+  color: white;
+}
+
+/* ============================================
+   FOCUS STATES
+   ============================================ */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+.link-cobalt {
+  color: var(--cobalt);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.link-cobalt:hover {
+  opacity: 0.8;
+}
+
+/* ============================================
+   DIVIDERS
+   ============================================ */
+.divider-cobalt {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #2563EB, transparent);
+  background: linear-gradient(90deg, transparent, #557df5, transparent);
 }
 
-/* Score indicator with accent */
+/* ============================================
+   SCORE INDICATOR
+   ============================================ */
 .score-indicator {
   position: relative;
   width: 100%;
   height: 8px;
-  background: var(--cream-dark);
+  background: var(--cream-warm);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -477,27 +439,125 @@
   left: 0;
   top: 0;
   height: 100%;
-  background: linear-gradient(90deg, #0F172A, #2563EB);
+  background: linear-gradient(90deg, var(--navy), var(--cobalt));
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 
-/* CSV Upload Drop Zone */
+/* ============================================
+   UPLOAD ZONE
+   ============================================ */
 .upload-zone {
-  border: 2px dashed var(--gold);
-  background: var(--cream);
+  border: 2px dashed var(--cobalt);
+  background: var(--cobalt-subtle);
+  border-radius: 1rem;
   transition: all 0.2s ease;
 }
 
 .upload-zone:hover,
 .upload-zone.drag-over {
-  border-color: var(--gold-dark);
-  background: var(--gold-subtle);
+  border-color: var(--cobalt-dark);
+  background: rgba(85, 125, 245, 0.18);
 }
 
-/* Responsive Typography */
-@media (max-width: 640px) {
-  .responsive-text-sm { font-size: 0.875rem; }
-  .responsive-text-base { font-size: 1rem; }
-  .responsive-text-lg { font-size: 1.125rem; }
+/* ============================================
+   STATS CARDS
+   ============================================ */
+.stat-card {
+  background: var(--cream-light);
+  border: 1px solid var(--cream-border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: rgba(85, 125, 245, 0.25);
+  box-shadow: 0 4px 16px rgba(31, 42, 54, 0.06);
+}
+
+.stat-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cobalt-subtle);
+  color: var(--cobalt);
+}
+
+/* ============================================
+   TABLE STYLES
+   ============================================ */
+.table-elite {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-elite th {
+  background: var(--cream-warm);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--navy-light);
+  border-bottom: 1px solid var(--cream-border);
+}
+
+.table-elite td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--cream-border);
+  color: var(--navy);
+}
+
+.table-elite tr:hover td {
+  background: var(--cream-warm);
+}
+
+/* ============================================
+   MODAL/DIALOG
+   ============================================ */
+.dialog-elite {
+  background: var(--cream-light);
+  border: 1px solid var(--cream-border);
+  border-radius: 1rem;
+  box-shadow: 0 24px 48px rgba(31, 42, 54, 0.15);
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast-success {
+  background: var(--success-light);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  color: var(--success);
+}
+
+.toast-error {
+  background: var(--destructive-light);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: var(--destructive);
+}
+
+.toast-warning {
+  background: var(--warning-light);
+  border: 1px solid rgba(234, 88, 12, 0.2);
+  color: var(--warning);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
 }
