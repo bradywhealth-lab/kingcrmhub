@@ -6,18 +6,30 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
+const nullableString = (maxLen: number) =>
+  z.preprocess(
+    (val) => (val === null || val === '' ? undefined : val),
+    z.string().max(maxLen).optional(),
+  )
+
 const createLeadSchema = z.object({
-  firstName: z.string().max(120).optional(),
-  lastName: z.string().max(120).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().max(40).optional(),
-  company: z.string().max(160).optional(),
-  title: z.string().max(160).optional(),
-  website: z.string().max(300).optional(),
-  linkedin: z.string().max(300).optional(),
-  source: z.string().max(80).optional(),
-  estimatedValue: z.coerce.number().nonnegative().optional(),
-  customFields: z.record(z.string(), z.unknown()).optional(),
+  firstName: nullableString(120),
+  lastName: nullableString(120),
+  email: z.preprocess(
+    (val) => (val === null || val === '' ? undefined : val),
+    z.string().email().optional(),
+  ),
+  phone: nullableString(40),
+  company: nullableString(160),
+  title: nullableString(160),
+  website: nullableString(300),
+  linkedin: nullableString(300),
+  source: nullableString(80),
+  estimatedValue: z.preprocess(
+    (val) => (val === null || val === '' ? undefined : val),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  customFields: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
 /**

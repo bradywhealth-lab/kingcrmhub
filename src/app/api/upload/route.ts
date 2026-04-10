@@ -14,6 +14,10 @@ const FIELD_ALIASES: Record<string, string[]> = {
   website: ['website', 'site', 'domain', 'url'],
   linkedin: ['linkedin', 'linkedinurl', 'linkedinprofile'],
   estimatedValue: ['estimatedvalue', 'value', 'dealvalue', 'annualpremium'],
+  address: ['address', 'street', 'streetaddress', 'addr'],
+  city: ['city', 'town', 'municipality'],
+  state: ['state', 'province', 'region', 'st'],
+  zip: ['zip', 'zipcode', 'postalcode', 'postcode', 'postal'],
 }
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 const ALLOWED_CSV_MIME_TYPES = new Set([
@@ -21,6 +25,7 @@ const ALLOWED_CSV_MIME_TYPES = new Set([
   'application/csv',
   'application/vnd.ms-excel',
   'text/plain',
+  'application/octet-stream',
 ])
 
 type ParsedCsv = {
@@ -214,8 +219,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Only .csv files are supported' }, { status: 400 })
       }
 
+      // Only reject if MIME type is set AND is clearly not CSV-like.
+      // Browsers vary widely in MIME types for .csv (octet-stream, text/csv, etc.).
+      // The .csv extension check above is the primary guard.
       if (file.type && !ALLOWED_CSV_MIME_TYPES.has(file.type.toLowerCase())) {
-        return NextResponse.json({ error: 'Invalid CSV file type' }, { status: 400 })
+        // Allow any text/* type as well
+        if (!file.type.toLowerCase().startsWith('text/')) {
+          return NextResponse.json({ error: 'Invalid CSV file type' }, { status: 400 })
+        }
       }
 
       const csvText = await file.text()
@@ -225,8 +236,10 @@ export async function POST(request: NextRequest) {
       }
 
       const columnIndexes = buildColumnIndexes(parsed.headers)
-      if (columnIndexes.email == null && columnIndexes.phone == null) {
-        return NextResponse.json({ error: 'CSV must include an Email or Phone column' }, { status: 400 })
+      const hasNameColumn = columnIndexes.firstName != null || columnIndexes.lastName != null
+      const hasPhoneColumn = columnIndexes.phone != null
+      if (!hasNameColumn && !hasPhoneColumn) {
+        return NextResponse.json({ error: 'CSV must include a Name (first or last) or Phone column' }, { status: 400 })
       }
 
       const upload = await db.cSVUpload.create({
@@ -246,6 +259,7 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      // --- Pre-load existing emails/phones for duplicate detection ---
       const existingLeads = await db.lead.findMany({
         where: { organizationId: context.organizationId },
         select: { email: true, phone: true },
@@ -254,20 +268,25 @@ export async function POST(request: NextRequest) {
       const knownEmails = new Set(existingLeads.map((lead) => normalizeEmail(lead.email)).filter(Boolean) as string[])
       const knownPhones = new Set(existingLeads.map((lead) => normalizePhone(lead.phone)).filter(Boolean) as string[])
 
+      // --- Phase 1: Validate all rows and build insert-ready batch ---
       const errors: Array<{ rowNumber: number; message: string }> = []
       const warnings: Array<{ rowNumber: number; message: string }> = []
-      let successfulRows = 0
       let duplicateRows = 0
       let failedRows = 0
+
+      const validLeads: Prisma.LeadCreateManyInput[] = []
 
       for (const [index, row] of parsed.rows.entries()) {
         const rowNumber = index + 2
         const email = normalizeEmail(getCell(row, columnIndexes, 'email'))
         const phone = normalizePhone(getCell(row, columnIndexes, 'phone'))
 
-        if (!email && !phone) {
+        const firstNameVal = getCell(row, columnIndexes, 'firstName')
+        const lastNameVal = getCell(row, columnIndexes, 'lastName')
+        const hasName = !!(firstNameVal || lastNameVal)
+        if (!hasName && !phone) {
           failedRows++
-          errors.push({ rowNumber, message: 'Missing both email and phone' })
+          errors.push({ rowNumber, message: 'Missing both name and phone' })
           continue
         }
 
@@ -277,9 +296,13 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const firstName = getCell(row, columnIndexes, 'firstName') || null
-        const lastName = getCell(row, columnIndexes, 'lastName') || null
+        const firstName = firstNameVal || null
+        const lastName = lastNameVal || null
         const company = getCell(row, columnIndexes, 'company') || null
+        const address = getCell(row, columnIndexes, 'address') || null
+        const city = getCell(row, columnIndexes, 'city') || null
+        const state = getCell(row, columnIndexes, 'state') || null
+        const zip = getCell(row, columnIndexes, 'zip') || null
         const title = getCell(row, columnIndexes, 'title') || null
         const website = getCell(row, columnIndexes, 'website') || null
         const linkedin = getCell(row, columnIndexes, 'linkedin') || null
@@ -288,40 +311,82 @@ export async function POST(request: NextRequest) {
           ? calculateUploadLeadScore({ email, phone, company, title, website, linkedin, estimatedValue, source })
           : 0
 
-        await db.lead.create({
-          data: {
-            organizationId: context.organizationId,
-            firstName,
-            lastName,
-            email,
-            phone,
-            company,
-            title,
-            website,
-            linkedin,
-            source,
-            status: 'new',
-            estimatedValue,
-            csvUploadId: upload.id,
-            rowNumber,
-            aiScore,
-            aiConfidence: aiAutoScore ? Math.min(0.98, Math.max(0.6, 0.72 + aiScore / 500)) : null,
-            aiLastAnalyzed: aiAutoScore ? new Date() : null,
-            aiNextAction: aiAutoScore
-              ? aiScore >= 85
-                ? 'Call today and push for appointment booking'
-                : aiScore >= 70
-                  ? 'Send personalized outreach and propose 2 call slots'
-                  : 'Qualify this lead with AI questionnaire and initial contact'
-              : null,
-          },
+        validLeads.push({
+          organizationId: context.organizationId,
+          firstName,
+          lastName,
+          email,
+          phone,
+          company,
+          address,
+          city,
+          state,
+          zip,
+          title,
+          website,
+          linkedin,
+          source,
+          status: 'new',
+          estimatedValue,
+          csvUploadId: upload.id,
+          rowNumber,
+          aiScore,
+          aiConfidence: aiAutoScore ? Math.min(0.98, Math.max(0.6, 0.72 + aiScore / 500)) : null,
+          aiLastAnalyzed: aiAutoScore ? new Date() : null,
+          aiNextAction: aiAutoScore
+            ? aiScore >= 85
+              ? 'Call today and push for appointment booking'
+              : aiScore >= 70
+                ? 'Send personalized outreach and propose 2 call slots'
+                : 'Qualify this lead with AI questionnaire and initial contact'
+            : null,
         })
 
+        // Track in memory so later rows in this file detect intra-file duplicates
         if (email) knownEmails.add(email)
         if (phone) knownPhones.add(phone)
-        successfulRows++
       }
 
+      // --- Phase 2: Chunked batch insert with createMany ---
+      const CHUNK_SIZE = 200
+      let successfulRows = 0
+      const chunkErrors: Array<{ chunkStart: number; message: string }> = []
+
+      for (let i = 0; i < validLeads.length; i += CHUNK_SIZE) {
+        const chunk = validLeads.slice(i, i + CHUNK_SIZE)
+        try {
+          const result = await db.lead.createMany({
+            data: chunk,
+            skipDuplicates: true,
+          })
+          successfulRows += result.count
+        } catch (chunkError) {
+          // Chunk failed — fall back to individual inserts to isolate bad rows
+          for (const lead of chunk) {
+            try {
+              await db.lead.create({ data: lead })
+              successfulRows++
+            } catch (rowError) {
+              failedRows++
+              errors.push({
+                rowNumber: lead.rowNumber ?? 0,
+                message: rowError instanceof Error ? rowError.message.slice(0, 200) : 'Insert failed',
+              })
+            }
+          }
+        }
+
+        // Update progress after each chunk so the UI can reflect it
+        await db.cSVUpload.update({
+          where: { id: upload.id },
+          data: {
+            processedRows: Math.min(i + CHUNK_SIZE, validLeads.length) + failedRows + duplicateRows,
+            successfulRows,
+          },
+        })
+      }
+
+      // --- Phase 3: Finalize upload record ---
       const updatedUpload = await db.cSVUpload.update({
         where: { id: upload.id },
         data: {

@@ -60,6 +60,7 @@
   --cobalt-dark: #3a5fd9;
   --cobalt-light: #6b91f7;
   --cobalt-subtle: rgba(85, 125, 245, 0.12);
+  --cobalt-strong: rgba(85, 125, 245, 0.28);
   
   /* Cream Background System */
   --cream: #fcf8ec;
@@ -133,6 +134,13 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-image: radial-gradient(circle at top right, rgba(85, 125, 245, 0.12), transparent 30%), linear-gradient(180deg, #fcf8ec 0%, #eef3fb 48%, #fcf8ec 100%);
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: rgba(85, 125, 245, 0.22);
+    color: #1f2a36;
   }
 }
 
@@ -560,4 +568,29 @@
   .stat-card {
     padding: 1rem;
   }
+}
+
+.page-shell {
+  background: transparent;
+}
+
+.panel-surface {
+  background: rgba(252, 252, 252, 0.92);
+  border: 1px solid rgba(31, 42, 54, 0.08);
+  box-shadow: 0 18px 48px rgba(31, 42, 54, 0.08);
+}
+
+.panel-soft {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 248, 252, 0.86));
+  border: 1px solid rgba(31, 42, 54, 0.08);
+}
+
+.section-heading {
+  letter-spacing: -0.03em;
+}
+
+.kpi-tile {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
+  border: 1px solid rgba(31, 42, 54, 0.08);
+  box-shadow: 0 12px 32px rgba(31, 42, 54, 0.06);
 }

@@ -264,6 +264,7 @@ function createPrismaAuthAdapter(request?: NextRequest): Adapter {
 export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
   return {
     secret: getAuthSecret(),
+    useSecureCookies: process.env.ALLOW_INSECURE_LOCAL_AUTH !== 'true',
     adapter: createPrismaAuthAdapter(request),
     session: {
       strategy: 'jwt',
@@ -306,7 +307,7 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NEXTAUTH_URL?.startsWith('https://') && process.env.ALLOW_INSECURE_LOCAL_AUTH !== 'true',
         },
       },
     },

@@ -18,6 +18,7 @@ export function AddLeadDialog({
   onCreated?: () => void
 }) {
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -32,6 +33,7 @@ export function AddLeadDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSaving(true)
+    setError(null)
 
     try {
       const response = await fetch("/api/leads", {
@@ -66,8 +68,10 @@ export function AddLeadDialog({
       })
       onCreated?.()
       onOpenChange(false)
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create lead'
+      setError(message)
+      console.error('Add lead error:', err)
     } finally {
       setSaving(false)
     }
@@ -86,6 +90,11 @@ export function AddLeadDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-600">First name</Label>

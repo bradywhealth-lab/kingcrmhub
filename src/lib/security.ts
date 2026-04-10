@@ -3,26 +3,28 @@ import { getAuthBaseUrl } from '@/lib/auth-env'
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
-function getAllowedOrigin(request: NextRequest): string {
-  if (process.env.NODE_ENV !== 'production') {
-    return request.nextUrl.origin
-  }
+function getAllowedOrigins(request: NextRequest): string[] {
+  const allowed = new Set<string>([request.nextUrl.origin])
 
   const authBaseUrl = getAuthBaseUrl()
   if (authBaseUrl) {
-    return authBaseUrl
+    try {
+      allowed.add(new URL(authBaseUrl).origin)
+    } catch {
+      // Ignore malformed auth base URL.
+    }
   }
 
   const appBaseUrl = process.env.APP_BASE_URL?.trim()
   if (appBaseUrl) {
     try {
-      return new URL(appBaseUrl).origin
+      allowed.add(new URL(appBaseUrl).origin)
     } catch {
-      // Fall back to request origin when APP_BASE_URL is malformed.
+      // Ignore malformed app base URL.
     }
   }
 
-  return request.nextUrl.origin
+  return [...allowed]
 }
 
 function getRequestOrigin(request: NextRequest): string | null {
@@ -49,10 +51,13 @@ export function enforceSameOrigin(request: NextRequest): NextResponse | null {
   const requestOrigin = getRequestOrigin(request)
   if (!requestOrigin) return null
 
-  const allowedOrigin = getAllowedOrigin(request)
-  if (requestOrigin === allowedOrigin) return null
+  const allowedOrigins = getAllowedOrigins(request)
+  if (allowedOrigins.includes(requestOrigin)) return null
 
-  return NextResponse.json({ error: 'Cross-site request blocked' }, { status: 403 })
+  return NextResponse.json(
+    { error: 'Cross-site request blocked', details: `origin ${requestOrigin} not in ${allowedOrigins.join(', ')}` },
+    { status: 403 },
+  )
 }
 
 export function applySecurityHeaders(request: NextRequest, response: NextResponse): NextResponse {

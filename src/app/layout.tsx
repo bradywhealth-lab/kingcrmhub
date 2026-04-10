@@ -7,24 +7,24 @@ import { Analytics } from "@vercel/analytics/next";
 initSentry()
 
 export const metadata: Metadata = {
-  title: "InsuraFuze CRM",
-  description: "InsuraFuze is an AI-first insurance CRM for lead capture, pipeline management, quoting workflows, carrier intelligence, and team operations.",
-  keywords: ["InsuraFuze", "insurance CRM", "AI CRM", "broker workflow", "lead management", "pipeline", "quoting", "carrier intelligence"],
-  authors: [{ name: "InsuraFuze" }],
+  title: "King CRM Hub",
+  description: "King CRM Hub is an AI-powered insurance CRM for lead capture, pipeline management, auth-protected operations, carrier intelligence, and team execution.",
+  keywords: ["King CRM Hub", "insurance CRM", "AI CRM", "broker workflow", "lead management", "pipeline", "carrier intelligence"],
+  authors: [{ name: "King CRM Hub" }],
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "InsuraFuze CRM",
-    description: "AI-first CRM infrastructure for modern insurance teams.",
-    url: "https://insurafuze-king-crm.vercel.app",
-    siteName: "InsuraFuze",
+    title: "King CRM Hub",
+    description: "AI-powered CRM infrastructure for modern insurance teams.",
+    url: "https://kingcrmhub.net",
+    siteName: "King CRM Hub",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "InsuraFuze CRM",
-    description: "AI-first CRM infrastructure for modern insurance teams.",
+    title: "King CRM Hub",
+    description: "AI-powered CRM infrastructure for modern insurance teams.",
   },
 };
 

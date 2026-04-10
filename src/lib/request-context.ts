@@ -9,6 +9,13 @@ type OrgContext = {
   userId: string | null
 }
 
+function isLocalOrDirectHost(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase()
+  if (!normalized) return false
+  if (normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1') return true
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(normalized)
+}
+
 function readSessionTokenFromRequest(request: NextRequest): string | null {
   const headerToken = request.headers.get('x-session-token') || request.headers.get('authorization')
   if (headerToken?.startsWith('Bearer ')) return headerToken.slice('Bearer '.length).trim()
@@ -57,11 +64,13 @@ export async function getOrgContext(request: NextRequest): Promise<OrgContext | 
     }
   }
 
-  // Development-only fallback to keep local workflows usable before auth rollout.
-  if (process.env.NODE_ENV !== 'production') {
-    const allowBypass = process.env.ALLOW_DEV_AUTH_BYPASS?.trim() === 'true'
-    if (!allowBypass) return null
+  const allowDevBypass = process.env.ALLOW_DEV_AUTH_BYPASS?.trim() === 'true'
+  const allowLocalFallback = process.env.ALLOW_INSECURE_LOCAL_AUTH?.trim() === 'true'
+  const canUseFallback =
+    (process.env.NODE_ENV !== 'production' && allowDevBypass) ||
+    (allowLocalFallback && isLocalOrDirectHost(request.nextUrl.hostname))
 
+  if (canUseFallback) {
     const fallbackOrgId = process.env.DEV_DEFAULT_ORG_ID?.trim()
     if (fallbackOrgId) {
       const existing = await withOrgRlsTransaction(fallbackOrgId, async () =>

@@ -41,7 +41,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from "recharts"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { AppChrome } from "@/components/app/app-chrome"
+import { AppShell } from "@/components/app/app-shell"
 import { WorkspaceOverlays } from "@/components/app/workspace-overlays"
 import { useWorkspaceOverlays } from "@/components/app/use-workspace-overlays"
 import { useWorkspaceSession } from "@/components/app/use-workspace-session"
@@ -228,13 +228,15 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
   const [displayValue, setDisplayValue] = useState(0)
   
   useEffect(() => {
-    const duration = 1000
-    const steps = 60
+    const duration = 500
+    const steps = 20
     const stepValue = value / steps
     let current = 0
+    let step = 0
     const timer = setInterval(() => {
-      current += stepValue
-      if (current >= value) {
+      step++
+      current = Math.min(step * stepValue, value)
+      if (step >= steps) {
         setDisplayValue(value)
         clearInterval(timer)
       } else {
@@ -3248,7 +3250,7 @@ export default function EliteCRM() {
   }
   
   return (
-    <AppChrome
+    <AppShell
       activeView={activeView}
       setActiveView={setActiveView}
       currentUser={currentUser}
@@ -3258,10 +3260,10 @@ export default function EliteCRM() {
       <AnimatePresence mode="wait">
         <motion.div
           key={activeView}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.1 }}
         >
           {renderView()}
         </motion.div>
@@ -3291,6 +3293,6 @@ export default function EliteCRM() {
         onAddLead={() => setShowAddLeadDialog(true)}
         onUploadCSV={() => setShowUploadDialog(true)}
       />
-    </AppChrome>
+    </AppShell>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { getSession, signOut as nextAuthSignOut } from "next-auth/react"
 
 export type WorkspaceUser = {
@@ -16,11 +16,13 @@ export type WorkspaceUser = {
 
 export function useWorkspaceSession() {
   const router = useRouter()
+  const pathname = usePathname()
   const [authLoading, setAuthLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<WorkspaceUser | null>(null)
 
   useEffect(() => {
     let cancelled = false
+    const isAuthRoute = pathname?.startsWith("/auth") ?? false
 
     ;(async () => {
       try {
@@ -28,18 +30,28 @@ export function useWorkspaceSession() {
         if (cancelled) return
 
         if (!session?.user) {
-          router.replace("/auth")
+          setCurrentUser(null)
+          if (!isAuthRoute) router.replace("/auth")
           return
         }
 
         if (session.user.mustChangePassword) {
-          router.replace("/auth/password")
+          setCurrentUser(session.user as WorkspaceUser)
+          if (pathname !== "/auth/password") {
+            router.replace("/auth/password")
+          }
           return
         }
 
         setCurrentUser(session.user as WorkspaceUser)
+
+        if (isAuthRoute) {
+          router.replace("/")
+          router.refresh()
+        }
       } catch {
-        if (!cancelled) router.replace("/auth")
+        setCurrentUser(null)
+        if (!cancelled && !isAuthRoute) router.replace("/auth")
       } finally {
         if (!cancelled) setAuthLoading(false)
       }
@@ -48,7 +60,7 @@ export function useWorkspaceSession() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [pathname, router])
 
   const signOut = useCallback(async () => {
     try {
