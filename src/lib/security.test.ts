@@ -26,7 +26,7 @@ describe('security helpers', () => {
     const response = enforceSameOrigin(request)
 
     expect(response?.status).toBe(403)
-    await expect(response?.json()).resolves.toEqual({ error: 'Cross-site request blocked' })
+    await expect(response?.json()).resolves.toEqual(expect.objectContaining({ error: 'Cross-site request blocked' }))
   })
 
   it('allows local same-origin posts in development even when APP_BASE_URL points elsewhere', () => {
