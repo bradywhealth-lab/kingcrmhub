@@ -19,7 +19,7 @@ jobs:
 
       - name: Detect dependency graph support
         id: graph
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             try {
