@@ -68,7 +68,7 @@ export async function getOrgContext(request: NextRequest): Promise<OrgContext | 
   const allowLocalFallback = process.env.ALLOW_INSECURE_LOCAL_AUTH?.trim() === 'true'
   const canUseFallback =
     (process.env.NODE_ENV !== 'production' && allowDevBypass) ||
-    (allowLocalFallback && isLocalOrDirectHost(request.nextUrl.hostname))
+    (process.env.NODE_ENV !== 'production' && allowLocalFallback && isLocalOrDirectHost(request.nextUrl.hostname))
 
   if (canUseFallback) {
     const fallbackOrgId = process.env.DEV_DEFAULT_ORG_ID?.trim()
