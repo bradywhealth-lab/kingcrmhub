@@ -238,8 +238,9 @@ export async function POST(request: NextRequest) {
       const columnIndexes = buildColumnIndexes(parsed.headers)
       const hasNameColumn = columnIndexes.firstName != null || columnIndexes.lastName != null
       const hasPhoneColumn = columnIndexes.phone != null
-      if (!hasNameColumn && !hasPhoneColumn) {
-        return NextResponse.json({ error: 'CSV must include a Name (first or last) or Phone column' }, { status: 400 })
+      const hasEmailColumn = columnIndexes.email != null
+      if (!hasNameColumn && !hasPhoneColumn && !hasEmailColumn) {
+        return NextResponse.json({ error: 'CSV must include a Name, Phone, or Email column' }, { status: 400 })
       }
 
       const upload = await db.cSVUpload.create({
@@ -284,9 +285,9 @@ export async function POST(request: NextRequest) {
         const firstNameVal = getCell(row, columnIndexes, 'firstName')
         const lastNameVal = getCell(row, columnIndexes, 'lastName')
         const hasName = !!(firstNameVal || lastNameVal)
-        if (!hasName && !phone) {
+        if (!hasName && !phone && !email) {
           failedRows++
-          errors.push({ rowNumber, message: 'Missing both name and phone' })
+          errors.push({ rowNumber, message: 'Missing name, phone, and email' })
           continue
         }
 
