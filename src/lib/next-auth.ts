@@ -307,7 +307,7 @@ export function buildNextAuthOptions(request?: NextRequest): NextAuthOptions {
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-          secure: process.env.NEXTAUTH_URL?.startsWith('https://') && process.env.ALLOW_INSECURE_LOCAL_AUTH !== 'true',
+          secure: process.env.ALLOW_INSECURE_LOCAL_AUTH !== 'true' && (process.env.NODE_ENV === 'production' || (process.env.NEXTAUTH_URL?.startsWith('https://') ?? false)),
         },
       },
     },
