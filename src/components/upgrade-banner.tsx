@@ -4,10 +4,23 @@ import { useState } from "react";
 import Link from "next/link";
 import { Crown, X } from "lucide-react";
 
+function safeSessionStorage(key: string, value?: string): string | null {
+  try {
+    if (value !== undefined) {
+      sessionStorage.setItem(key, value);
+      return value;
+    }
+    return sessionStorage.getItem(key);
+  } catch {
+    // SecurityError in private/incognito mode — treat as if storage is empty
+    return null;
+  }
+}
+
 export function CrmDashboardBanner() {
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
-    return sessionStorage.getItem("crm-dash-banner") === "1";
+    return safeSessionStorage("crm-dash-banner") === "1";
   });
 
   if (dismissed) return null;
@@ -33,7 +46,7 @@ export function CrmDashboardBanner() {
           </Link>
           <button
             onClick={() => {
-              sessionStorage.setItem("crm-dash-banner", "1");
+              safeSessionStorage("crm-dash-banner", "1");
               setDismissed(true);
             }}
             className="rounded-lg p-1.5 text-[#9a8040] transition-colors hover:bg-white/60 hover:text-[#3a2a00]"
@@ -57,7 +70,7 @@ export function CrmDashboardBanner() {
             <div className="h-1.5 overflow-hidden rounded-full bg-[#d4b96a]/40">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#b8860b] to-[#d4a017] transition-all"
-                style={{ width: `${(used / limit) * 100}%` }}
+                style={{ width: `${Math.min(100, limit > 0 ? (used / limit) * 100 : 0)}%` }}
               />
             </div>
           </div>

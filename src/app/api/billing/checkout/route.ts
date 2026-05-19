@@ -18,23 +18,32 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 }
 
 export async function POST(request: Request) {
+  const session = await getServerSession(buildNextAuthOptions())
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Parse and validate request body — return 400 on malformed JSON or missing fields
+  let planId: string | undefined
+  let interval: 'monthly' | 'yearly' | undefined
   try {
-    const session = await getServerSession(buildNextAuthOptions())
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const body = (await request.json()) as { planId?: unknown; interval?: unknown }
+    if (typeof body.planId === 'string') planId = body.planId
+    if (body.interval === 'monthly' || body.interval === 'yearly') interval = body.interval
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
 
-    const { planId, interval } = (await request.json()) as { planId: string; interval: 'monthly' | 'yearly' }
+  if (!planId || !interval) {
+    return NextResponse.json({ error: 'planId and interval are required' }, { status: 400 })
+  }
 
-    if (!planId || !interval) {
-      return NextResponse.json({ error: 'planId and interval are required' }, { status: 400 })
-    }
+  const priceId = PRICE_IDS[planId]?.[interval]
+  if (!priceId) {
+    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+  }
 
-    const priceId = PRICE_IDS[planId]?.[interval]
-    if (!priceId) {
-      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
-    }
-
+  try {
     // TODO: Wire Stripe when ready:
     // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
     // const checkoutSession = await stripe.checkout.sessions.create({
@@ -54,7 +63,7 @@ export async function POST(request: Request) {
       interval,
     })
   } catch (error) {
-    console.error(error)
+    console.error('[billing/checkout] error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

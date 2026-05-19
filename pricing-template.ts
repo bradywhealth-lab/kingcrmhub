@@ -335,6 +335,7 @@ export const PLANS = PLANS_OPTION_A;
 // Usage: canUse("aiAssistant", userPlan)
 // ============================================================
 export function canUse(feature: keyof Plan["features"], planId: PlanId): boolean {
+  if (planId === "free") return FREE_PLAN.features[feature];
   const plan = PLANS.find((p) => p.id === planId);
   if (!plan) return false;
   return plan.features[feature];
@@ -343,8 +344,10 @@ export function canUse(feature: keyof Plan["features"], planId: PlanId): boolean
 // ============================================================
 // HELPER: get limit for a given plan
 // Returns null if unlimited, 0 if plan not found
+// Handles both paid tiers (PLANS) and the free tier (FREE_PLAN)
 // ============================================================
 export function getLimit(limit: keyof Plan["limits"], planId: PlanId): number | null {
+  if (planId === "free") return FREE_PLAN.limits[limit];
   const plan = PLANS.find((p) => p.id === planId);
   if (!plan) return 0;
   return plan.limits[limit];

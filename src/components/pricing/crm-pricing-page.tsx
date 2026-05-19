@@ -115,7 +115,7 @@ const COMPARE_FEATURES = [
   "Priority support",
 ];
 
-const FEATURE_MAP: Record<PlanId, (string | false)[]> = {
+const FEATURE_MAP: Record<PlanId, (string | boolean)[]> = {
   free:       ["1 seat", "50 leads", true, false, false, false, false, false, false, false],
   starter:    ["3 seats", "500 leads", true, true, "5 rules", false, false, false, false, false],
   pro:        ["10 seats", "Unlimited", true, true, "Unlimited", true, true, true, true, true],
@@ -169,7 +169,11 @@ export function CrmPricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, interval }),
       });
-      const data = (await res.json()) as { url?: string | null; message?: string };
+      const data = (await res.json()) as { url?: string | null; message?: string; error?: string };
+      if (!res.ok) {
+        showToast(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
       if (data.url) {
         window.location.href = data.url;
       } else {

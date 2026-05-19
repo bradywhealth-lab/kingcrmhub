@@ -7,7 +7,10 @@ import { z } from 'zod'
 const patchSchema = z.object({
   step: z.number().int().min(0).max(10).optional(),
   completed: z.boolean().optional(),
-})
+}).refine(
+  (v) => v.step !== undefined || v.completed !== undefined,
+  { message: 'At least one of "step" or "completed" is required' }
+)
 
 // GET /api/onboarding - return onboarding state for current org
 export async function GET(request: NextRequest) {
@@ -17,8 +20,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use raw query to gracefully handle the case where the migration hasn't run yet
-    // by defaulting to sensible values when columns don't exist
     let onboardingCompleted = false
     let onboardingCompletedAt: Date | null = null
     let onboardingStep = 0
@@ -38,12 +39,16 @@ export async function GET(request: NextRequest) {
         onboardingCompletedAt = org.onboardingCompletedAt ?? null
         onboardingStep = org.onboardingStep ?? 0
       }
-    } catch {
-      // Columns may not exist yet if migration hasn't been applied — default to not completed
+    } catch (err: unknown) {
+      // Only swallow "column does not exist" errors from a pending migration.
+      // Re-throw anything else so genuine DB failures surface correctly.
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.includes('column') && !msg.includes('does not exist')) {
+        throw err
+      }
       onboardingCompleted = false
     }
 
-    // Get org stats separately
     const counts = await db.organization.findUnique({
       where: { id: session.user.organizationId },
       select: {
@@ -81,10 +86,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json().catch(() => ({}))
+    // Parse body — return 400 on bad JSON or empty payload
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const parsed = patchSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return NextResponse.json(
+        { error: parsed.error.errors[0]?.message ?? 'Invalid request body' },
+        { status: 400 }
+      )
     }
 
     const updateData: {
@@ -121,11 +136,15 @@ export async function PATCH(request: NextRequest) {
           onboardingCompletedAt: true,
         },
       })
-    } catch {
-      // Migration may not have run yet — gracefully ignore
+    } catch (err: unknown) {
+      // Only swallow "column does not exist" from a pending migration.
+      // All other DB errors (connection failures, constraint violations, etc.) should propagate.
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.includes('column') && !msg.includes('does not exist')) {
+        throw err
+      }
     }
 
-    // Log to audit trail
     await db.auditLog.create({
       data: {
         organizationId: session.user.organizationId,

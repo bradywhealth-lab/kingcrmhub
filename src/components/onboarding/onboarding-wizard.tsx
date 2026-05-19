@@ -28,6 +28,7 @@ import { toast } from "@/hooks/use-toast"
 interface OnboardingWizardProps {
   organizationName: string
   userName: string | null
+  initialStep?: number
   onComplete: () => void
   onSkip: () => void
 }
@@ -848,10 +849,15 @@ function DoneStep({
 // MAIN WIZARD
 // ============================================
 
-export function OnboardingWizard({ organizationName, userName, onComplete, onSkip }: OnboardingWizardProps) {
-  const [currentStep, setCurrentStep] = useState(0)
+export function OnboardingWizard({ organizationName, userName, initialStep = 0, onComplete, onSkip }: OnboardingWizardProps) {
+  const safeInitial = Math.max(0, Math.min(initialStep, STEPS.length - 1))
+  const [currentStep, setCurrentStep] = useState(safeInitial)
   const [statuses, setStatuses] = useState<StepStatus[]>(
-    STEPS.map((_, i) => (i === 0 ? "active" : "pending"))
+    STEPS.map((_, i) => {
+      if (i < safeInitial) return "done"
+      if (i === safeInitial) return "active"
+      return "pending"
+    })
   )
   const [skippedCount, setSkippedCount] = useState(0)
 
@@ -1078,6 +1084,7 @@ export function useOnboarding(isAuthenticated: boolean) {
   const [showWizard, setShowWizard] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [onboardingLoaded, setOnboardingLoaded] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -1090,6 +1097,7 @@ export function useOnboarding(isAuthenticated: boolean) {
         if (cancelled) return
         if (!data.error) {
           const completed: boolean = data.onboardingCompleted === true
+          setOnboardingStep(typeof data.onboardingStep === "number" ? data.onboardingStep : 0)
           setShowWizard(!completed)
           setShowBanner(!completed)
         }
@@ -1124,6 +1132,7 @@ export function useOnboarding(isAuthenticated: boolean) {
     showWizard,
     showBanner,
     onboardingLoaded,
+    onboardingStep,
     handleComplete,
     handleSkip,
     openWizard,

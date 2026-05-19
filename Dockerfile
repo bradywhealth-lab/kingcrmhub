@@ -8,12 +8,11 @@ RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-COPY package.json package-lock.json* bun.lock* ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Install with npm ci (uses package-lock.json when present)
-# If only bun.lock is present the next line falls back gracefully
-RUN npm install --frozen-lockfile 2>/dev/null || npm install
+# Use npm ci for deterministic, lockfile-based installs
+RUN npm ci
 
 # Generate Prisma client after deps are installed
 RUN npx prisma generate
@@ -42,8 +41,8 @@ ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 
 # DATABASE_URL is required only at runtime (server-side Prisma),
 # but next build may call getStaticProps/generateStaticParams that touch the DB.
-# Pass a dummy value here; real value is injected at runtime via env_file.
-ARG DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder"
+# Pass a non-credential placeholder here; real value is injected at runtime via env_file.
+ARG DATABASE_URL="postgresql://build_placeholder@db_placeholder:5432/db_placeholder"
 ENV DATABASE_URL=$DATABASE_URL
 
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -71,7 +70,6 @@ RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
 # Copy only what Next.js needs to serve the app.
-# This project does NOT use output:"standalone", so we copy the full build.
 COPY --from=builder --chown=nextjs:nodejs /app/public        ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next         ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules  ./node_modules
@@ -84,4 +82,5 @@ EXPOSE 3003
 
 # Use dumb-init as PID 1 so signals are forwarded correctly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["node", "node_modules/next/dist/bin/next", "start", "--port", "3003"]
+# Use $PORT so runtime overrides take effect
+CMD ["sh", "-c", "node node_modules/next/dist/bin/next start --port ${PORT:-3003}"]
