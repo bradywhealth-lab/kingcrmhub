@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       // Only swallow "column does not exist" errors from a pending migration.
       // Re-throw anything else so genuine DB failures surface correctly.
       const msg = err instanceof Error ? err.message : String(err)
-      if (!msg.includes('column') && !msg.includes('does not exist')) {
+      if (!msg.includes('column') || !msg.includes('does not exist')) {
         throw err
       }
       onboardingCompleted = false
@@ -140,7 +140,7 @@ export async function PATCH(request: NextRequest) {
       // Only swallow "column does not exist" from a pending migration.
       // All other DB errors (connection failures, constraint violations, etc.) should propagate.
       const msg = err instanceof Error ? err.message : String(err)
-      if (!msg.includes('column') && !msg.includes('does not exist')) {
+      if (!msg.includes('column') || !msg.includes('does not exist')) {
         throw err
       }
     }
