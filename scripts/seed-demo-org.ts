@@ -97,7 +97,7 @@ async function main() {
       id: 'demo-pipeline-1',
       organizationId: organization.id,
       name: 'Sales Pipeline',
-      description: 'Default sales pipeline for insurance leads',
+      description: 'Default client pipeline for freelance leads',
       isDefault: true,
       order: 0
     }
