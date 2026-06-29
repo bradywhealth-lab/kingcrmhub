@@ -31,7 +31,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.1.1",
     "@linear/sdk": "^77.0.0",
-    "@mdxeditor/editor": "^3.54.0",
+    "@mdxeditor/editor": "^4.0.4",
     "@pinecone-database/pinecone": "^7.2.0",
     "@prisma/adapter-better-sqlite3": "^7.7.0",
     "@prisma/adapter-pg": "^7.7.0",
