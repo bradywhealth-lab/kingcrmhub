@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getSession, signIn } from 'next-auth/react'
 import { ArrowRight, CheckCircle2, ChevronLeft, Copy, LockKeyhole, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -19,12 +19,12 @@ const VALUE_POINTS = [
   },
   {
     icon: Users,
-    title: 'Keep the whole team aligned',
-    description: 'Lead handoff, activity visibility, and execution standards without chaos.',
+    title: 'Stay on top of every client',
+    description: 'Client conversations, activity history, and follow-up standards without chaos.',
   },
   {
     icon: ShieldCheck,
-    title: 'Built for real insurance ops',
+    title: 'Built for real client ops',
     description: 'Auth, sessions, password resets, and daily workflow guardrails that actually matter.',
   },
 ]
@@ -32,11 +32,28 @@ const VALUE_POINTS = [
 const TRUST_METRICS = [
   { label: 'Lead response discipline', value: '<5 min' },
   { label: 'Pipeline visibility', value: 'Real-time' },
-  { label: 'Team accountability', value: 'Built-in' },
+  { label: 'Follow-up discipline', value: 'Built-in' },
 ]
 
 export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0f172a]" role="status" aria-label="Loading sign in">
+          <div className="mx-auto max-w-7xl px-6 py-10">
+            <div className="h-10 w-40 animate-pulse rounded-2xl bg-white/10" />
+          </div>
+        </div>
+      }
+    >
+      <AuthPageInner />
+    </Suspense>
+  )
+}
+
+function AuthPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,6 +89,23 @@ export default function AuthPage() {
       cancelled = true
     }
   }, [router])
+
+  // Deep-link support: /auth?mode=signup opens the signup form directly.
+  // Reactive via useSearchParams (works on soft navigation + back/forward);
+  // the ?mode= param is cleared once applied so a later refresh or manual
+  // tab switch doesn't snap back to the deep-linked mode.
+  useEffect(() => {
+    const requested = searchParams.get('mode')
+    if (requested === 'signup' || requested === 'forgot') {
+      setMode(requested)
+      window.history.replaceState(null, '', (() => {
+        const p = new URLSearchParams(searchParams.toString())
+        p.delete('mode')
+        const qs = p.toString()
+        return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
+      })())
+    }
+  }, [searchParams])
 
   const currentModeTitle = useMemo(() => {
     switch (mode) {
@@ -234,7 +268,7 @@ export default function AuthPage() {
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">King CRM Hub</p>
-                <p className="text-lg font-semibold text-white">Insurance operator workspace</p>
+                <p className="text-lg font-semibold text-white">Freelancer client workspace</p>
               </div>
             </div>
             <div className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-medium text-white/70">
@@ -251,7 +285,7 @@ export default function AuthPage() {
                 Run the whole CRM like a control room, not a spreadsheet.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-white/68">
-                Leads, pipeline, automations, AI support, and team execution in one polished workspace built for serious insurance production.
+                Leads, pipeline, automations, AI support, and follow-up execution in one polished workspace built for serious one-person businesses.
               </p>
             </div>
 
@@ -307,7 +341,7 @@ export default function AuthPage() {
               <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#1f2a36]">{currentModeTitle}</h2>
               <p className="text-sm leading-6 text-[#1f2a36]/55">
                 {mode === 'login' && 'Sign in to manage leads, pipeline execution, automations, and AI workflows.'}
-                {mode === 'signup' && 'Create the team workspace, owner account, and operating foundation in one move.'}
+                {mode === 'signup' && 'Create your workspace, owner account, and operating foundation in one move.'}
                 {mode === 'forgot' && 'Request a reset token for controlled password recovery.'}
                 {mode === 'reset' && 'Apply a fresh password and invalidate old sessions safely.'}
               </p>
@@ -341,7 +375,7 @@ export default function AuthPage() {
                       </div>
                       <div>
                         <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Organization</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="King CRM Insurance Group" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
+                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
@@ -479,7 +513,7 @@ export default function AuthPage() {
           </div>
 
           <p className="mt-10 text-center text-xs text-[#1f2a36]/35">
-            © 2026 King CRM Hub. Premium CRM infrastructure for insurance operators.
+            © 2026 King CRM Hub. Proof. Decision. Next Move.
           </p>
         </section>
       </div>

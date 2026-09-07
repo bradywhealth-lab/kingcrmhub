@@ -8,9 +8,9 @@ const gettingStarted = [
   'Import or add your first leads',
   'Configure your AI provider in Settings → AI',
   'Test the AI assistant with a simple prompt before relying on it',
-  'Upload at least one carrier document',
+  'Upload at least one offer document',
   'Qualify your first lead',
-  'Generate a carrier playbook or follow-up',
+  'Generate an offer playbook or follow-up',
 ]
 
 const featureGuides = [
@@ -23,8 +23,8 @@ const featureGuides = [
     body: 'Give the assistant lead context, pipeline stage, and your objective. Best prompts are specific: ask for next actions, scripts, follow-ups, or objection handling.',
   },
   {
-    title: 'How to win with carrier playbooks',
-    body: 'Upload clean carrier docs first. Then use playbooks to generate qualification summaries, script ideas, objections, and next actions grounded in your source docs.',
+    title: 'How to win with offer playbooks',
+    body: 'Upload clean offer docs first. Then use playbooks to generate qualification summaries, script ideas, objections, and next actions grounded in your source docs.',
   },
 ]
 
@@ -33,7 +33,7 @@ const troubleshooting = [
   'Seeing Unauthorized? Sign out and back in, or make sure your session cookie is present on this domain.',
   'Seeing an empty or failed AI response? The deployment may have a bad provider selection or missing fallback key. Switch provider in Settings → AI and test again.',
   'No AI provider configured? Add your own key or use the platform fallback if it is enabled for this deployment.',
-  'Carrier playbook weak? Upload better source docs before expecting grounded answers.',
+  'Offer playbook weak? Upload better source docs before expecting grounded answers.',
 ]
 
 export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: () => void }) {

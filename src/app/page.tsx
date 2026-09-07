@@ -810,7 +810,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
         title: 'AI playbook generated',
         description: data.source === 'fallback'
           ? 'Generated from rule-based fallback because LLM output was unavailable.'
-          : 'Carrier recommendation and scripts are ready.',
+          : 'Offer recommendation and scripts are ready.',
       })
     } catch (playbookError) {
       toast({
@@ -1186,10 +1186,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2 text-black">
                     <Bot className="w-4 h-4 text-[#2563EB]" />
-                    AI Carrier Assistant
+                    AI Offer Assistant
                   </CardTitle>
                   <CardDescription>
-                    Recommends carrier + plan strategy and generates follow-up scripts from lead context and your carrier library.
+                    Recommends offer + engagement strategy and generates follow-up scripts from lead context and your offer library.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1229,7 +1229,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   {assistantPlaybook && (
                     <div className="space-y-4">
                       <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-4">
-                        <p className="text-xs text-gray-500">Recommended Carrier</p>
+                        <p className="text-xs text-gray-500">Recommended Offer</p>
                         <p className="text-sm font-semibold text-black mt-1">
                           {assistantPlaybook.recommendedCarrier.name}
                           <span className="text-xs text-gray-500 ml-2">
@@ -1238,13 +1238,13 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         </p>
                         <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedCarrier.rationale}</p>
                         <p className="text-sm text-[#2563EB] mt-2">
-                          Plan suggestion: {assistantPlaybook.suggestedPlanType}
+                          Service suggestion: {assistantPlaybook.suggestedPlanType}
                         </p>
                       </div>
 
                       {assistantPlaybook.backupCarriers?.length > 0 && (
                         <div>
-                          <p className="text-xs text-gray-500 mb-2">Backup Carriers</p>
+                          <p className="text-xs text-gray-500 mb-2">Backup Offers</p>
                           <div className="space-y-2">
                             {assistantPlaybook.backupCarriers.map((carrier, idx) => (
                               <div key={`${carrier.name}-${idx}`} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
@@ -2535,30 +2535,30 @@ function SocialMediaView() {
   const [composerContent, setComposerContent] = useState('')
   const [composerPlatform, setComposerPlatform] = useState('linkedin')
   const [composerScheduleAt, setComposerScheduleAt] = useState('')
-  const insuranceCampaignPacks = [
+  const clientAcquisitionCampaignPacks = [
     {
-      id: 'life-protection',
-      label: 'Life Protection Campaign',
-      topic: 'How term life insurance protects family income',
+      id: 'authority-content',
+      label: 'Authority Builder',
+      topic: 'How to show expertise without bragging: behind-the-scenes client wins',
       tone: 'educational',
-      defaultPlatform: 'facebook',
-      cta: 'Book your family protection review',
+      defaultPlatform: 'linkedin',
+      cta: 'Book a free project scoping call',
     },
     {
-      id: 'retirement-health',
-      label: 'Health + Retirement',
-      topic: 'Medicare timing and avoiding coverage gaps',
+      id: 'pain-point',
+      label: 'Pain Point Spotlight',
+      topic: 'The hidden cost of DIY: what small businesses lose by not hiring a pro',
       tone: 'authoritative',
       defaultPlatform: 'linkedin',
-      cta: 'Schedule a Medicare planning call',
+      cta: 'Get a quick audit of your current setup',
     },
     {
-      id: 'business-owner',
-      label: 'Business Owner Risk',
-      topic: 'Key person and buy-sell protection for small businesses',
+      id: 'social-proof',
+      label: 'Social Proof Story',
+      topic: 'Before/after transformation from a recent client project',
       tone: 'professional',
-      defaultPlatform: 'linkedin',
-      cta: 'Request a business risk strategy session',
+      defaultPlatform: 'facebook',
+      cta: 'Request a strategy session',
     },
   ]
 
@@ -2723,7 +2723,7 @@ function SocialMediaView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'generate-media',
-          data: { topic: mediaTopic, platform: mediaPlatform, style: 'luxury, polished, insurance brand-safe' },
+          data: { topic: mediaTopic, platform: mediaPlatform, style: 'luxury, polished, professional brand-safe' },
         }),
       })
       const data = await res.json()
@@ -2795,7 +2795,7 @@ function SocialMediaView() {
   }
 
   const filteredItems = items.filter((item) => platformFilter === 'all' || item.platform === platformFilter)
-  const applyCampaignPack = (pack: typeof insuranceCampaignPacks[number]) => {
+  const applyCampaignPack = (pack: typeof clientAcquisitionCampaignPacks[number]) => {
     setTopic(pack.topic)
     setTone(pack.tone)
     setPlatform(pack.defaultPlatform)
@@ -2824,7 +2824,7 @@ function SocialMediaView() {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {insuranceCampaignPacks.map((pack) => (
+        {clientAcquisitionCampaignPacks.map((pack) => (
           <motion.button
             key={pack.id}
             whileHover={{ y: -2, scale: 1.01 }}
@@ -3025,7 +3025,7 @@ function SocialMediaView() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-3">
               <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Life insurance myths families should stop believing" />
+              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
             </div>
             <div>
               <Label className="text-gray-600">Platform</Label>
@@ -3103,7 +3103,7 @@ function SocialMediaView() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Family life insurance peace of mind visual" />
+              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
             </div>
             <div>
               <Label className="text-gray-600">Platform</Label>

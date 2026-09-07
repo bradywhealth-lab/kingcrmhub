@@ -56,25 +56,28 @@ function fallbackPlaybook(lead: {
   title: string | null
   source: string | null
   aiNextAction: string | null
-}, carriers: Array<{ id: string; name: string }>): PlaybookResponse {
+}, carriers: Array<{ id: string; name: string }>, senderName?: string | null): PlaybookResponse {
   const primary = carriers[0]
   const backup = carriers.slice(1, 3)
   const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'this lead'
+  // Resolved real identity (user name or org name); null when neither is
+  // available — then the email simply omits a personal sign-off.
+  const sender = senderName?.trim() || null
   const scoreBand = lead.aiScore >= 85 ? 'high-intent' : lead.aiScore >= 65 ? 'mid-intent' : 'early-intent'
 
   return {
     recommendedCarrier: {
       id: primary?.id || null,
-      name: primary?.name || 'General Carrier Match',
-      rationale: `Best available match from current carrier library for a ${scoreBand} profile based on lead status, role, and available underwriting docs.`,
+      name: primary?.name || 'General Offer Match',
+      rationale: `Best available match from current offer library for a ${scoreBand} profile based on lead status, role, and available service docs.`,
       confidence: Math.max(0.55, Math.min(0.9, 0.55 + lead.aiScore / 200)),
     },
     backupCarriers: backup.map((c) => ({
       id: c.id,
       name: c.name,
-      rationale: 'Keep as fallback if underwriting fit or pricing alignment is stronger during discovery.',
+      rationale: 'Keep as fallback if service fit or pricing alignment is stronger during discovery.',
     })),
-    suggestedPlanType: 'Life + health protection bundle (to be finalized after underwriting Q&A)',
+    suggestedPlanType: 'Recommended service package (to be finalized after discovery Q&A)',
     qualificationSummary: [
       `Lead status: ${lead.status}`,
       `AI score: ${lead.aiScore}`,
@@ -83,18 +86,18 @@ function fallbackPlaybook(lead: {
       lead.source ? `Lead source: ${lead.source}` : 'Lead source unknown',
     ],
     objectionHandling: [
-      'Price concern: compare total protection value and long-term cost of waiting.',
-      'Need to think about it: book a firm follow-up and summarize key risk gaps now.',
-      'Already have coverage: position this as a coverage-gap review, not a replacement pitch.',
+      'Price concern: compare total value delivered and the cost of delaying the project.',
+      'Need to think about it: book a firm follow-up and summarize key pain points now.',
+      'Already working with someone: position this as a fresh-perspective review, not a replacement pitch.',
     ],
     followUpScripts: {
-      callOpening: `Hey ${lead.firstName || 'there'}, this is your broker following up with a quick strategy based on your profile. I found a carrier-plan fit that may reduce risk exposure while keeping underwriting realistic. Can I take 2 minutes to walk you through it?`,
-      sms: `Hi ${lead.firstName || ''}, quick update: I mapped your profile to a strong carrier option and a backup plan if underwriting shifts. Want me to send the summary before our call?`,
-      emailSubject: `Your tailored coverage strategy options`,
-      emailBody: `Hi ${fullName},\n\nI reviewed your profile and prepared a recommended carrier strategy plus backup options based on qualification signals and underwriting fit.\n\nIf helpful, I can walk you through the recommended route and why it is likely to be the best match.\n\nBest,\nYour Broker`,
+      callOpening: `Hey ${lead.firstName || 'there'}, ${sender ? `this is ${sender}` : 'this is your freelancer'} following up with a quick strategy based on your project. I found an offer fit that addresses your goals while keeping scope and budget realistic. Can I take 2 minutes to walk you through it?`,
+      sms: `Hi ${lead.firstName || ''}, quick update: I mapped your project to a strong service option and a backup plan if scope shifts. Want me to send the summary before our call?`,
+      emailSubject: `Your tailored project strategy options`,
+      emailBody: `Hi ${fullName},\n\nI reviewed your project and prepared a recommended approach plus backup options based on your goals and timeline.\n\nIf helpful, I can walk you through the recommended route and why it is likely to be the best match.\n\nBest regards${sender ? `, ${sender}` : ''}`,
     },
     nextActions: [
-      'Run underwriting checklist questions and update lead notes.',
+      'Run discovery checklist questions and update lead notes.',
       'Send SMS summary and request preferred call slot.',
       lead.aiNextAction || 'Execute the next best follow-up in CRM.',
     ],
@@ -175,7 +178,7 @@ function retrieveTopChunks(
         if (queryTokenSet.has(token)) overlap++
       }
       const uniqueOverlap = overlap / Math.max(1, new Set(chunkTokens).size)
-      const boost = /underwriting|eligibility|knockout|decline|risk class|prescription|bmi|tobacco|age/i.test(chunk.content)
+      const boost = /pricing|scope|deliverable|timeline|proposal|budget|terms|package|engagement/i.test(chunk.content)
         ? 0.05
         : 0
       const score = uniqueOverlap + boost
@@ -260,7 +263,7 @@ export async function POST(request: NextRequest) {
 
     if (carriers.length === 0) {
       return NextResponse.json({
-        error: 'No carriers configured yet. Add carriers and underwriting documents first.',
+        error: 'No offers configured yet. Add offer packages and service documents first.',
       }, { status: 400 })
     }
 
@@ -363,11 +366,11 @@ export async function POST(request: NextRequest) {
       snippet: chunk.content.slice(0, 700),
     }))
 
-    const prompt = `You are an elite life and health insurance broker assistant.
-Given lead qualification context plus carrier underwriting materials metadata and retrieved underwriting snippets, return:
-1) best carrier recommendation
-2) backup carriers
-3) suggested plan type
+    const prompt = `You are an elite client strategy assistant for a freelancer using King CRM.
+Given lead qualification context plus offer/service package metadata and retrieved document snippets, return:
+1) best offer recommendation
+2) backup offers
+3) suggested service package
 4) qualification summary bullets
 5) objection handling bullets
 6) personalized follow-up scripts (call opening, SMS, email subject/body)
@@ -376,13 +379,13 @@ Given lead qualification context plus carrier underwriting materials metadata an
 Lead context:
 ${JSON.stringify(compactLead)}
 
-Carrier library context:
+Offer library context:
 ${JSON.stringify(compactCarriers)}
 
-Retrieved underwriting snippets (use these for grounded recommendations):
+Retrieved service document snippets (use these for grounded recommendations):
 ${JSON.stringify(knowledgeContext)}
 
-Additional broker context:
+Additional freelancer context:
 ${extraContext || 'N/A'}
 
 Respond as strict JSON only using this schema:
@@ -439,6 +442,23 @@ Respond as strict JSON only using this schema:
       console.error('Carrier playbook LLM fallback triggered:', error)
     }
 
+    // Best-effort sender identity for the fallback outreach scripts. Runs only
+    // after the LLM failed, so a DB hiccup here must NOT 500 the route —
+    // degrade to a no-name sign-off instead (round-4 review fix).
+    let senderName: string | null = null
+    try {
+      const senderUser = context.userId
+        ? await db.user.findUnique({
+            where: { id: context.userId },
+            select: { name: true, organization: { select: { name: true } } },
+          })
+        : null
+      senderName = senderUser?.name?.trim() || senderUser?.organization?.name?.trim() || null
+    } catch (error) {
+      senderName = null
+      console.warn('Playbook fallback sender lookup failed:', error)
+    }
+
     const fallback = fallbackPlaybook(
       {
         id: lead.id,
@@ -451,7 +471,8 @@ Respond as strict JSON only using this schema:
         source: lead.source,
         aiNextAction: lead.aiNextAction,
       },
-      carriers.map((c) => ({ id: c.id, name: c.name }))
+      carriers.map((c) => ({ id: c.id, name: c.name })),
+      senderName
     )
     fallback.citations = normalizeCitations(undefined, knowledgeContext)
     fallback.recommendedCarrier.confidence = calibrateConfidence(

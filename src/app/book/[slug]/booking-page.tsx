@@ -50,7 +50,7 @@ export function BookingPage({ slug, organizationName }: BookingPageProps) {
     lastName: '',
     email: '',
     phone: '',
-    title: 'Insurance strategy session',
+    title: 'Client strategy session',
     description: '',
   })
 
@@ -156,7 +156,7 @@ export function BookingPage({ slug, organizationName }: BookingPageProps) {
       <section className="rounded-[32px] border border-white/60 bg-white/92 p-8 shadow-[0_40px_140px_-52px_rgba(15,23,42,0.55)] backdrop-blur">
         <p className="text-sm uppercase tracking-[0.35em] text-amber-700">Appointment Setting</p>
         <h2 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-950">
-          Reserve your insurance strategy session
+          Reserve your client strategy session
         </h2>
         <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600">
           Pick a clean 30-minute slot and the CRM will create the lead, log the meeting, and prepare calendar sync.

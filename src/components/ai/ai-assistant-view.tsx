@@ -45,11 +45,11 @@ const STORAGE_KEY = "kingcrm-ai-chats"
 
 const SUGGESTED_PROMPTS = [
   { label: "Draft a follow-up SMS", prompt: "Write a short, high-converting follow-up SMS for a qualified lead who hasn't responded in 3 days. Keep it personal and direct." },
-  { label: "Qualify a new lead", prompt: "Give me a quick qualification framework for insurance leads. What are the top 5 questions to ask on the first call?" },
+  { label: "Qualify a new lead", prompt: "Give me a quick qualification framework for freelance client leads. What are the top 5 questions to ask on the first call?" },
   { label: "Identify deals at risk", prompt: "What are the warning signs that a pipeline deal is going cold? How do I re-engage fast?" },
-  { label: "Write a cold email", prompt: "Write a cold outreach email to a small business owner about key person insurance. Make it compelling, under 150 words." },
-  { label: "Objection handling", prompt: "Give me the 3 most common insurance sales objections and elite responses for each one." },
-  { label: "Medicare pitch script", prompt: "Give me a 60-second call opening script for Medicare Advantage leads aged 64-67." },
+  { label: "Write a cold email", prompt: "Write a cold outreach email to a small business owner who needs my services. Make it compelling, under 150 words." },
+  { label: "Objection handling", prompt: "Give me the 3 most common objections freelancers hear from prospects and elite responses for each one." },
+  { label: "Discovery call script", prompt: "Give me a 60-second call opening script for a discovery call with a warm lead who found me online." },
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
