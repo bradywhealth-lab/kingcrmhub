@@ -23,7 +23,7 @@ const TEAL = '#18B897'
 
 export default function PublicLandingPage() {
   return (
-    <main className="min-h-screen px-6 py-10" style={{ background: INK }}>
+    <main data-deploy-marker="public-landing-v1" className="min-h-screen px-6 py-10" style={{ background: INK }}>
       <div
         className="mx-auto max-w-6xl rounded-[32px] border p-8 md:p-14"
         style={{ background: INK, borderColor: 'rgba(244,240,230,0.14)' }}
