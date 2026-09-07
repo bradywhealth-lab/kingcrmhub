@@ -61,8 +61,8 @@ const STEPS: StepDef[] = [
   },
   {
     id: "carrier",
-    title: "Add your first carrier",
-    subtitle: "Add a carrier to your library so the AI can match leads to plans.",
+    title: "Add your first offer package",
+    subtitle: "Add an offer or service package to your library so the AI can match leads to what you sell.",
     icon: FileText,
     color: "#2563eb",
   },
@@ -197,7 +197,7 @@ function WelcomeStep({
           transition={{ delay: 0.4 }}
           className="mx-auto max-w-md text-sm leading-7 text-[#1f2a36]/55"
         >
-          We'll walk you through 3–5 quick steps to get your pipeline, carrier library, and automations running.
+          We'll walk you through 3–5 quick steps to get your pipeline, offer library, and automations running.
           Takes less than 3 minutes.
         </motion.p>
       </div>
@@ -210,7 +210,7 @@ function WelcomeStep({
       >
         {[
           { label: "AI Scoring", desc: "Auto-scored leads" },
-          { label: "Carrier AI", desc: "Smart plan matching" },
+          { label: "Offer AI", desc: "Smart offer matching" },
           { label: "Pipeline", desc: "Drag & drop deals" },
         ].map((feature) => (
           <div
@@ -287,7 +287,7 @@ function OrganizationStep({
             className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="King Insurance Group"
+            placeholder="Your business name (e.g. Alex Design Co.)"
           />
         </div>
         <div>
@@ -333,7 +333,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast({ title: "Carrier name required", description: "Enter the carrier's name.", variant: "destructive" })
+      toast({ title: "Offer name required", description: "Enter the offer package's name.", variant: "destructive" })
       return
     }
     setSaving(true)
@@ -349,11 +349,11 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      toast({ title: "Carrier added", description: `${name} is now in your carrier library.` })
+      toast({ title: "Offer added", description: `${name} is now in your offer library.` })
       onNext()
     } catch (error) {
       toast({
-        title: "Failed to add carrier",
+        title: "Failed to add offer",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       })
@@ -367,13 +367,13 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
       <div className="space-y-4">
         <div>
           <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
-            Carrier name
+            Offer name
           </Label>
           <Input
             className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Nationwide, Mutual of Omaha"
+            placeholder="e.g. Website Redesign Package, Monthly Retainer"
           />
         </div>
         <div>
@@ -385,7 +385,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
             className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
-            placeholder="https://carrier.com"
+            placeholder="https://yourportfolio.com"
           />
         </div>
         <div>
@@ -397,14 +397,14 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
             className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Specializes in term life, great for seniors…"
+            placeholder="Best for small business clients, 2-week turnaround…"
           />
         </div>
       </div>
 
       <div className="rounded-2xl border border-[rgba(85,125,245,0.18)] bg-[#f5f8ff] p-4 text-sm text-[#1f2a36]/65">
-        You can add more carriers and upload underwriting documents in{" "}
-        <span className="font-semibold text-[#557df5]">Settings → Carriers</span> at any time.
+        You can add more offers and upload service documents in{" "}
+        <span className="font-semibold text-[#557df5]">Settings → Offers</span> at any time.
       </div>
 
       <div className="flex gap-3">
@@ -420,7 +420,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
           disabled={saving}
           className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_8px_20px_rgba(85,125,245,0.22)] hover:opacity-95"
         >
-          {saving ? "Adding carrier…" : "Add carrier & continue"}
+          {saving ? "Adding offer…" : "Add offer & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
         </Button>
       </div>

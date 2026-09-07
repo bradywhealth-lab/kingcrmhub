@@ -7,16 +7,16 @@ import { Analytics } from "@vercel/analytics/next";
 initSentry()
 
 export const metadata: Metadata = {
-  title: "King CRM Hub",
-  description: "King CRM Hub is an AI-powered insurance CRM for lead capture, pipeline management, auth-protected operations, carrier intelligence, and team execution.",
-  keywords: ["King CRM Hub", "insurance CRM", "AI CRM", "broker workflow", "lead management", "pipeline", "carrier intelligence"],
+  title: "King CRM Hub — The Client Pipeline for One-Person Businesses",
+  description: "King CRM Hub is the client pipeline for freelancers and one-person businesses: lead capture, follow-up automation, proposals, and AI guidance in one workspace.",
+  keywords: ["King CRM Hub", "freelancer CRM", "client pipeline", "lead management", "follow-up automation", "one-person business", "solo operator"],
   authors: [{ name: "King CRM Hub" }],
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
     title: "King CRM Hub",
-    description: "AI-powered CRM infrastructure for modern insurance teams.",
+    description: "The client pipeline for freelancers and solo operators.",
     url: "https://kingcrmhub.net",
     siteName: "King CRM Hub",
     type: "website",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "King CRM Hub",
-    description: "AI-powered CRM infrastructure for modern insurance teams.",
+    description: "The client pipeline for freelancers and solo operators.",
   },
 };
 
