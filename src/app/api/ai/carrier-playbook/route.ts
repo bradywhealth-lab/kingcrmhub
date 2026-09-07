@@ -60,7 +60,9 @@ function fallbackPlaybook(lead: {
   const primary = carriers[0]
   const backup = carriers.slice(1, 3)
   const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'this lead'
-  const sender = senderName?.trim() || 'your freelancer'
+  // Resolved real identity (user name or org name); null when neither is
+  // available — then the email simply omits a personal sign-off.
+  const sender = senderName?.trim() || null
   const scoreBand = lead.aiScore >= 85 ? 'high-intent' : lead.aiScore >= 65 ? 'mid-intent' : 'early-intent'
 
   return {
@@ -89,10 +91,10 @@ function fallbackPlaybook(lead: {
       'Already working with someone: position this as a fresh-perspective review, not a replacement pitch.',
     ],
     followUpScripts: {
-      callOpening: `Hey ${lead.firstName || 'there'}, ${sender} following up with a quick strategy based on your project. I found an offer fit that addresses your goals while keeping scope and budget realistic. Can I take 2 minutes to walk you through it?`,
+      callOpening: `Hey ${lead.firstName || 'there'}, ${sender ? `this is ${sender}` : 'this is your freelancer'} following up with a quick strategy based on your project. I found an offer fit that addresses your goals while keeping scope and budget realistic. Can I take 2 minutes to walk you through it?`,
       sms: `Hi ${lead.firstName || ''}, quick update: I mapped your project to a strong service option and a backup plan if scope shifts. Want me to send the summary before our call?`,
       emailSubject: `Your tailored project strategy options`,
-      emailBody: `Hi ${fullName},\n\nI reviewed your project and prepared a recommended approach plus backup options based on your goals and timeline.\n\nIf helpful, I can walk you through the recommended route and why it is likely to be the best match.\n\nBest,\n${sender}`,
+      emailBody: `Hi ${fullName},\n\nI reviewed your project and prepared a recommended approach plus backup options based on your goals and timeline.\n\nIf helpful, I can walk you through the recommended route and why it is likely to be the best match.\n\nBest regards${sender ? `, ${sender}` : ''}`,
     },
     nextActions: [
       'Run discovery checklist questions and update lead notes.',
@@ -440,11 +442,22 @@ Respond as strict JSON only using this schema:
       console.error('Carrier playbook LLM fallback triggered:', error)
     }
 
-    // Resolve a real sender identity for the fallback outreach scripts so we
-    // never sign user-facing copy as "Your Freelancer" (review: sender identity).
-    const senderUser = context.userId
-      ? await db.user.findUnique({ where: { id: context.userId }, select: { name: true } })
-      : null
+    // Best-effort sender identity for the fallback outreach scripts. Runs only
+    // after the LLM failed, so a DB hiccup here must NOT 500 the route —
+    // degrade to a no-name sign-off instead (round-4 review fix).
+    let senderName: string | null = null
+    try {
+      const senderUser = context.userId
+        ? await db.user.findUnique({
+            where: { id: context.userId },
+            select: { name: true, organization: { select: { name: true } } },
+          })
+        : null
+      senderName = senderUser?.name?.trim() || senderUser?.organization?.name?.trim() || null
+    } catch (error) {
+      senderName = null
+      console.warn('Playbook fallback sender lookup failed:', error)
+    }
 
     const fallback = fallbackPlaybook(
       {
@@ -459,7 +472,7 @@ Respond as strict JSON only using this schema:
         aiNextAction: lead.aiNextAction,
       },
       carriers.map((c) => ({ id: c.id, name: c.name })),
-      senderUser?.name
+      senderName
     )
     fallback.citations = normalizeCitations(undefined, knowledgeContext)
     fallback.recommendedCarrier.confidence = calibrateConfidence(

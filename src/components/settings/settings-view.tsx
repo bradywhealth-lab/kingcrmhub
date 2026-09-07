@@ -818,10 +818,9 @@ function CarrierLibrarySettings() {
                 <Select value={uploadType} onValueChange={setUploadType}>
                   <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="brochure">Brochure</SelectItem>
-                    <SelectItem value="underwriting_guidelines">Scope &amp; Pricing Guide</SelectItem>
-                    <SelectItem value="application">Proposal Template</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {Object.entries(OFFER_DOC_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -847,10 +846,9 @@ function CarrierLibrarySettings() {
                 <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="brochure">Brochure</SelectItem>
-                  <SelectItem value="underwriting_guidelines">Scope &amp; Pricing Guide</SelectItem>
-                  <SelectItem value="application">Proposal Template</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {Object.entries(OFFER_DOC_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

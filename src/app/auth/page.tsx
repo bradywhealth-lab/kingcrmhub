@@ -39,7 +39,7 @@ export default function AuthPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0f172a]" aria-busy="true" aria-label="Loading sign in">
+        <div className="min-h-screen bg-[#0f172a]" role="status" aria-label="Loading sign in">
           <div className="mx-auto max-w-7xl px-6 py-10">
             <div className="h-10 w-40 animate-pulse rounded-2xl bg-white/10" />
           </div>
