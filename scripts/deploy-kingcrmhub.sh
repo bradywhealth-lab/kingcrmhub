@@ -9,9 +9,19 @@ REPO_DIR="${REPO_DIR:-${DEPLOY_ROOT}/kingcrmhub}"
 COMPOSE_FILE="${COMPOSE_FILE:-${DEPLOY_ROOT}/docker-compose.apps.yml}"
 SERVICE="${KINGCRM_SERVICE:-kingcrmhub}"
 CONTAINER="${KINGCRM_CONTAINER:-kingcrmhub}"
-ROLLBACK_IMAGE="kingcrmhub-rollback:$(date +%Y%m%d%H%M%S)"
+# Unique per-process rollback tag: timestamp alone collides when two deploys
+# overlap within the same second (cubic P1). $$ (PID) makes the tag unique.
+ROLLBACK_IMAGE="kingcrmhub-rollback:$(date +%Y%m%d%H%M%S)-$$"
 SERVICE_IMAGE_REF=""
 ROLLBACK_ARMED=0
+DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-${DEPLOY_ROOT}/kingcrmhub-deploy.lock}"
+
+# Serialize deployments: only one deploy process may hold this lock.
+exec 9>"$DEPLOY_LOCK_FILE"
+if ! flock -n 9; then
+  echo "DEPLOY_ALREADY_RUNNING: another deploy holds $DEPLOY_LOCK_FILE" >&2
+  exit 75
+fi
 
 if docker compose version >/dev/null 2>&1; then
   COMPOSE=(docker compose)

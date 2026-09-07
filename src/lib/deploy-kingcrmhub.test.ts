@@ -35,7 +35,7 @@ function writeExecutable(path: string, content: string): void {
 }
 
 /** Execute the deployment script against mocked Git and Docker commands. */
-function runMockDeploy({ failVerify = false, keepContainerAfterRemove = false } = {}) {
+function runMockDeploy({ failLock = false, failVerify = false, keepContainerAfterRemove = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
 
@@ -61,6 +61,14 @@ exit 0
   writeExecutable(
     join(binDir, 'sleep'),
     `#!/usr/bin/env bash
+exit 0
+`,
+  )
+
+  writeExecutable(
+    join(binDir, 'flock'),
+    `#!/usr/bin/env bash
+if [[ "$FAIL_LOCK" == "1" ]]; then exit 1; fi
 exit 0
 `,
   )
@@ -107,8 +115,10 @@ exit 0
     env: {
       ...process.env,
       COMPOSE_FILE: composeFile,
+      DEPLOY_LOCK_FILE: join(root, 'deploy.lock'),
       DEPLOY_LOG: deployLog,
       DEPLOY_ROOT: root,
+      FAIL_LOCK: failLock ? '1' : '0',
       FAIL_VERIFY: failVerify ? '1' : '0',
       KEEP_CONTAINER_AFTER_REMOVE: keepContainerAfterRemove ? '1' : '0',
       PATH: `${binDir}:${process.env.PATH ?? ''}`,
@@ -159,18 +169,42 @@ describe('KingCRMhub deploy hardening', () => {
     const { deployLog, result } = runMockDeploy({ failVerify: true })
     const output = `${result.stdout}\n${result.stderr}`
     const dockerCalls = readFileSync(deployLog, 'utf8')
-    const preserveImage = dockerCalls.search(/tag sha256:old-image kingcrmhub-rollback:\d+/)
-    const restoreImage = dockerCalls.search(/tag kingcrmhub-rollback:\d+ deployer-kingcrmhub/)
+    const rollbackImage = dockerCalls.match(/tag sha256:old-image (kingcrmhub-rollback:\S+)/)?.[1]
+    const preserveImage = dockerCalls.indexOf(`tag sha256:old-image ${rollbackImage}`)
+    const restoreImage = dockerCalls.indexOf(`tag ${rollbackImage} deployer-kingcrmhub`)
     const recreateOriginal = dockerCalls.indexOf('up -d --no-deps --force-recreate kingcrmhub', restoreImage)
 
     expect(result.status).toBe(1)
     expect(output).toContain('VERIFY_FAILED')
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
+    expect(rollbackImage).toMatch(/kingcrmhub-rollback:\d+-\d+/)
     expect(preserveImage).toBeGreaterThanOrEqual(0)
     expect(restoreImage).toBeGreaterThan(preserveImage)
     expect(recreateOriginal).toBeGreaterThan(restoreImage)
     expect(dockerCalls).not.toContain('rename kingcrmhub')
+  })
+
+  it('rejects an overlapping deploy before any Docker work begins', () => {
+    const { deployLog, result } = runMockDeploy({ failLock: true })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(75)
+    expect(output).toContain('DEPLOY_ALREADY_RUNNING')
+    expect(readFileSync(deployLog, 'utf8')).toBe('')
+  })
+
+  it('uses unique per-process rollback tags and serializes via flock', () => {
+    const script = readDeployScript()
+    expect(script).toContain('flock -n 9')
+    expect(script).toContain('$(date +%Y%m%d%H%M%S)-$$')
+
+    const first = runMockDeploy().result.stdout.match(/ROLLBACK_IMAGE=(\S+)/)?.[1]
+    const second = runMockDeploy().result.stdout.match(/ROLLBACK_IMAGE=(\S+)/)?.[1]
+
+    expect(first).toMatch(/^kingcrmhub-rollback:\d+-\d+$/)
+    expect(second).toMatch(/^kingcrmhub-rollback:\d+-\d+$/)
+    expect(first).not.toBe(second)
   })
 
   it('reports a distinct rollback failure when the replacement name remains occupied', () => {
