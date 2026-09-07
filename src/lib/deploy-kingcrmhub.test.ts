@@ -242,6 +242,9 @@ describe('KingCRMhub deploy hardening', () => {
     )
     try {
       await new Promise<void>((resolve, reject) => {
+        // python3 is not a declared dependency of this repo; without an
+        // 'error' listener a missing interpreter crashes the vitest process.
+        holder.once('error', reject)
         holder.stdout?.once('data', chunk => {
           if (String(chunk).includes('LOCKED')) resolve()
           else reject(new Error('unexpected holder output'))
