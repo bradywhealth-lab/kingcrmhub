@@ -712,12 +712,12 @@ function CarrierLibrarySettings() {
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      toast({ title: 'Carrier added', description: `${newCarrierName} created successfully.` })
+      toast({ title: 'Offer added', description: `${newCarrierName} created successfully.` })
       setNewCarrierName('')
       setNewCarrierWebsite('')
       await loadCarriers()
     } catch (error) {
-      toast({ title: 'Failed to add carrier', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
+      toast({ title: 'Failed to add offer', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -735,7 +735,7 @@ function CarrierLibrarySettings() {
       const res = await fetch(`/api/carriers/${selectedCarrierId}/documents`, { method: 'POST', body: formData })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      toast({ title: 'Document uploaded', description: 'Carrier document saved.' })
+      toast({ title: 'Document uploaded', description: 'Offer document saved.' })
       setUploadFile(null)
       setUploadName('')
       setUploadVersion('')

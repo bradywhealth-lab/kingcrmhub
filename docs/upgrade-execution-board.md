@@ -1,6 +1,6 @@
 # KingCRM Upgrade Execution Board (Local + GitHub Only)
 
-Last updated: 2026-05-26
+Last updated: 2026-09-07 (review-resolution pass on PR #150)
 Owner: @OpsForge
 
 ## Non-Negotiables
@@ -22,18 +22,17 @@ Owner: @OpsForge
 - **Status:** FIXED LOCALLY
 - **Evidence:** `src/app/welcome/page.tsx` added; `middleware.ts` now routes unauthenticated `/` to `/welcome`.
 
-## Validation Gate (Blocking Push Right Now)
+## Validation Gate
 
-### Current blocker
-- Runtime mismatch in this environment (`node v25.8.2`), while project requires Node `22.x`.
-- Lint/test currently failing due toolchain/module resolution mismatch, not due verified app logic above.
+### Status: RESOLVED (2026-09-07)
+- The former blocker (Node v25 runtime mismatch, lint/test "currently failing") is stale history — full release gate has since run green on the pivot commits: db:generate ✅ typecheck 0 ✅ lint 0 errors ✅ tests 80 passed ✅ build ✅ (isolated worktree, transcripts in PR #150 thread).
+- Review-bot findings (cubic/CodeRabbit) on #149/#150 resolved in follow-up commit: public `/book` middleware exemption, offer-toast wording, auth deep-link popstate + param clearing, welcome page canonical metadata, board doc freshness.
+- `/book/[slug]` was auth-walled by middleware since the feature shipped (pre-existing bug, now fixed).
 
 ### Required unblock steps
-1. Switch shell to Node 22.x.
-2. Clean install dependencies for one package manager path.
-3. Run full validation:
-   - `npm run lint`
-   - `npm run test`
+1. ~~Switch shell to Node 22.x.~~ Done — Docker build uses `node:22-alpine`.
+2. ~~Clean install dependencies for one package manager path.~~ Done — `bun install` for local gate, `npm ci` in the image.
+3. ~~Run full validation~~ Done — see Validation Gate status above.
 
 ## Owner Assignments (One Task = One Owner)
 

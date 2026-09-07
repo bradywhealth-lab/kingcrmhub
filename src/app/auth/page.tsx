@@ -73,13 +73,21 @@ export default function AuthPage() {
     }
   }, [router])
 
-  // Deep-link support: /auth?mode=signup opens the signup form directly
+  // Deep-link support: /auth?mode=signup opens the signup form directly.
+  // Applied on mount AND on back/forward (popstate); the ?mode= param is
+  // cleared once applied so switching tabs by hand doesn't inherit it.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const requested = params.get('mode')
-    if (requested === 'signup' || requested === 'forgot') {
-      setMode(requested)
+    const applyModeFromUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      const requested = params.get('mode')
+      if (requested === 'signup' || requested === 'forgot') {
+        setMode(requested)
+        window.history.replaceState(null, '', window.location.pathname)
+      }
     }
+    applyModeFromUrl()
+    window.addEventListener('popstate', applyModeFromUrl)
+    return () => window.removeEventListener('popstate', applyModeFromUrl)
   }, [])
 
   const currentModeTitle = useMemo(() => {

@@ -1,5 +1,15 @@
 import Link from 'next/link'
 import { ArrowRight, ExternalLink, TrendingUp, Wand2, Zap } from 'lucide-react'
+import type { Metadata } from 'next'
+
+// `/` is rewritten to this page for visitors; declare `/` as the canonical
+// so the duplicate /welcome URL can't split ranking signals (SEO review fix).
+export const metadata: Metadata = {
+  title: 'King CRM Hub — The Client Pipeline for One-Person Businesses',
+  description:
+    'Run your client pipeline like a one-person agency. See who to follow up with, what to say, and when to send it.',
+  alternates: { canonical: 'https://kingcrmhub.net/' },
+}
 
 // Locked landing palette (Gate v3): Ink #0C111B, Paper #F4F0E6, Signal Teal #18B897
 // Contrast (machine-verified, WCAG AA normal text):
