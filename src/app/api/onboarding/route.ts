@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest) {
     const parsed = patchSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0]?.message ?? 'Invalid request body' },
+        { error: parsed.error.issues[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       )
     }

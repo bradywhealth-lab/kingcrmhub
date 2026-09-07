@@ -58,7 +58,7 @@ function InviteAcceptanceContent() {
         <Card className="w-full border-[#D7DFEA] bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-black">Accept Team Invitation</CardTitle>
-            <CardDescription>Finish setting up your InsuraFuze account to join the workspace.</CardDescription>
+            <CardDescription>Finish setting up your King CRM Hub account to join the workspace.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
