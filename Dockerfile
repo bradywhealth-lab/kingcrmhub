@@ -77,8 +77,12 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/public        ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next         ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules  ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json  ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/prisma        ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/package.json      ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/prisma           ./prisma
+# Prisma 7 CLI reads the datasource URL from prisma.config.ts. Keep the config
+# in the runner so migration and verification commands do not need legacy
+# --schema flags or an adapter-less PrismaClient constructor.
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 USER nextjs
 
