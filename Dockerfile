@@ -11,7 +11,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Use npm ci for deterministic, lockfile-based installs
+# Deterministic, lockfile-based install. NOTE: package-lock.json MUST NOT be
+# dockerignored — it ships in the build context (the previous exclusion made
+# `npm ci` fail with EUSAGE and the `|| npm install` fallback crash the npm
+# tree resolver with `edgesOut` on this dep graph).
 RUN npm ci
 
 # Generate Prisma client after deps are installed
