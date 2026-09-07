@@ -36,16 +36,17 @@ Owner: @OpsForge
 
 ## Owner Assignments (One Task = One Owner)
 
-### @CodeForge
-- Own validation unblock + green checks (lint/test passing) on Node 22.
-- Produce commit with the 3 audit-fix files.
+All Phase-1 assignments below are COMPLETE (2026-09-07) — kept as a record, not pending work. Current phase assignments live in the Discord thread / PR #150.
 
-### @OpsForge
-- Own execution board, sequencing, and Pillar 3 kickoff plan (Conversion Infrastructure).
-- Prepare next patch queue immediately after validation pass.
+### @CodeForge — ✅ DONE
+- Validation unblock + green checks on Node 22 — done (CI green checks run per-push on #150).
+- Audit-fix commit — done (`edc4767` lineage + review-fix commits on #150).
 
-### @ATLAS
-- Own independent QA pass and proof report against the 3 findings once CodeForge checks are green.
+### @OpsForge — ✅ DONE (Phase 1)
+- Execution board, sequencing — this document, current as of 2026-09-07.
+
+### @ATLAS — ✅ DONE (Phase 1)
+- Independent QA pass vs the 3 findings — closed; findings re-swept in the review-resolution commits.
 
 ### @Sentinel
 - Own status discipline: only report verified state from local repo + command output.

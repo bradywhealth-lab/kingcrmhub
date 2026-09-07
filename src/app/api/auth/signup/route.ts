@@ -45,7 +45,9 @@ export async function POST(request: NextRequest) {
         data: {
           name: parsed.data.organizationName.trim(),
           slug,
-          plan: 'pro',
+          // Review fix (Cubic P2): landing promises "Claim your free account" —
+          // new orgs start on the free plan; upgrades go through billing/checkout.
+          plan: 'free',
         },
       })
 

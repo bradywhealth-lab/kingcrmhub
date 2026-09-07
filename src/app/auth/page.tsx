@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getSession, signIn } from 'next-auth/react'
 import { ArrowRight, CheckCircle2, ChevronLeft, Copy, LockKeyhole, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -36,7 +36,16 @@ const TRUST_METRICS = [
 ]
 
 export default function AuthPage() {
+  return (
+    <Suspense>
+      <AuthPageInner />
+    </Suspense>
+  )
+}
+
+function AuthPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -74,21 +83,21 @@ export default function AuthPage() {
   }, [router])
 
   // Deep-link support: /auth?mode=signup opens the signup form directly.
-  // Applied on mount AND on back/forward (popstate); the ?mode= param is
-  // cleared once applied so switching tabs by hand doesn't inherit it.
+  // Reactive via useSearchParams (works on soft navigation + back/forward);
+  // the ?mode= param is cleared once applied so a later refresh or manual
+  // tab switch doesn't snap back to the deep-linked mode.
   useEffect(() => {
-    const applyModeFromUrl = () => {
-      const params = new URLSearchParams(window.location.search)
-      const requested = params.get('mode')
-      if (requested === 'signup' || requested === 'forgot') {
-        setMode(requested)
-        window.history.replaceState(null, '', window.location.pathname)
-      }
+    const requested = searchParams.get('mode')
+    if (requested === 'signup' || requested === 'forgot') {
+      setMode(requested)
+      window.history.replaceState(null, '', (() => {
+        const p = new URLSearchParams(searchParams.toString())
+        p.delete('mode')
+        const qs = p.toString()
+        return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
+      })())
     }
-    applyModeFromUrl()
-    window.addEventListener('popstate', applyModeFromUrl)
-    return () => window.removeEventListener('popstate', applyModeFromUrl)
-  }, [])
+  }, [searchParams])
 
   const currentModeTitle = useMemo(() => {
     switch (mode) {
