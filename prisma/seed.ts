@@ -61,7 +61,7 @@ async function main() {
   // Create default pipeline with stages
   const pipeline = await prisma.pipeline.upsert({
     where: { id: 'demo-pipeline-1' },
-    update: {},
+    update: { description: 'Default client pipeline for freelance leads' },
     create: {
       id: 'demo-pipeline-1',
       organizationId: organization.id,

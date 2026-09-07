@@ -651,6 +651,19 @@ function AuditLogPanel() {
   )
 }
 
+// Shared label map so the doc list rows, upload selector, and filter dropdown
+// all render the same friendly names (review: keep labels consistent).
+const OFFER_DOC_TYPE_LABELS: Record<string, string> = {
+  brochure: 'Brochure',
+  underwriting_guidelines: 'Scope & Pricing Guide',
+  application: 'Proposal Template',
+  other: 'Other',
+}
+
+function offerDocTypeLabel(type: string): string {
+  return OFFER_DOC_TYPE_LABELS[type] ?? type.replaceAll('_', ' ')
+}
+
 function CarrierLibrarySettings() {
   type Carrier = { id: string; name: string; slug: string; website?: string | null; _count?: { documents: number } }
   type CarrierDoc = { id: string; type: string; name: string; fileUrl: string; createdAt: string; version?: string | null }
@@ -865,7 +878,7 @@ function CarrierLibrarySettings() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-black">{doc.name}</p>
-                  <p className="text-xs capitalize text-gray-500">{doc.type.replaceAll('_', ' ')} {doc.version ? `• ${doc.version}` : ''}</p>
+                  <p className="text-xs text-gray-500">{offerDocTypeLabel(doc.type)} {doc.version ? `• ${doc.version}` : ''}</p>
                 </div>
                 <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-[#2563EB] hover:underline">Open</a>
               </motion.div>
