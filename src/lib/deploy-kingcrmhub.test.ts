@@ -1,15 +1,7 @@
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const repoRoot = join(import.meta.dirname, '..', '..')
@@ -34,8 +26,26 @@ function writeExecutable(path: string, content: string): void {
   chmodSync(path, 0o755)
 }
 
-/** Execute the deployment script against mocked Git and Docker commands. */
-function runMockDeploy({ failLock = false, failVerify = false, keepContainerAfterRemove = false } = {}) {
+interface DeployHarnessOptions {
+  failLock?: boolean
+  failVerify?: boolean
+  keepContainerAfterRemove?: boolean
+}
+
+interface DeployHarness {
+  deployLog: string
+  env: Record<string, string>
+  lockFile: string
+  root: string
+}
+
+/**
+ * Build an isolated harness (mocked git/docker/flock shims + env) that the
+ * deploy script can run against. The flock shim performs REAL advisory
+ * locking on the inherited file descriptor so concurrent deploys genuinely
+ * contend on the same lock file.
+ */
+function createDeployHarness({ failLock = false, failVerify = false, keepContainerAfterRemove = false }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
 
@@ -43,6 +53,7 @@ function runMockDeploy({ failLock = false, failVerify = false, keepContainerAfte
   const repoDir = join(root, 'repo')
   const composeFile = join(root, 'docker-compose.apps.yml')
   const deployLog = join(root, 'docker.log')
+  const lockFile = join(root, 'deploy.lock')
   mkdirSync(binDir)
   mkdirSync(join(repoDir, '.git'), { recursive: true })
   writeFileSync(composeFile, 'services: {}\n')
@@ -65,10 +76,22 @@ exit 0
 `,
   )
 
+  // Real flock semantics: acquire LOCK_EX|LOCK_NB on inherited FD 9 via
+  // fcntl.flock. Fails with exit 1 when another process holds the lock.
   writeExecutable(
     join(binDir, 'flock'),
     `#!/usr/bin/env bash
 if [[ "$FAIL_LOCK" == "1" ]]; then exit 1; fi
+if [[ "$1" == "-n" && "$2" == "9" ]]; then
+  python3 - <<'PY'
+import fcntl, sys
+try:
+    fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    sys.exit(1)
+PY
+  exit $?
+fi
 exit 0
 `,
   )
@@ -109,23 +132,33 @@ exit 0
 `,
   )
 
+  const env: Record<string, string> = {
+    COMPOSE_FILE: composeFile,
+    DEPLOY_LOCK_FILE: lockFile,
+    DEPLOY_LOG: deployLog,
+    DEPLOY_ROOT: root,
+    FAIL_LOCK: failLock ? '1' : '0',
+    FAIL_VERIFY: failVerify ? '1' : '0',
+    KEEP_CONTAINER_AFTER_REMOVE: keepContainerAfterRemove ? '1' : '0',
+    PATH: `${binDir}:${process.env.PATH ?? ''}`,
+    REPO_DIR: repoDir,
+  }
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value === 'string' && !(key in env)) env[key] = value
+  }
+
+  return { deployLog, env, lockFile, root }
+}
+
+/** Execute the deployment script against a fresh mocked harness. */
+function runMockDeploy(options: DeployHarnessOptions = {}) {
+  const harness = createDeployHarness(options)
   const result = spawnSync('bash', [deployScriptPath], {
     cwd: repoRoot,
     encoding: 'utf8',
-    env: {
-      ...process.env,
-      COMPOSE_FILE: composeFile,
-      DEPLOY_LOCK_FILE: join(root, 'deploy.lock'),
-      DEPLOY_LOG: deployLog,
-      DEPLOY_ROOT: root,
-      FAIL_LOCK: failLock ? '1' : '0',
-      FAIL_VERIFY: failVerify ? '1' : '0',
-      KEEP_CONTAINER_AFTER_REMOVE: keepContainerAfterRemove ? '1' : '0',
-      PATH: `${binDir}:${process.env.PATH ?? ''}`,
-      REPO_DIR: repoDir,
-    },
+    env: harness.env,
   })
-  return { deployLog, result }
+  return { deployLog: harness.deployLog, result }
 }
 
 describe('KingCRMhub deploy hardening', () => {
@@ -185,7 +218,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(dockerCalls).not.toContain('rename kingcrmhub')
   })
 
-  it('rejects an overlapping deploy before any Docker work begins', () => {
+  it('rejects a deploy when the lock cannot be acquired, before any Docker work', () => {
     const { deployLog, result } = runMockDeploy({ failLock: true })
     const output = `${result.stdout}\n${result.stderr}`
 
@@ -194,7 +227,44 @@ describe('KingCRMhub deploy hardening', () => {
     expect(readFileSync(deployLog, 'utf8')).toBe('')
   })
 
-  it('uses unique per-process rollback tags and serializes via flock', () => {
+  it('serializes concurrent deploys through a real file lock', async () => {
+    const harness = createDeployHarness()
+
+    // External holder takes a real LOCK_EX on the same lock file and keeps it.
+    const holder = spawn(
+      'python3',
+      [
+        '-c',
+        'import fcntl, sys, time\nf = open(sys.argv[1], "w")\nfcntl.flock(f, fcntl.LOCK_EX)\nsys.stdout.write("LOCKED")\nsys.stdout.flush()\ntime.sleep(30)\n',
+        harness.lockFile,
+      ],
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    )
+    try {
+      await new Promise<void>((resolve, reject) => {
+        holder.stdout?.once('data', chunk => {
+          if (String(chunk).includes('LOCKED')) resolve()
+          else reject(new Error('unexpected holder output'))
+        })
+        holder.once('exit', code => reject(new Error(`holder exited early: ${code}`)))
+      })
+
+      const result = spawnSync('bash', [deployScriptPath], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: harness.env,
+      })
+      const output = `${result.stdout}\n${result.stderr}`
+
+      expect(result.status).toBe(75)
+      expect(output).toContain('DEPLOY_ALREADY_RUNNING')
+      expect(readFileSync(harness.deployLog, 'utf8')).toBe('')
+    } finally {
+      holder.kill('SIGKILL')
+    }
+  })
+
+  it('uses unique per-process rollback tags across separate deploys', () => {
     const script = readDeployScript()
     expect(script).toContain('flock -n 9')
     expect(script).toContain('$(date +%Y%m%d%H%M%S)-$$')
