@@ -21,10 +21,12 @@ else
   exit 1
 fi
 
+# Run Docker Compose with the production compose file selected explicitly.
 compose() {
   "${COMPOSE[@]}" -f "$COMPOSE_FILE" "$@"
 }
 
+# Fetch an internal HTTP endpoint from inside a named app container.
 container_get() {
   local container_name="$1"
   local request_path="$2"
@@ -32,7 +34,7 @@ container_get() {
   docker exec "$container_name" node -e '
     const requestPath = process.argv[1]
     const port = process.env.PORT || "3003"
-    fetch(`http://127.0.0.1:${port}${requestPath}`)
+    fetch(`http://127.0.0.1:${port}${requestPath}`, { signal: AbortSignal.timeout(10_000) })
       .then(async response => {
         const body = await response.text()
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 120)}`)
@@ -45,6 +47,7 @@ container_get() {
   ' "$request_path"
 }
 
+# Wait up to one minute for the app's health endpoint to respond.
 wait_for_health() {
   local container_name="$1"
 
@@ -57,11 +60,16 @@ wait_for_health() {
   return 1
 }
 
+# Remove the failed replacement and restore the timestamped original container.
 restore_old() {
   trap - ERR
   ROLLBACK_ARMED=0
   docker stop "$CONTAINER" >/dev/null 2>&1 || true
   docker rm "$CONTAINER" >/dev/null 2>&1 || true
+  if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
+    echo "ROLLBACK_NAME_CONFLICT: $CONTAINER still exists" >&2
+    return 2
+  fi
   docker rename "$ROLLBACK_CONTAINER" "$CONTAINER"
   docker start "$CONTAINER" >/dev/null
   if ! wait_for_health "$CONTAINER"; then
@@ -73,6 +81,7 @@ restore_old() {
   echo "ROLLED_BACK_TO_ORIGINAL"
 }
 
+# Roll back unexpected failures that occur after the original container is parked.
 on_error() {
   local status=$?
   if [[ "$ROLLBACK_ARMED" == "1" ]]; then
@@ -160,12 +169,12 @@ echo "=== FINAL EVIDENCE ==="
 container_get "$CONTAINER" /api/health
 echo
 LANDING_HTML="$(container_get "$CONTAINER" /)"
-if [[ "$LANDING_HTML" != *"Run your client pipeline"* ]]; then
-  echo "LANDING_COPY_FAIL" >&2
+if [[ "$LANDING_HTML" != *'data-deploy-marker="public-landing-v1"'* ]]; then
+  echo "LANDING_MARKER_FAIL" >&2
   restore_old
   exit 1
 fi
-echo "LANDING_COPY_OK"
+echo "LANDING_MARKER_OK"
 container_get "$CONTAINER" /sitemap.xml >/dev/null
 echo "SITEMAP_OK"
 

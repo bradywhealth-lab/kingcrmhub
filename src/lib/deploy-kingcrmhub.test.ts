@@ -22,17 +22,20 @@ afterEach(() => {
   }
 })
 
+/** Read the versioned deployment script under test. */
 function readDeployScript(): string {
   expect(existsSync(deployScriptPath), 'versioned deploy script must exist').toBe(true)
   return readFileSync(deployScriptPath, 'utf8')
 }
 
+/** Create an executable command shim for the isolated deployment harness. */
 function writeExecutable(path: string, content: string): void {
   writeFileSync(path, content)
   chmodSync(path, 0o755)
 }
 
-function runMockDeploy(failVerify = false) {
+/** Execute the deployment script against mocked Git and Docker commands. */
+function runMockDeploy({ failVerify = false, keepContainerAfterRemove = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
 
@@ -73,11 +76,15 @@ if [[ "$args" == *" --stdin "* ]]; then
   if [[ "$FAIL_VERIFY" == "1" ]]; then exit 42; fi
   exit 0
 fi
+if [[ "$args" == *" container inspect "* ]]; then
+  if [[ "$KEEP_CONTAINER_AFTER_REMOVE" == "1" ]]; then exit 0; fi
+  exit 1
+fi
 if [[ "$1" == "exec" ]]; then
   request_path="${'${@: -1}'}"
   case "$request_path" in
     /api/health) printf '{"status":"ok"}' ;;
-    /) printf 'Run your client pipeline' ;;
+    /) printf '<main data-deploy-marker="public-landing-v1">King CRM Hub</main>' ;;
     /sitemap.xml) printf '<urlset />' ;;
   esac
 fi
@@ -85,7 +92,7 @@ exit 0
 `,
   )
 
-  return spawnSync('bash', [deployScriptPath], {
+  const result = spawnSync('bash', [deployScriptPath], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: {
@@ -94,10 +101,12 @@ exit 0
       DEPLOY_LOG: deployLog,
       DEPLOY_ROOT: root,
       FAIL_VERIFY: failVerify ? '1' : '0',
+      KEEP_CONTAINER_AFTER_REMOVE: keepContainerAfterRemove ? '1' : '0',
       PATH: `${binDir}:${process.env.PATH ?? ''}`,
       REPO_DIR: repoDir,
     },
   })
+  return { deployLog, result }
 }
 
 describe('KingCRMhub deploy hardening', () => {
@@ -119,23 +128,46 @@ describe('KingCRMhub deploy hardening', () => {
   })
 
   it('completes when mocked build, migration, schema, and HTTP gates pass', () => {
-    const result = runMockDeploy()
+    const { result } = runMockDeploy()
 
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout).toContain('ORG_FIELDS_OK')
-    expect(result.stdout).toContain('LANDING_COPY_OK')
+    expect(result.stdout).toContain('LANDING_MARKER_OK')
     expect(result.stdout).toContain('SITEMAP_OK')
     expect(result.stdout).toContain('DEPLOY_V4_DONE')
   })
 
   it('restores the original container when Prisma schema verification fails', () => {
-    const result = runMockDeploy(true)
+    const { deployLog, result } = runMockDeploy({ failVerify: true })
     const output = `${result.stdout}\n${result.stderr}`
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+    const restoreRename = dockerCalls.search(/rename kingcrmhub-old-\d+ kingcrmhub/)
+    const restoreStart = dockerCalls.indexOf('start kingcrmhub', restoreRename)
 
     expect(result.status).toBe(1)
     expect(output).toContain('VERIFY_FAILED')
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
+    expect(restoreRename).toBeGreaterThanOrEqual(0)
+    expect(restoreStart).toBeGreaterThan(restoreRename)
+  })
+
+  it('reports a distinct rollback failure when the replacement name remains occupied', () => {
+    const { result } = runMockDeploy({ failVerify: true, keepContainerAfterRemove: true })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(2)
+    expect(output).toContain('ROLLBACK_NAME_CONFLICT')
+    expect(output).not.toContain('ROLLED_BACK_TO_ORIGINAL')
+  })
+
+  it('uses the same stable public landing marker as the rendered page', () => {
+    const landingPage = readFileSync(join(repoRoot, 'src/app/welcome/page.tsx'), 'utf8')
+    const script = readDeployScript()
+
+    expect(landingPage).toContain('data-deploy-marker="public-landing-v1"')
+    expect(script).toContain('data-deploy-marker="public-landing-v1"')
+    expect(script).toContain('AbortSignal.timeout(10_000)')
   })
 
   it('ships the Prisma 7 config in the runtime image used by db execute', () => {
