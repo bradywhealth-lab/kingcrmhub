@@ -41,7 +41,7 @@ async function createBookingForOrganization(
       start,
       end,
       timezone,
-      title = 'Insurance strategy session',
+      title = 'Strategy session',
       description,
     } = payload
 

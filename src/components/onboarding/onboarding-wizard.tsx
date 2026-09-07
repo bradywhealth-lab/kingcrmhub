@@ -85,7 +85,7 @@ const STEPS: StepDef[] = [
   {
     id: "ai-setup",
     title: "Set Up Your AI Assistant",
-    subtitle: "Connect an AI provider for sales coaching, scripts, and lead qualification.",
+    subtitle: "Connect an AI provider for client coaching, scripts, and lead qualification.",
     icon: Bot,
     color: "#7c3aed",
     optional: true,
@@ -822,7 +822,7 @@ function DoneStep({
           "Dashboard shows live stats and AI insights",
           "Leads tab has your full contact table + AI scoring",
           "Pipeline is your drag-and-drop kanban board",
-          "Settings → Carriers to upload documents for AI",
+          "Settings → Offers to upload documents for AI",
           "Settings → AI Configuration to change your AI provider",
         ].map((item) => (
           <div key={item} className="flex items-center gap-3 text-sm text-[#1f2a36]/65">

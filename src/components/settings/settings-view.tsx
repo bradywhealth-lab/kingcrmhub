@@ -666,12 +666,12 @@ function CarrierLibrarySettings() {
   const [uploadVersion, setUploadVersion] = useState('')
   const [docFilter, setDocFilter] = useState('all')
   const [loading, setLoading] = useState(false)
-  const underwritingChecklist = [
-    'Medical history questionnaire',
-    'Prescription history check',
-    'Build/height-weight review',
-    'Lifestyle risk notes (smoker, aviation, diving)',
-    'Financial suitability notes',
+  const offerPrepChecklist = [
+    'Service scope summary (deliverables, timeline)',
+    'Pricing tiers and payment terms',
+    'Portfolio samples or case studies',
+    'Ideal client profile notes (industry, size, budget)',
+    'Revision and handoff policy notes',
   ]
 
   const loadCarriers = useCallback(async () => {
@@ -755,17 +755,17 @@ function CarrierLibrarySettings() {
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <Card className="bg-white border-[#D7DFEA] shadow-sm">
         <CardHeader>
-          <CardTitle className="text-black">Insurance Carriers</CardTitle>
-          <CardDescription>Store life/health carriers and underwriting libraries.</CardDescription>
+          <CardTitle className="text-black">Offer Library</CardTitle>
+          <CardDescription>Store your services, packages, and proposal libraries.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input className="border-[#D7DFEA] bg-[#EEF2F7]" placeholder="Carrier name" value={newCarrierName} onChange={(e) => setNewCarrierName(e.target.value)} />
+          <Input className="border-[#D7DFEA] bg-[#EEF2F7]" placeholder="Offer name" value={newCarrierName} onChange={(e) => setNewCarrierName(e.target.value)} />
           <Input className="border-[#D7DFEA] bg-[#EEF2F7]" placeholder="Website (optional)" value={newCarrierWebsite} onChange={(e) => setNewCarrierWebsite(e.target.value)} />
-          <Button className="btn-gold w-full" onClick={() => void createCarrier()} disabled={loading}>Add Carrier</Button>
+          <Button className="btn-gold w-full" onClick={() => void createCarrier()} disabled={loading}>Add Offer</Button>
           <Separator />
           <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-3">
-            <p className="text-xs font-medium text-black">Broker workflow shortcuts</p>
-            <p className="mt-1 text-xs text-gray-500">Store each carrier’s brochure, underwriting guide, and app form with version tracking.</p>
+            <p className="text-xs font-medium text-black">Freelancer workflow shortcuts</p>
+            <p className="mt-1 text-xs text-gray-500">Store each offer’s brochure, scope guide, and proposal template with version tracking.</p>
           </div>
           <div className="max-h-[320px] space-y-2 overflow-auto">
             {carriers.map((carrier) => (
@@ -788,9 +788,9 @@ function CarrierLibrarySettings() {
 
       <Card className="bg-white border-[#D7DFEA] shadow-sm xl:col-span-2">
         <CardHeader>
-          <CardTitle className="text-black">Carrier Document Library</CardTitle>
+          <CardTitle className="text-black">Offer Document Library</CardTitle>
           <CardDescription>
-            {selectedCarrier ? `Upload brochures and underwriting guidelines for ${selectedCarrier.name}.` : 'Select a carrier to manage files.'}
+            {selectedCarrier ? `Upload brochures and scope guides for ${selectedCarrier.name}.` : 'Select an offer to manage files.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -798,7 +798,7 @@ function CarrierLibrarySettings() {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <div className="md:col-span-2">
                 <Label className="text-gray-600">Document name</Label>
-                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={uploadName} onChange={(e) => setUploadName(e.target.value)} placeholder="2026 Term Life Brochure" />
+                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={uploadName} onChange={(e) => setUploadName(e.target.value)} placeholder="2026 Website Redesign Package" />
               </div>
               <div>
                 <Label className="text-gray-600">Type</Label>
@@ -806,8 +806,8 @@ function CarrierLibrarySettings() {
                   <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="brochure">Brochure</SelectItem>
-                    <SelectItem value="underwriting_guidelines">Underwriting Guidelines</SelectItem>
-                    <SelectItem value="application">Application</SelectItem>
+                    <SelectItem value="underwriting_guidelines">Scope &amp; Pricing Guide</SelectItem>
+                    <SelectItem value="application">Proposal Template</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -835,16 +835,16 @@ function CarrierLibrarySettings() {
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="brochure">Brochure</SelectItem>
-                  <SelectItem value="underwriting_guidelines">Underwriting Guidelines</SelectItem>
-                  <SelectItem value="application">Application</SelectItem>
+                  <SelectItem value="underwriting_guidelines">Scope &amp; Pricing Guide</SelectItem>
+                  <SelectItem value="application">Proposal Template</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-3">
-              <p className="text-xs font-medium text-black">Underwriting Prep Checklist</p>
+              <p className="text-xs font-medium text-black">Offer Prep Checklist</p>
               <div className="mt-1 space-y-1">
-                {underwritingChecklist.slice(0, 3).map((item) => (
+                {offerPrepChecklist.slice(0, 3).map((item) => (
                   <p key={item} className="text-[11px] text-gray-500">- {item}</p>
                 ))}
               </div>
@@ -854,7 +854,7 @@ function CarrierLibrarySettings() {
           <div className="space-y-2">
             {filteredDocuments.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#D7DFEA] p-5 text-sm text-gray-500">
-                No documents yet. Upload brochures and underwriting guidelines here.
+                No documents yet. Upload brochures and scope guides here.
               </div>
             ) : filteredDocuments.map((doc) => (
               <motion.div
@@ -1370,7 +1370,7 @@ export function SettingsView() {
           </TabsTrigger>
           <TabsTrigger value="carriers" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
             <FileText className="h-4 w-4" />
-            Carriers & Docs
+            Offers &amp; Docs
           </TabsTrigger>
           <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
             <Webhook className="h-4 w-4" />
