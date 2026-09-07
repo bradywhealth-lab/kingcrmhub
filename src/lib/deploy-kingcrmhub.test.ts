@@ -92,6 +92,7 @@ if [[ "$1" == "exec" ]]; then
   request_path="${'${@: -1}'}"
   case "$request_path" in
     /api/health) printf '{"status":"ok"}' ;;
+    /api/ready) printf '{"ok":true,"ready":true,"database":"ok"}' ;;
     /) printf '<main data-deploy-marker="public-landing-v1">King CRM Hub</main>' ;;
     /sitemap.xml) printf '<urlset />' ;;
   esac
@@ -132,7 +133,16 @@ describe('KingCRMhub deploy hardening', () => {
     expect(script).toContain("'onboardingCompleted'")
     expect(script).toContain("'onboardingCompletedAt'")
     expect(script).toContain("'onboardingStep'")
+    expect(script).toContain("'boolean', 'NO', 'false'")
+    expect(script).toContain("'timestamp without time zone', 'YES', NULL")
+    expect(script).toContain("'integer', 'NO', '0'")
     expect(script).toContain('RAISE EXCEPTION')
+  })
+
+  it('uses the database-ready endpoint for replacement and rollback gates', () => {
+    const script = readDeployScript()
+
+    expect(script).toContain('container_get "$container_name" /api/ready')
   })
 
   it('completes when mocked build, migration, schema, and HTTP gates pass', () => {
@@ -183,7 +193,14 @@ describe('KingCRMhub deploy hardening', () => {
 
   it('ships the Prisma 7 config in the runtime image used by db execute', () => {
     const dockerfile = readFileSync(join(repoRoot, 'Dockerfile'), 'utf8')
+    const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    const prismaConfig = readFileSync(join(repoRoot, 'prisma.config.ts'), 'utf8')
 
     expect(dockerfile).toContain('/app/prisma.config.ts ./prisma.config.ts')
+    expect(packageJson.dependencies.dotenv).toBe('^16.6.1')
+    expect(prismaConfig).toContain('seed: "npx tsx prisma/seed.ts"')
+    expect(prismaConfig).not.toContain('seed: "bun prisma/seed.ts"')
   })
 })

@@ -48,12 +48,12 @@ container_get() {
   ' "$request_path"
 }
 
-# Wait up to one minute for the app's health endpoint to respond.
+# Wait up to one minute for the app and its database connection to be ready.
 wait_for_health() {
   local container_name="$1"
 
   for _ in {1..12}; do
-    if container_get "$container_name" /api/health >/dev/null 2>&1; then
+    if container_get "$container_name" /api/ready >/dev/null 2>&1; then
       return 0
     fi
     sleep 5
@@ -77,7 +77,7 @@ restore_old() {
     echo "ROLLBACK_HEALTH_FAIL" >&2
     return 1
   fi
-  container_get "$CONTAINER" /api/health
+  container_get "$CONTAINER" /api/ready
   echo
   echo "ROLLED_BACK_TO_ORIGINAL"
 }
@@ -144,26 +144,27 @@ echo "=== VERIFY ORG SCHEMA ALIGNMENT ==="
 if ! compose exec -T "$SERVICE" npx prisma db execute --stdin <<'SQL'
 DO $$
 DECLARE
-  missing_columns text;
+  schema_errors text;
 BEGIN
-  SELECT string_agg(required.column_name, ', ' ORDER BY required.column_name)
-  INTO missing_columns
+  SELECT string_agg(expected.column_name, ', ' ORDER BY expected.column_name)
+  INTO schema_errors
   FROM (
     VALUES
-      ('onboardingCompleted'),
-      ('onboardingCompletedAt'),
-      ('onboardingStep')
-  ) AS required(column_name)
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns AS actual
-    WHERE actual.table_schema = 'public'
-      AND actual.table_name = 'Organization'
-      AND actual.column_name = required.column_name
-  );
+      ('onboardingCompleted', 'boolean', 'NO', 'false'),
+      ('onboardingCompletedAt', 'timestamp without time zone', 'YES', NULL),
+      ('onboardingStep', 'integer', 'NO', '0')
+  ) AS expected(column_name, data_type, is_nullable, column_default)
+  LEFT JOIN information_schema.columns AS actual
+    ON actual.table_schema = 'public'
+   AND actual.table_name = 'Organization'
+   AND actual.column_name = expected.column_name
+  WHERE actual.column_name IS NULL
+     OR actual.data_type IS DISTINCT FROM expected.data_type
+     OR actual.is_nullable IS DISTINCT FROM expected.is_nullable
+     OR actual.column_default IS DISTINCT FROM expected.column_default;
 
-  IF missing_columns IS NOT NULL THEN
-    RAISE EXCEPTION 'Missing required Organization columns: %', missing_columns;
+  IF schema_errors IS NOT NULL THEN
+    RAISE EXCEPTION 'Missing or mismatched Organization columns: %', schema_errors;
   END IF;
 END
 $$;
@@ -177,6 +178,8 @@ echo "ORG_FIELDS_OK"
 
 echo "=== FINAL EVIDENCE ==="
 container_get "$CONTAINER" /api/health
+echo
+container_get "$CONTAINER" /api/ready
 echo
 LANDING_HTML="$(container_get "$CONTAINER" /)"
 if [[ "$LANDING_HTML" != *'data-deploy-marker="public-landing-v1"'* ]]; then
