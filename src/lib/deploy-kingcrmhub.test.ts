@@ -80,6 +80,14 @@ if [[ "$args" == *" container inspect "* ]]; then
   if [[ "$KEEP_CONTAINER_AFTER_REMOVE" == "1" ]]; then exit 0; fi
   exit 1
 fi
+if [[ "$args" == *" --format {{.Image}} kingcrmhub "* ]]; then
+  printf 'sha256:old-image'
+  exit 0
+fi
+if [[ "$args" == *" --format {{.Config.Image}} kingcrmhub "* ]]; then
+  printf 'deployer-kingcrmhub'
+  exit 0
+fi
 if [[ "$1" == "exec" ]]; then
   request_path="${'${@: -1}'}"
   case "$request_path" in
@@ -141,15 +149,18 @@ describe('KingCRMhub deploy hardening', () => {
     const { deployLog, result } = runMockDeploy({ failVerify: true })
     const output = `${result.stdout}\n${result.stderr}`
     const dockerCalls = readFileSync(deployLog, 'utf8')
-    const restoreRename = dockerCalls.search(/rename kingcrmhub-old-\d+ kingcrmhub/)
-    const restoreStart = dockerCalls.indexOf('start kingcrmhub', restoreRename)
+    const preserveImage = dockerCalls.search(/tag sha256:old-image kingcrmhub-rollback:\d+/)
+    const restoreImage = dockerCalls.search(/tag kingcrmhub-rollback:\d+ deployer-kingcrmhub/)
+    const recreateOriginal = dockerCalls.indexOf('up -d --no-deps --force-recreate kingcrmhub', restoreImage)
 
     expect(result.status).toBe(1)
     expect(output).toContain('VERIFY_FAILED')
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
-    expect(restoreRename).toBeGreaterThanOrEqual(0)
-    expect(restoreStart).toBeGreaterThan(restoreRename)
+    expect(preserveImage).toBeGreaterThanOrEqual(0)
+    expect(restoreImage).toBeGreaterThan(preserveImage)
+    expect(recreateOriginal).toBeGreaterThan(restoreImage)
+    expect(dockerCalls).not.toContain('rename kingcrmhub')
   })
 
   it('reports a distinct rollback failure when the replacement name remains occupied', () => {

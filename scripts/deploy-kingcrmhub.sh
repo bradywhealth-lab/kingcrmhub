@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # KingCRMhub deploy v4
-# Builds before touching the live container, keeps a timestamped rollback anchor,
+# Builds before touching the live container, keeps a timestamped rollback image,
 # and verifies the onboarding schema with Prisma 7's adapter-free CLI path.
 set -Eeuo pipefail
 
@@ -9,7 +9,8 @@ REPO_DIR="${REPO_DIR:-${DEPLOY_ROOT}/kingcrmhub}"
 COMPOSE_FILE="${COMPOSE_FILE:-${DEPLOY_ROOT}/docker-compose.apps.yml}"
 SERVICE="${KINGCRM_SERVICE:-kingcrmhub}"
 CONTAINER="${KINGCRM_CONTAINER:-kingcrmhub}"
-ROLLBACK_CONTAINER="${CONTAINER}-old-$(date +%Y%m%d%H%M%S)"
+ROLLBACK_IMAGE="kingcrmhub-rollback:$(date +%Y%m%d%H%M%S)"
+SERVICE_IMAGE_REF=""
 ROLLBACK_ARMED=0
 
 if docker compose version >/dev/null 2>&1; then
@@ -60,7 +61,7 @@ wait_for_health() {
   return 1
 }
 
-# Remove the failed replacement and restore the timestamped original container.
+# Re-tag the preserved image and recreate the service from the Compose source of truth.
 restore_old() {
   trap - ERR
   ROLLBACK_ARMED=0
@@ -70,8 +71,8 @@ restore_old() {
     echo "ROLLBACK_NAME_CONFLICT: $CONTAINER still exists" >&2
     return 2
   fi
-  docker rename "$ROLLBACK_CONTAINER" "$CONTAINER"
-  docker start "$CONTAINER" >/dev/null
+  docker tag "$ROLLBACK_IMAGE" "$SERVICE_IMAGE_REF"
+  compose up -d --no-deps --force-recreate "$SERVICE"
   if ! wait_for_health "$CONTAINER"; then
     echo "ROLLBACK_HEALTH_FAIL" >&2
     return 1
@@ -107,13 +108,22 @@ fi
 git -C "$REPO_DIR" pull --ff-only origin main
 echo "REPO_SHA=$(git -C "$REPO_DIR" rev-parse --short HEAD)"
 
+OLD_IMAGE_ID="$(docker inspect --format '{{.Image}}' "$CONTAINER")"
+SERVICE_IMAGE_REF="$(docker inspect --format '{{.Config.Image}}' "$CONTAINER")"
+if [[ -z "$OLD_IMAGE_ID" || -z "$SERVICE_IMAGE_REF" ]]; then
+  echo "ROLLBACK_IMAGE_DISCOVERY_FAILED" >&2
+  exit 1
+fi
+docker tag "$OLD_IMAGE_ID" "$ROLLBACK_IMAGE"
+echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
+
 echo "=== BUILD (live container remains untouched) ==="
 compose build "$SERVICE"
 
-echo "=== SWAP (original retained as $ROLLBACK_CONTAINER) ==="
-docker rename "$CONTAINER" "$ROLLBACK_CONTAINER"
+echo "=== SWAP (original image retained as $ROLLBACK_IMAGE) ==="
 ROLLBACK_ARMED=1
-docker stop "$ROLLBACK_CONTAINER" >/dev/null
+docker stop "$CONTAINER" >/dev/null
+docker rm "$CONTAINER" >/dev/null
 compose up -d "$SERVICE"
 
 if ! wait_for_health "$CONTAINER"; then
@@ -179,5 +189,5 @@ container_get "$CONTAINER" /sitemap.xml >/dev/null
 echo "SITEMAP_OK"
 
 ROLLBACK_ARMED=0
-echo "ROLLBACK_CONTAINER=$ROLLBACK_CONTAINER"
+echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
 echo "DEPLOY_V4_DONE"
