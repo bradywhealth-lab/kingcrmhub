@@ -47,6 +47,7 @@ import { useWorkspaceOverlays } from "@/components/app/use-workspace-overlays"
 import { useWorkspaceSession } from "@/components/app/use-workspace-session"
 import { SettingsView } from "@/components/settings/settings-view"
 import { AiAssistantView } from "@/components/ai/ai-assistant-view"
+import { OnboardingWizard, IncompleteSetupBanner, useOnboarding } from "@/components/onboarding/onboarding-wizard"
 import { triggerWinCelebration, triggerSmallCelebration } from "@/lib/celebrations"
 import { toast } from "@/hooks/use-toast"
 import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
@@ -3200,6 +3201,19 @@ export default function EliteCRM() {
   const [activeView, setActiveView] = useState("dashboard")
   const { authLoading, currentUser, signOut } = useWorkspaceSession()
   const { theme } = useAppStore()
+
+  // Onboarding — only active once auth is resolved. useOnboarding GETs
+  // /api/onboarding and auto-opens the wizard while onboardingCompleted=false.
+  const isAuthenticated = !authLoading && !!currentUser
+  const {
+    showWizard,
+    showBanner,
+    onboardingStep,
+    handleComplete,
+    handleSkip,
+    openWizard,
+  } = useOnboarding(isAuthenticated)
+
   const {
     commandPaletteOpen,
     setCommandPaletteOpen,
@@ -3250,13 +3264,34 @@ export default function EliteCRM() {
   }
   
   return (
-    <AppShell
+    <>
+      {/* Onboarding wizard overlay — resumes from the persisted step */}
+      <AnimatePresence>
+        {showWizard && currentUser && (
+          <OnboardingWizard
+            organizationName={currentUser.organization?.name || "Your Organization"}
+            userName={currentUser.name}
+            initialStep={onboardingStep}
+            onComplete={handleComplete}
+            onSkip={handleSkip}
+          />
+        )}
+      </AnimatePresence>
+
+      <AppShell
       activeView={activeView}
       setActiveView={setActiveView}
       currentUser={currentUser}
       onAddLead={() => setShowAddLeadDialog(true)}
       onSignOut={() => void signOut()}
     >
+      {/* Resume-setup banner: visible after skip or while setup is incomplete */}
+      <AnimatePresence>
+        {showBanner && !showWizard && (
+          <IncompleteSetupBanner onOpenWizard={openWizard} />
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         <motion.div
           key={activeView}
@@ -3294,5 +3329,6 @@ export default function EliteCRM() {
         onUploadCSV={() => setShowUploadDialog(true)}
       />
     </AppShell>
+    </>
   )
 }
