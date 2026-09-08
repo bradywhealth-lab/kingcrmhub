@@ -77,16 +77,16 @@ export default function PasswordSetupPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#EFF4FB] flex items-center justify-center text-gray-500">
+      <main className="min-h-screen bg-[var(--paper)] flex items-center justify-center text-gray-500">
         Loading password setup…
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#EFF4FB] text-foreground">
+    <main className="min-h-screen bg-[var(--paper)] text-foreground">
       <div className="mx-auto flex min-h-screen max-w-xl items-center justify-center px-6 py-16">
-        <Card className="w-full border-[#D7DFEA] bg-white shadow-sm">
+        <Card className="w-full border-[var(--ink-line)] bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-black">Set Your Password</CardTitle>
             <CardDescription>Finish account setup by replacing the temporary password.</CardDescription>

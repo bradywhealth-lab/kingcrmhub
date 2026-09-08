@@ -150,6 +150,12 @@
        dark  surface (ink)               -> --teal     for text
      Never use --teal-deep as text on ink. */
   --teal-deep: #127c66;
+  /* Light-surface border: ink @ 14% — mirror of the landing's paper@14%
+     border-on-ink (welcome/page.tsx). Machine-checked: decorative only. */
+  --ink-line: rgba(12, 17, 27, 0.14);
+  /* Button hover teal. Machine-measured: ink-on-#15a88a = 6.30:1 PASS.
+     (teal-deep FAILS as button bg with ink text: 3.69:1 — never use.) */
+  --teal-hover: #15a88a;
   --ink-soft: rgba(244, 240, 230, 0.72);
   --ink-faint: rgba(244, 240, 230, 0.12);
   --teal-tint: rgba(24, 184, 151, 0.14);
@@ -163,13 +169,14 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image: radial-gradient(circle at top right, rgba(85, 125, 245, 0.12), transparent 30%), linear-gradient(180deg, #fcf8ec 0%, #eef3fb 48%, #fcf8ec 100%);
+    /* Gate v3 canon: cream→paper wash with a teal tint (was blue rgba(85,125,245) drift). */
+    background-image: radial-gradient(circle at top right, rgba(24, 184, 151, 0.08), transparent 30%), linear-gradient(180deg, #fcf8ec 0%, #f4f0e6 48%, #fcf8ec 100%);
     min-height: 100vh;
   }
 
   ::selection {
-    background: rgba(85, 125, 245, 0.22);
-    color: #1f2a36;
+    background: rgba(24, 184, 151, 0.22);
+    color: #0c111b;
   }
 }
 
