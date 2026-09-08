@@ -125,6 +125,27 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #557df5;
+
+  /* ============================================
+     PUBLIC BRAND PALETTE — single source of truth
+     Locked Gate v3 landing palette. Interior + auth
+     must reference these instead of re-typing hexes.
+     Contrast machine-verified (WCAG AA normal text):
+       --paper on --ink  16.60:1 PASS
+       --ink   on --paper 16.60:1 PASS
+       --teal  on --ink    7.50:1 PASS
+       --ink   on --teal   7.50:1 PASS
+       --teal  on --paper  2.21:1 FAIL
+         -> teal is NEVER used as text on paper;
+            accent on ink backgrounds only.
+     ============================================ */
+  --ink: #0c111b;
+  --paper: #f4f0e6;
+  --teal: #18b897;
+  --ink-soft: rgba(244, 240, 230, 0.72);
+  --ink-faint: rgba(244, 240, 230, 0.12);
+  --teal-tint: rgba(24, 184, 151, 0.14);
+  --teal-edge: rgba(24, 184, 151, 0.4);
 }
 
 @layer base {
@@ -226,6 +247,50 @@
 
 .btn-ghost:hover {
   background: rgba(31, 42, 54, 0.05);
+}
+
+/* ============================================
+   BRAND ACTION BUTTON
+   Legacy class name `.btn-gold` is referenced by 10+
+   components (settings, auth/password, auth/invite,
+   workspace overlays, automation, help) but was never
+   defined in this stylesheet, so every primary action
+   rendered unstyled. Defined here against the public
+   brand palette. Name kept for compatibility; new code
+   should use `.btn-brand` (same rules, semantic name).
+   Contrast: ink-on-teal 7.50:1 PASS (WCAG AA).
+   ============================================ */
+.btn-gold,
+.btn-brand {
+  background: var(--teal);
+  color: var(--ink);
+  font-weight: 600;
+  border: none;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(24, 184, 151, 0.28);
+}
+
+.btn-gold:hover,
+.btn-brand:hover {
+  background: #1fd0aa;
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(24, 184, 151, 0.38);
+}
+
+.btn-gold:active,
+.btn-brand:active {
+  transform: translateY(0);
+}
+
+.btn-gold:disabled,
+.btn-brand:disabled {
+  background: rgba(24, 184, 151, 0.4);
+  color: rgba(12, 17, 27, 0.6);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
 }
 
 /* ============================================
