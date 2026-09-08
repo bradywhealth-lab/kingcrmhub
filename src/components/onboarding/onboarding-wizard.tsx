@@ -171,7 +171,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-3xl font-semibold tracking-[-0.03em] text-[#1f2a36]"
+          className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]"
         >
           Welcome{userName ? `, ${userName.split(" ")[0]}` : ""}
         </motion.h2>
@@ -179,7 +179,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="text-lg text-[#1f2a36]/60"
+          className="text-lg text-[#0c111b]/60"
         >
           <span className="font-semibold text-[var(--teal-deep)]">{organizationName}</span> is ready for setup.
         </motion.p>
@@ -187,7 +187,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mx-auto max-w-md text-sm leading-7 text-[#1f2a36]/55"
+          className="mx-auto max-w-md text-sm leading-7 text-[#0c111b]/55"
         >
           We'll walk you through a few quick steps to get your pipeline, offers, and prompts running.
           Takes less than 3 minutes.
@@ -209,8 +209,8 @@ function WelcomeStep({
             key={feature.label}
             className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f8f5ec] p-3 text-center"
           >
-            <p className="text-xs font-semibold text-[#1f2a36]">{feature.label}</p>
-            <p className="mt-0.5 text-[11px] text-[#1f2a36]/50">{feature.desc}</p>
+            <p className="text-xs font-semibold text-[#0c111b]">{feature.label}</p>
+            <p className="mt-0.5 text-[11px] text-[#0c111b]/50">{feature.desc}</p>
           </div>
         ))}
       </motion.div>
@@ -272,7 +272,7 @@ function OrganizationStep({
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Organization name
           </Label>
           <Input
@@ -283,7 +283,7 @@ function OrganizationStep({
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Logo URL{" "}
             <span className="text-[rgba(31,42,54,0.38)] normal-case font-normal tracking-normal">(optional)</span>
           </Label>
@@ -299,7 +299,7 @@ function OrganizationStep({
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -358,7 +358,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Offer name
           </Label>
           <Input
@@ -369,7 +369,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Website{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -381,7 +381,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Notes{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -394,7 +394,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[rgba(85,125,245,0.18)] bg-[#f5f8ff] p-4 text-sm text-[#1f2a36]/65">
+      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-[#f4f0e6] p-4 text-sm text-[#0c111b]/65">
         You can add more offers and upload service documents in{" "}
         <span className="font-semibold text-[var(--teal-deep)]">Settings → Offers</span> at any time.
       </div>
@@ -402,7 +402,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -465,7 +465,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             First name
           </Label>
           <Input
@@ -476,7 +476,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Last name
           </Label>
           <Input
@@ -487,7 +487,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Email{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -500,7 +500,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Phone{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -516,7 +516,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -577,7 +577,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-[var(--ink)]">New client — immediate follow-up</p>
-            <p className="mt-1 text-sm text-[#1f2a36]/60">
+            <p className="mt-1 text-sm text-[#0c111b]/60">
               When a new client is created, automatically create a task: "Follow up within 5 minutes".
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -592,7 +592,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         </div>
       </div>
 
-      <p className="text-sm text-[#1f2a36]/55">
+      <p className="text-sm text-[#0c111b]/55">
         You can customize triggers and actions in the{" "}
         <span className="font-semibold text-[var(--teal-deep)]">AI Automation</span> section at any time.
       </p>
@@ -600,7 +600,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -633,7 +633,7 @@ function DoneStep({
         transition={{ type: "spring", stiffness: 180, delay: 0.05 }}
         className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
       >
-        <Check className="h-9 w-9 text-white" />
+        <Check className="h-9 w-9 text-[var(--ink)]" />
       </motion.div>
 
       <div className="space-y-2">
@@ -641,7 +641,7 @@ function DoneStep({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="text-3xl font-semibold tracking-[-0.03em] text-[#1f2a36]"
+          className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]"
         >
           You're all set
         </motion.h2>
@@ -649,7 +649,7 @@ function DoneStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="text-lg text-[#1f2a36]/60"
+          className="text-lg text-[#0c111b]/60"
         >
           Your workspace is ready. Time to make your next move.
         </motion.p>
@@ -679,7 +679,7 @@ function DoneStep({
           "Settings → Offers to upload documents for AI",
           "Settings → AI Configuration to change your AI provider",
         ].map((item) => (
-          <div key={item} className="flex items-center gap-3 text-sm text-[#1f2a36]/65">
+          <div key={item} className="flex items-center gap-3 text-sm text-[#0c111b]/65">
             <Check className="h-4 w-4 shrink-0 text-[var(--teal-deep)]" />
             {item}
           </div>
@@ -797,7 +797,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         {!isDoneStep && (
           <button
             onClick={() => void handleSkipAll()}
-            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[#1f2a36]/35 transition-colors hover:bg-[rgba(31,42,54,0.06)] hover:text-[#1f2a36]"
+            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[#0c111b]/35 transition-colors hover:bg-[rgba(31,42,54,0.06)] hover:text-[#0c111b]"
             aria-label="Skip setup"
           >
             <X className="h-4 w-4" />
@@ -810,7 +810,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
             <div className="flex items-center justify-between gap-6">
               <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
               <div className="min-w-[80px] text-right">
-                <p className="text-xs font-medium text-[#1f2a36]/45">
+                <p className="text-xs font-medium text-[#0c111b]/45">
                   Step {currentStep} of {totalSteps - 2}
                 </p>
               </div>
@@ -830,8 +830,8 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
                 <step.icon className="h-5 w-5" style={{ color: step.color }} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-[#1f2a36]">{step.title}</h3>
-                <p className="text-sm text-[#1f2a36]/55">{step.subtitle}</p>
+                <h3 className="text-lg font-semibold text-[#0c111b]">{step.title}</h3>
+                <p className="text-sm text-[#0c111b]/55">{step.subtitle}</p>
               </div>
             </div>
           </div>

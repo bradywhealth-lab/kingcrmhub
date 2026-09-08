@@ -38,40 +38,40 @@ const troubleshooting = [
 
 export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: () => void }) {
   return (
-    <div className="min-h-screen space-y-6 bg-[#F5F7FB] p-6">
+    <div className="min-h-screen space-y-6 bg-[#faf7ee] p-6">
       <div>
         <h1 className="text-2xl font-bold text-black">Help Center</h1>
         <p className="text-gray-500">Learn the app fast, get value fast, and know what to do next.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-[#D7DFEA] bg-white shadow-sm">
+        <Card className="border-[var(--ink-line)] bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-black"><Compass className="h-5 w-5 text-[#2563EB]" /> Getting started in 10 minutes</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-black"><Compass className="h-5 w-5 text-[#127c66]" /> Getting started in 10 minutes</CardTitle>
             <CardDescription>Follow this order so you unlock the real value of the CRM.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {gettingStarted.map((item, index) => (
-              <div key={item} className="flex items-center justify-between rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] px-4 py-3">
+              <div key={item} className="flex items-center justify-between rounded-lg border border-[var(--ink-line)] bg-[#f4f0e6] px-4 py-3">
                 <span className="text-sm text-black">{index + 1}. {item}</span>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        <Card className="border-[#D7DFEA] bg-white shadow-sm">
+        <Card className="border-[var(--ink-line)] bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-black"><Sparkles className="h-5 w-5 text-[#2563EB]" /> Quick actions</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-black"><Sparkles className="h-5 w-5 text-[#127c66]" /> Quick actions</CardTitle>
             <CardDescription>Use these when the workspace needs setup or the AI assistant is not helping enough.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button className="btn-gold w-full justify-start" onClick={() => onJumpToSettingsAI?.()}>
               <Bot className="mr-2 h-4 w-4" /> Configure AI now
             </Button>
-            <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4 text-sm text-gray-600">
+            <div className="rounded-lg border border-[var(--ink-line)] bg-[#f4f0e6] p-4 text-sm text-gray-600">
               Best question to ask the assistant: <span className="font-medium text-black">“What are my top 3 next actions today and why?”</span>
             </div>
-            <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4 text-sm text-gray-600">
+            <div className="rounded-lg border border-[var(--ink-line)] bg-[#f4f0e6] p-4 text-sm text-gray-600">
               Best workflow: qualify lead → open playbook → generate follow-up → log activity → revisit My Day.
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -81,14 +81,14 @@ export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: ()
         </Card>
       </div>
 
-      <Card className="border-[#D7DFEA] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-black"><Bot className="h-5 w-5 text-[#2563EB]" /> Feature guides</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-black"><Bot className="h-5 w-5 text-[#127c66]" /> Feature guides</CardTitle>
           <CardDescription>Focused advice for using the product well, not generic filler.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           {featureGuides.map((guide) => (
-            <div key={guide.title} className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4">
+            <div key={guide.title} className="rounded-lg border border-[var(--ink-line)] bg-[#f4f0e6] p-4">
               <div className="font-medium text-black">{guide.title}</div>
               <p className="mt-2 text-sm text-gray-600">{guide.body}</p>
             </div>
@@ -96,14 +96,14 @@ export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: ()
         </CardContent>
       </Card>
 
-      <Card className="border-[#D7DFEA] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-black"><LifeBuoy className="h-5 w-5 text-[#2563EB]" /> Troubleshooting</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-black"><LifeBuoy className="h-5 w-5 text-[#127c66]" /> Troubleshooting</CardTitle>
           <CardDescription>Most common reasons the CRM feels broken or underpowered.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-gray-600">
           {troubleshooting.map((item) => (
-            <div key={item} className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4">{item}</div>
+            <div key={item} className="rounded-lg border border-[var(--ink-line)] bg-[#f4f0e6] p-4">{item}</div>
           ))}
         </CardContent>
       </Card>

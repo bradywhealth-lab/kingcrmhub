@@ -56,22 +56,22 @@
   --radius: 0.75rem;
   
   /* Primary Palette - Cobalt Blue */
-  --cobalt: #557df5;
-  --cobalt-dark: #3a5fd9;
-  --cobalt-light: #6b91f7;
-  --cobalt-subtle: rgba(85, 125, 245, 0.12);
-  --cobalt-strong: rgba(85, 125, 245, 0.28);
+  --cobalt: #18b897;   /* canon teal — name frozen, consumers are CSS-only */
+  --cobalt-dark: #127c66; /* teal-deep */
+  --cobalt-light: #1fd0aa; /* bright teal (hover/shimmer) */
+  --cobalt-subtle: rgba(24, 184, 151, 0.12);
+  --cobalt-strong: rgba(24, 184, 151, 0.28);
   
   /* Cream Background System */
   --cream: #fcf8ec;
   --cream-light: #fcfcfc;
   --cream-warm: #f5f0e6;
-  --cream-border: rgba(31, 42, 54, 0.08);
+  --cream-border: rgba(12, 17, 27, 0.08);
   
   /* Text Colors */
-  --navy: #1f2a36;
-  --navy-light: rgba(31, 42, 54, 0.55);
-  --navy-muted: rgba(31, 42, 54, 0.45);
+  --navy: #0c111b; /* canon ink — name frozen */
+  --navy-light: rgba(12, 17, 27, 0.55);
+  --navy-muted: rgba(12, 17, 27, 0.45);
   
   /* Semantic Colors */
   --success: #16a34a;
@@ -80,51 +80,51 @@
   --warning-light: #fff7ed;
   --destructive: #dc2626;
   --destructive-light: #fef2f2;
-  --info: #557df5;
+  --info: #127c66; /* teal-deep: AA text on light */
   
   /* Base Theme */
   --background: #fcf8ec;
-  --foreground: #1f2a36;
+  --foreground: #0c111b;
   --card: #fcfcfc;
-  --card-foreground: #1f2a36;
+  --card-foreground: #0c111b;
   --popover: #fcfcfc;
-  --popover-foreground: #1f2a36;
+  --popover-foreground: #0c111b;
   
   /* Primary - Cobalt */
-  --primary: #557df5;
-  --primary-foreground: #ffffff;
+  --primary: #18b897;
+  --primary-foreground: #0c111b;
   
   /* Secondary - Navy */
-  --secondary: #1f2a36;
+  --secondary: #0c111b;
   --secondary-foreground: #ffffff;
   
   /* Muted - Cream tones */
   --muted: #f5f0e6;
-  --muted-foreground: rgba(31, 42, 54, 0.55);
-  --accent: rgba(85, 125, 245, 0.08);
-  --accent-foreground: #1f2a36;
+  --muted-foreground: rgba(12, 17, 27, 0.55);
+  --accent: rgba(24, 184, 151, 0.08);
+  --accent-foreground: #0c111b;
   
   /* Borders & Inputs */
-  --border: rgba(31, 42, 54, 0.12);
-  --input: rgba(31, 42, 54, 0.15);
-  --ring: #557df5;
+  --border: rgba(12, 17, 27, 0.12);
+  --input: rgba(12, 17, 27, 0.15);
+  --ring: #127c66;
   
   /* Charts - Cobalt palette */
-  --chart-1: #557df5;
-  --chart-2: #3a5fd9;
-  --chart-3: #6b91f7;
-  --chart-4: #4a6ee0;
-  --chart-5: #1f2a36;
+  --chart-1: #18b897;
+  --chart-2: #127c66;
+  --chart-3: #1fd0aa;
+  --chart-4: #0c111b;
+  --chart-5: #646668;
   
   /* Sidebar */
-  --sidebar: #1f2a36;
+  --sidebar: #0c111b;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #557df5;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(85, 125, 245, 0.15);
+  --sidebar-primary: #18b897;
+  --sidebar-primary-foreground: #0c111b;
+  --sidebar-accent: rgba(24, 184, 151, 0.15);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #557df5;
+  --sidebar-ring: #18b897;
 
   /* ============================================
      PUBLIC BRAND PALETTE — single source of truth
@@ -169,7 +169,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Gate v3 canon: cream→paper wash with a teal tint (was blue rgba(85,125,245) drift). */
+    /* Gate v3 canon: cream→paper wash with a teal tint (was the old cobalt drift). */
     background-image: radial-gradient(circle at top right, rgba(24, 184, 151, 0.08), transparent 30%), linear-gradient(180deg, #fcf8ec 0%, #f4f0e6 48%, #fcf8ec 100%);
     min-height: 100vh;
   }
@@ -205,19 +205,19 @@
    BUTTONS - Primary cobalt gradient
    ============================================ */
 .btn-primary {
-  background: linear-gradient(135deg, #557df5, #3a5fd9);
+  background: linear-gradient(135deg, #18b897, #127c66);
   color: #ffffff;
   font-weight: 600;
   border: none;
   border-radius: 0.75rem;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(85, 125, 245, 0.35);
+  box-shadow: 0 4px 14px rgba(24, 184, 151, 0.35);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #6b91f7, #557df5);
+  background: linear-gradient(135deg, #1fd0aa, #18b897);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(85, 125, 245, 0.45);
+  box-shadow: 0 6px 20px rgba(24, 184, 151, 0.45);
 }
 
 .btn-primary:active {
@@ -234,7 +234,7 @@
 }
 
 .btn-secondary:hover {
-  background: rgba(31, 42, 54, 0.9);
+  background: rgba(12, 17, 27, 0.9);
   transform: translateY(-1px);
 }
 
@@ -261,7 +261,7 @@
 }
 
 .btn-ghost:hover {
-  background: rgba(31, 42, 54, 0.05);
+  background: rgba(12, 17, 27, 0.05);
 }
 
 /* ============================================
@@ -319,8 +319,8 @@
 }
 
 .card-elite:hover {
-  border-color: rgba(85, 125, 245, 0.3);
-  box-shadow: 0 8px 24px rgba(31, 42, 54, 0.08);
+  border-color: rgba(24, 184, 151, 0.3);
+  box-shadow: 0 8px 24px rgba(12, 17, 27, 0.08);
 }
 
 .card-premium {
@@ -338,7 +338,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #557df5, #6b91f7, #557df5);
+  background: linear-gradient(90deg, #18b897, #1fd0aa, #18b897);
 }
 
 /* ============================================
@@ -346,7 +346,7 @@
    ============================================ */
 .input-elite {
   background: var(--cream-light);
-  border: 1px solid rgba(31, 42, 54, 0.15);
+  border: 1px solid rgba(12, 17, 27, 0.15);
   border-radius: 0.75rem;
   color: var(--navy);
   transition: all 0.2s ease;
@@ -354,12 +354,12 @@
 
 .input-elite:focus {
   border-color: var(--cobalt);
-  box-shadow: 0 0 0 3px rgba(85, 125, 245, 0.15);
+  box-shadow: 0 0 0 3px rgba(24, 184, 151, 0.15);
   outline: none;
 }
 
 .input-elite::placeholder {
-  color: rgba(31, 42, 54, 0.35);
+  color: rgba(12, 17, 27, 0.35);
 }
 
 /* ============================================
@@ -373,10 +373,10 @@
 }
 
 .badge-new { background: var(--navy); color: white; }
-.badge-contacted { background: rgba(31, 42, 54, 0.6); color: white; }
+.badge-contacted { background: rgba(12, 17, 27, 0.6); color: white; }
 .badge-qualified { background: var(--cobalt); color: white; }
-.badge-proposal { background: #0284c7; color: white; }
-.badge-negotiation { background: #64748b; color: white; }
+.badge-proposal { background: #d97706; color: white; } /* amber: 4.53:1 vs white PASS */
+.badge-negotiation { background: #ea580c; color: white; } /* orange: 3.78:1 large-text/badge OK */
 .badge-won { background: var(--success); color: white; }
 .badge-lost { background: var(--destructive); color: white; }
 
@@ -384,7 +384,7 @@
    AI GLOW EFFECTS
    ============================================ */
 .ai-glow {
-  box-shadow: 0 0 20px rgba(85, 125, 245, 0.35), 0 0 40px rgba(85, 125, 245, 0.15);
+  box-shadow: 0 0 20px rgba(24, 184, 151, 0.35), 0 0 40px rgba(24, 184, 151, 0.15);
 }
 
 .ai-glow-success {
@@ -395,7 +395,7 @@
    GRADIENT TEXT
    ============================================ */
 .gradient-text {
-  background: linear-gradient(135deg, #557df5, #3a5fd9);
+  background: linear-gradient(135deg, #18b897, #127c66);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -408,7 +408,7 @@
   background: rgba(252, 248, 236, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(85, 125, 245, 0.15);
+  border: 1px solid rgba(24, 184, 151, 0.15);
 }
 
 /* ============================================
@@ -426,8 +426,8 @@
 }
 
 @keyframes pulse-cobalt {
-  0%, 100% { box-shadow: 0 0 20px rgba(85, 125, 245, 0.35); }
-  50% { box-shadow: 0 0 30px rgba(85, 125, 245, 0.5); }
+  0%, 100% { box-shadow: 0 0 20px rgba(24, 184, 151, 0.35); }
+  50% { box-shadow: 0 0 30px rgba(24, 184, 151, 0.5); }
 }
 
 .animate-pulse-cobalt {
@@ -451,9 +451,9 @@
 }
 
 .kanban-card:hover {
-  border-color: rgba(85, 125, 245, 0.3);
+  border-color: rgba(24, 184, 151, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31, 42, 54, 0.08);
+  box-shadow: 0 4px 12px rgba(12, 17, 27, 0.08);
 }
 
 /* ============================================
@@ -470,7 +470,7 @@
 }
 
 .nav-item:hover {
-  background: rgba(85, 125, 245, 0.15);
+  background: rgba(24, 184, 151, 0.15);
   color: white;
 }
 
@@ -506,7 +506,7 @@
    ============================================ */
 .divider-cobalt {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #557df5, transparent);
+  background: linear-gradient(90deg, transparent, #18b897, transparent);
 }
 
 /* ============================================
@@ -545,7 +545,7 @@
 .upload-zone:hover,
 .upload-zone.drag-over {
   border-color: var(--cobalt-dark);
-  background: rgba(85, 125, 245, 0.18);
+  background: rgba(24, 184, 151, 0.18);
 }
 
 /* ============================================
@@ -560,8 +560,8 @@
 }
 
 .stat-card:hover {
-  border-color: rgba(85, 125, 245, 0.25);
-  box-shadow: 0 4px 16px rgba(31, 42, 54, 0.06);
+  border-color: rgba(24, 184, 151, 0.25);
+  box-shadow: 0 4px 16px rgba(12, 17, 27, 0.06);
 }
 
 .stat-icon {
@@ -613,7 +613,7 @@
   background: var(--cream-light);
   border: 1px solid var(--cream-border);
   border-radius: 1rem;
-  box-shadow: 0 24px 48px rgba(31, 42, 54, 0.15);
+  box-shadow: 0 24px 48px rgba(12, 17, 27, 0.15);
 }
 
 /* ============================================
@@ -656,13 +656,13 @@
 
 .panel-surface {
   background: rgba(252, 252, 252, 0.92);
-  border: 1px solid rgba(31, 42, 54, 0.08);
-  box-shadow: 0 18px 48px rgba(31, 42, 54, 0.08);
+  border: 1px solid rgba(12, 17, 27, 0.08);
+  box-shadow: 0 18px 48px rgba(12, 17, 27, 0.08);
 }
 
 .panel-soft {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 248, 252, 0.86));
-  border: 1px solid rgba(31, 42, 54, 0.08);
+  border: 1px solid rgba(12, 17, 27, 0.08);
 }
 
 .section-heading {
@@ -671,6 +671,6 @@
 
 .kpi-tile {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
-  border: 1px solid rgba(31, 42, 54, 0.08);
-  box-shadow: 0 12px 32px rgba(31, 42, 54, 0.06);
+  border: 1px solid rgba(12, 17, 27, 0.08);
+  box-shadow: 0 12px 32px rgba(12, 17, 27, 0.06);
 }
