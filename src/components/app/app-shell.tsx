@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Bot, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Search, Settings, Share2, SquareKanban, Upload, Users, X, Zap, GitBranch } from "lucide-react"
+import { Bell, Bot, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Search, Settings, Share2, Sparkles, SquareKanban, Upload, Users, X, Zap, GitBranch } from "lucide-react"
 import { useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -25,6 +25,7 @@ export const APP_NAV_ITEMS = [
   { id: "linear", icon: SquareKanban, label: "Linear", short: "Issues" },
   { id: "automation", icon: Zap, label: "AI Automation", short: "Automations" },
   { id: "assistant", icon: MessageSquare, label: "AI Assistant", short: "Assistant" },
+  { id: "prompts", icon: Sparkles, label: "Prompts", short: "Library" },
   { id: "social", icon: Share2, label: "Social Media", short: "Social" },
   { id: "settings", icon: Settings, label: "Settings", short: "Settings" },
 ] as const
