@@ -188,7 +188,7 @@ export function AISettingsPanel() {
               <p className="text-sm font-medium text-black">
                 Current: {settings?.providerLabel}
               </p>
-              <p className="text-xs text-gray-500">Model: {settings?.model}</p>
+              <p className="text-xs text-gray-500">AI tier: {settings?.providerLabel}</p>
             </div>
             {settings?.hasKey ? (
               <Badge className="border-emerald-500 bg-emerald-50 text-emerald-700" variant="outline">
@@ -242,11 +242,11 @@ export function AISettingsPanel() {
                   : 'Groq can run only if this deployment has a platform GROQ_API_KEY configured, unless your org adds its own key.'
                 : selectedProvider === 'openai'
                   ? settings?.platformFallbacks?.openai
-                    ? 'OpenAI platform fallback is available on this deployment, or you can use your own key.'
-                    : 'OpenAI GPT-4o requires your own API key on this deployment.'
+                    ? 'Advanced platform fallback is available on this deployment, or you can use your own key.'
+                    : 'Advanced tier requires your own API key on this deployment.'
                   : settings?.platformFallbacks?.anthropic
-                    ? 'Anthropic platform fallback is available on this deployment, or you can use your own key.'
-                    : 'Anthropic Claude requires your own API key on this deployment.'}
+                    ? 'Advanced platform fallback is available on this deployment, or you can use your own key.'
+                    : 'Advanced tier requires your own API key on this deployment.'}
             </p>
           </div>
 
@@ -325,11 +325,11 @@ export function AISettingsPanel() {
               <div className="rounded-lg border border-[#D7DFEA] bg-[#F5F7FB] p-4 space-y-2">
                 <p className="text-sm font-medium text-black">Free Tier Details</p>
                 <ul className="text-xs text-gray-600 space-y-1">
-                  <li>• Powered by Llama 3.3 70B via Groq inference when a platform or org key is actually available</li>
+                  <li>• Standard tier AI assistant included — powered by Groq inference when a platform or org key is available</li>
                   <li>• Great for lead qualification, email/SMS drafting, sales coaching</li>
-                  <li>• Upgrade to OpenAI or Anthropic anytime for premium models</li>
+                  <li>• Upgrade to Advanced tier anytime for premium capabilities</li>
                   <li>• If the assistant still fails, this deployment may not have a usable fallback key configured</li>
-                  <li>• Current deployment fallback status: {settings?.platformFallbacks?.groq ? 'Groq available' : 'Groq not detected'}</li>
+                  <li>• Current deployment fallback status: {settings?.platformFallbacks?.groq ? 'Standard tier available' : 'Standard tier not detected'}</li>
                 </ul>
                 {!settings?.hasKey && (
                   <p className="text-xs text-[#2563EB] font-medium mt-2">

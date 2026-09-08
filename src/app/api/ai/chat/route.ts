@@ -65,7 +65,6 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'X-AI-Provider': config.provider,
       },
     })
   } catch (error) {
