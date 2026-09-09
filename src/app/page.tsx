@@ -3141,7 +3141,7 @@ export default function EliteCRM() {
     handleComplete,
     handleSkip,
     openWizard,
-  } = useOnboarding(isAuthenticated)
+  } = useOnboarding(isAuthenticated, currentUser?.organization?.id)
 
   const {
     commandPaletteOpen,

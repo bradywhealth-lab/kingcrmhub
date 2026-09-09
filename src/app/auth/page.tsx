@@ -168,10 +168,17 @@ function AuthPageInner() {
 
       const email = mode === 'login' ? loginEmail : signupEmail
       const password = mode === 'login' ? loginPassword : signupPassword
-      const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: '/' })
+      // Validate ?callbackUrl before signing in (cubic P2 round 3): only
+      // same-origin absolute paths are honoured; everything else → '/'.
+      const rawCallback = searchParams.get('callbackUrl') ?? ''
+      const safeCallback =
+        rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+          ? rawCallback
+          : '/'
+      const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: safeCallback })
       if (!result || result.error) throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Authentication failed.')
       const session = await getSession()
-      router.push(session?.user?.mustChangePassword ? '/auth/password' : '/')
+      router.push(session?.user?.mustChangePassword ? '/auth/password' : safeCallback)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.')

@@ -929,7 +929,7 @@ export function IncompleteSetupBanner({ onOpenWizard }: { onOpenWizard: () => vo
 // HOOK: useOnboarding
 // ============================================
 
-export function useOnboarding(isAuthenticated: boolean) {
+export function useOnboarding(isAuthenticated: boolean, organizationId?: string | null) {
   const [showWizard, setShowWizard] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [onboardingLoaded, setOnboardingLoaded] = useState(false)
@@ -940,7 +940,11 @@ export function useOnboarding(isAuthenticated: boolean) {
   // therefore browser-persisted separately from server completion state
   // (cubic P2, PR #161: persisting completed:false made the overlay re-open
   // on every reload; persisting completed:true made resume impossible).
-  const DISMISS_KEY = "kingcrm-onboarding-dismissed"
+  //
+  // The flag is scoped per organization: a global key would let one
+  // workspace's skip suppress the next account's first-run wizard in the
+  // same browser profile (cubic P2 round 3).
+  const DISMISS_KEY = `kingcrm-onboarding-dismissed:${organizationId ?? 'anon'}`
   const isDismissed = () => {
     try { return localStorage.getItem(DISMISS_KEY) === "1" } catch { return false }
   }
@@ -978,7 +982,7 @@ export function useOnboarding(isAuthenticated: boolean) {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, organizationId])
 
   const handleComplete = useCallback(() => {
     setShowWizard(false)

@@ -26,6 +26,30 @@ function isServerAllowed(relPath: string): boolean {
   )
 }
 
+/**
+ * True when the file has a VALUE (runtime) import of @/lib/prompts.
+ * For each '@/lib/prompts' string specifier, the statement head is everything
+ * from the LAST `import` keyword before it to the specifier — an `import`
+ * appearing earlier belongs to a different statement only if another `from`
+ * intervened, which cannot happen between the last `import` and this
+ * specifier. Only `import type …` heads are compile-time-erased; anything
+ * else (named default, multi-line, side-effect) fails closed as a value
+ * import (cubic P1 round 3: line-anchored regexes silently pass multi-line
+ * value imports, re-enabling the exact leak the gate exists to catch).
+ */
+export function hasValuePromptsImport(text: string): boolean {
+  const specifier = /['"]@\/lib\/prompts['"]/g
+  let match: RegExpExecArray | null
+  while ((match = specifier.exec(text)) !== null) {
+    const before = text.slice(0, match.index)
+    const idx = before.lastIndexOf('import')
+    if (idx === -1) return true // specifier without a visible import — fail closed
+    const head = before.slice(idx).replace(/\s+/g, ' ').trim()
+    if (!/^import\s+type(\s|$)/.test(head)) return true
+  }
+  return false
+}
+
 function walk(dir: string): string[] {
   const out: string[] = []
   for (const entry of readdirSync(dir)) {
@@ -41,13 +65,18 @@ describe('paid prompt bodies never ship to the client bundle', () => {
     .filter((file) => file !== join(SRC, 'lib', 'prompts.ts'))
     .filter((file) => {
       const text = readFileSync(file, 'utf8')
-      if (!text.includes('@/lib/prompts')) return false
-      // `import type {...}` is erased at compile time — it ships no runtime
-      // bytes, so type-only usage of the library surface is bundle-safe.
-      const valueImports = text.match(/^\s*import\s+(?!type\s)[^\n]*@\/lib\/prompts[^\n]*/gm)
-      return valueImports !== null && valueImports.length > 0
+      if (!text.includes("@/lib/prompts")) return false
+      return hasValuePromptsImport(text)
     })
     .map((file) => file.slice(repoRoot.length + 1))
+
+  it('the detector itself catches multi-line value imports (no silent pass)', () => {
+    expect(hasValuePromptsImport("import { useState } from 'react'\nimport {\n  PROMPT_LIBRARY,\n} from '@/lib/prompts'\n")).toBe(true)
+    expect(hasValuePromptsImport("import { PROMPT_LIBRARY } from '@/lib/prompts'")).toBe(true)
+    expect(hasValuePromptsImport("import type { PromptPlan } from '@/lib/prompts'")).toBe(false)
+    expect(hasValuePromptsImport("import type {\n  PromptPlan,\n  PromptWithUnlock,\n} from '@/lib/prompts'")).toBe(false)
+    expect(hasValuePromptsImport("const x = 1\nimport '@/lib/prompts'")).toBe(true) // bare side-effect import — fail closed
+  })
 
   it('every importer of the full library is server-allowed', () => {
     const violations = importers.filter((rel) => !isServerAllowed(rel))
