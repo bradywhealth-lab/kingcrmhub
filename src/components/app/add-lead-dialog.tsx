@@ -79,10 +79,10 @@ export function AddLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border-[#D7DFEA] bg-white">
+      <DialogContent className="max-w-lg border-[var(--ink-line)] bg-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-black">
-            <UserPlus className="h-5 w-5 text-[#2563EB]" />
+            <UserPlus className="h-5 w-5 text-[#127c66]" />
             Add new lead
           </DialogTitle>
           <DialogDescription className="text-gray-500">
@@ -98,36 +98,36 @@ export function AddLeadDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-600">First name</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.firstName} onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))} placeholder="Jane" />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.firstName} onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))} placeholder="Jane" />
             </div>
             <div>
               <Label className="text-gray-600">Last name</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.lastName} onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))} placeholder="Doe" />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.lastName} onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))} placeholder="Doe" />
             </div>
           </div>
           <div>
             <Label className="text-gray-600">Email</Label>
-            <Input type="email" className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="jane@company.com" />
+            <Input type="email" className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="jane@company.com" />
           </div>
           <div>
             <Label className="text-gray-600">Phone</Label>
-            <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+1 (555) 000-0000" />
+            <Input className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+1 (555) 000-0000" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-600">Company</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.company} onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))} placeholder="Acme Inc" />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.company} onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))} placeholder="Acme Inc" />
             </div>
             <div>
               <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="VP Sales" />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="VP Sales" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-600">Source</Label>
               <Select value={form.source} onValueChange={(value) => setForm((current) => ({ ...current, source: value }))}>
-                <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]">
+                <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,11 +141,11 @@ export function AddLeadDialog({
             </div>
             <div>
               <Label className="text-gray-600">Est. value ($)</Label>
-              <Input type="number" className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.estimatedValue} onChange={(event) => setForm((current) => ({ ...current, estimatedValue: event.target.value }))} placeholder="50000" />
+              <Input type="number" className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]" value={form.estimatedValue} onChange={(event) => setForm((current) => ({ ...current, estimatedValue: event.target.value }))} placeholder="50000" />
             </div>
           </div>
           <DialogFooter className="gap-2 pt-4">
-            <Button type="button" variant="outline" className="border-[#D7DFEA]" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="outline" className="border-[var(--ink-line)]" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" className="btn-gold" disabled={saving}>{saving ? "Saving..." : "Add lead"}</Button>
           </DialogFooter>
         </form>

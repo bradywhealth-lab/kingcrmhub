@@ -5,6 +5,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+import { getDefaultModel } from '@/lib/ai-providers'
 
 const AI_PROVIDERS = ['groq', 'openai', 'anthropic'] as const
 type AIProvider = (typeof AI_PROVIDERS)[number]
@@ -26,11 +27,24 @@ function maskKey(key: string | undefined | null): string | null {
   return `${key.slice(0, 6)}${'•'.repeat(Math.min(key.length - 10, 30))}${key.slice(-4)}`
 }
 
-const PROVIDER_DEFAULTS: Record<AIProvider, { model: string; label: string }> = {
-  groq: { model: 'llama-3.3-70b-versatile', label: 'Groq (Llama 3.3 70B)' },
-  openai: { model: 'gpt-4o', label: 'OpenAI (GPT-4o)' },
-  anthropic: { model: 'claude-sonnet-4-20250514', label: 'Anthropic (Claude Sonnet)' },
+/**
+ * Atlas Gate v1.4 — vendor-only labels for dropdown (no model names).
+ * Model slugs are internal SDK params, imported from ai-providers.ts.
+ */
+const PROVIDER_LABELS: Record<AIProvider, string> = {
+  groq: 'Groq',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
 }
+
+/**
+ * Atlas Gate v1.4 — customer-safe tier labels.
+ * Vendor/model names are internal; customers see tier identity only.
+ */
+const TIER_LABELS = {
+  standard: 'Standard — included',
+  advanced: 'Advanced — bring your own key',
+} as const
 
 function getPlatformFallbacks() {
   return {
@@ -41,15 +55,9 @@ function getPlatformFallbacks() {
 }
 
 function getProviderLabel(provider: AIProvider, hasKey: boolean) {
-  const base = PROVIDER_DEFAULTS[provider].label
-  if (hasKey) return `${base} — Custom key active`
-
-  const fallbacks = getPlatformFallbacks()
-  if (provider === 'groq' && fallbacks.groq) return `${base} — Platform fallback active`
-  if (provider === 'openai' && fallbacks.openai) return `${base} — Platform fallback active`
-  if (provider === 'anthropic' && fallbacks.anthropic) return `${base} — Platform fallback active`
-
-  return `${base} — No key configured`
+  if (provider === 'groq') return TIER_LABELS.standard
+  if (hasKey) return TIER_LABELS.advanced
+  return TIER_LABELS.standard
 }
 
 // GET — return current AI settings (key masked)
@@ -66,23 +74,19 @@ export async function GET(request: NextRequest) {
       const provider = (AI_PROVIDERS.includes(settings.aiProvider as AIProvider)
         ? settings.aiProvider
         : 'groq') as AIProvider
-      const model =
-        typeof settings.aiModel === 'string' && settings.aiModel
-          ? settings.aiModel
-          : PROVIDER_DEFAULTS[provider].model
       const hasKey = typeof settings.aiApiKey === 'string' && settings.aiApiKey.length > 0
 
       return NextResponse.json({
         provider,
-        model,
+
         hasKey,
         maskedKey: hasKey ? maskKey(settings.aiApiKey as string) : null,
         providerLabel: getProviderLabel(provider, hasKey),
         platformFallbacks: getPlatformFallbacks(),
         availableProviders: AI_PROVIDERS.map((p) => ({
           id: p,
-          label: PROVIDER_DEFAULTS[p].label,
-          defaultModel: PROVIDER_DEFAULTS[p].model,
+          label: PROVIDER_LABELS[p],
+
           requiresKey: !getPlatformFallbacks()[p],
         })),
       })
@@ -118,7 +122,7 @@ export async function PATCH(request: NextRequest) {
       if (parsed.data.aiProvider !== undefined) {
         settings.aiProvider = parsed.data.aiProvider
         // Reset model to default when switching providers
-        settings.aiModel = PROVIDER_DEFAULTS[parsed.data.aiProvider].model
+        settings.aiModel = getDefaultModel(parsed.data.aiProvider)
       }
       if (parsed.data.aiModel !== undefined) {
         settings.aiModel = parsed.data.aiModel
@@ -150,13 +154,12 @@ export async function PATCH(request: NextRequest) {
       })
 
       const provider = (settings.aiProvider as AIProvider) || 'groq'
-
       const hasKey = typeof settings.aiApiKey === 'string' && settings.aiApiKey.length > 0
 
       return NextResponse.json({
         success: true,
         provider,
-        model: settings.aiModel || PROVIDER_DEFAULTS[provider].model,
+
         hasKey,
         maskedKey: maskKey(settings.aiApiKey as string | null),
         providerLabel: getProviderLabel(provider, hasKey),

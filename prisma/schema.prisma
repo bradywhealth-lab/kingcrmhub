@@ -18,7 +18,7 @@ model Organization {
   name      String
   slug      String   @unique
   logo      String?
-  plan      String   @default("free") // free, starter, pro, enterprise
+  plan      String   @default("free") // stored IDs: free, starter, pro, enterprise
   settings  Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

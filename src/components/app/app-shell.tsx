@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Bot, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Search, Settings, Share2, SquareKanban, Upload, Users, X, Zap, GitBranch } from "lucide-react"
+import { Bell, Bot, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Search, Settings, Share2, Sparkles, SquareKanban, Upload, Users, X, Zap, GitBranch } from "lucide-react"
 import { useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -25,6 +25,7 @@ export const APP_NAV_ITEMS = [
   { id: "linear", icon: SquareKanban, label: "Linear", short: "Issues" },
   { id: "automation", icon: Zap, label: "AI Automation", short: "Automations" },
   { id: "assistant", icon: MessageSquare, label: "AI Assistant", short: "Assistant" },
+  { id: "prompts", icon: Sparkles, label: "Prompts", short: "Library" },
   { id: "social", icon: Share2, label: "Social Media", short: "Social" },
   { id: "settings", icon: Settings, label: "Settings", short: "Settings" },
 ] as const
@@ -59,19 +60,19 @@ export function AppShell({
   const unreadCount = useMemo(() => mockNotifications.filter((notification) => notification.unread).length, [])
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8f4e8_0%,#eef3fb_48%,#f8f4e8_100%)] text-[#1f2a36]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_48%,#fcf8ec_100%)] text-[#0c111b]">
       <motion.aside
         initial={false}
         animate={{ width: sidebarOpen ? 288 : 88 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0f172a] shadow-[24px_0_60px_rgba(15,23,42,0.16)]"
+        className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0c111b] shadow-[24px_0_60px_rgba(15,23,42,0.16)]"
       >
         <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
           <AnimatePresence mode="wait">
             {sidebarOpen && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] shadow-[0_10px_30px_rgba(85,125,245,0.35)]">
-                  <Bot className="h-5 w-5 text-white" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_10px_30px_rgba(24,184,151,0.35)]">
+                  <Bot className="h-5 w-5 text-[var(--ink)]" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/55">King CRM Hub</p>
@@ -92,14 +93,14 @@ export function AppShell({
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12 border border-white/10 bg-white/10">
-                      <AvatarFallback className="bg-[#557df5] text-sm font-semibold text-white">{getInitials(currentUser?.name)}</AvatarFallback>
+                      <AvatarFallback className="bg-[#18b897] text-sm font-semibold text-[#0c111b]">{getInitials(currentUser?.name)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-white">{currentUser?.name || "Workspace User"}</p>
                       <p className="truncate text-xs capitalize text-white/55">{currentUser?.role || "member"}</p>
                     </div>
                   </div>
-                  <div className="rounded-xl bg-[linear-gradient(135deg,rgba(85,125,245,0.16),rgba(255,255,255,0.02))] p-3">
+                  <div className="rounded-xl bg-[linear-gradient(135deg,rgba(24,184,151,0.16),rgba(255,255,255,0.02))] p-3">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Organization</p>
                     <p className="mt-1 text-sm font-medium text-white">{currentUser?.organization?.name || "King CRM workspace"}</p>
                     <Badge className="mt-2 border-0 bg-white/10 text-white/75">{currentUser?.organization?.plan || "Pro"}</Badge>
@@ -108,7 +109,7 @@ export function AppShell({
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-center">
                   <Avatar className="h-11 w-11 border border-white/10 bg-white/10">
-                    <AvatarFallback className="bg-[#557df5] text-sm font-semibold text-white">{getInitials(currentUser?.name)}</AvatarFallback>
+                    <AvatarFallback className="bg-[#18b897] text-sm font-semibold text-[#0c111b]">{getInitials(currentUser?.name)}</AvatarFallback>
                   </Avatar>
                 </motion.div>
               )}
@@ -124,13 +125,13 @@ export function AppShell({
               className={cn(
                 "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
                 activeView === item.id
-                  ? "bg-[linear-gradient(90deg,rgba(85,125,245,0.24),rgba(85,125,245,0.08))] text-white shadow-[0_12px_28px_rgba(85,125,245,0.15)]"
+                  ? "bg-[linear-gradient(90deg,rgba(24,184,151,0.24),rgba(24,184,151,0.08))] text-white shadow-[0_12px_28px_rgba(24,184,151,0.15)]"
                   : "text-white/62 hover:bg-white/6 hover:text-white"
               )}
             >
               <div className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors",
-                activeView === item.id ? "border-[#557df5]/60 bg-[#557df5]/18" : "border-white/8 bg-white/4 group-hover:border-white/16"
+                activeView === item.id ? "border-[#127c66]/60 bg-[#18b897]/18" : "border-white/8 bg-white/4 group-hover:border-white/16"
               )}>
                 <item.icon className="h-4 w-4" />
               </div>
@@ -159,40 +160,40 @@ export function AppShell({
           <div className="flex min-h-20 items-center justify-between gap-4 px-6 py-4 lg:px-8">
             <div className="flex flex-1 items-center gap-4">
               <div className="hidden min-w-0 lg:block">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#1f2a36]/45">Workspace command center</p>
-                <h1 className="truncate text-xl font-semibold text-[#1f2a36]">{APP_NAV_ITEMS.find((item) => item.id === activeView)?.label || "Dashboard"}</h1>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#0c111b]/45">Workspace command center</p>
+                <h1 className="truncate text-xl font-semibold text-[#0c111b]">{APP_NAV_ITEMS.find((item) => item.id === activeView)?.label || "Dashboard"}</h1>
               </div>
               <div className="relative ml-auto w-full max-w-xl">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1f2a36]/35" />
-                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 rounded-2xl border-[rgba(31,42,54,0.08)] bg-white pl-11 shadow-[0_8px_24px_rgba(31,42,54,0.05)] focus-visible:ring-[#557df5]/30" />
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0c111b]/35" />
+                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 rounded-2xl border-[rgba(31,42,54,0.08)] bg-white pl-11 shadow-[0_8px_24px_rgba(31,42,54,0.05)] focus-visible:ring-[#18b897]/30" />
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#1f2a36]/70 shadow-sm hover:bg-[#f6f9ff] hover:text-[#557df5]">
+                  <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#0c111b]/70 shadow-sm hover:bg-[#f6f9ff] hover:text-[#127c66]">
                     <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#557df5]" />}
+                    {unreadCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#18b897]" />}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-80 rounded-2xl border-[rgba(31,42,54,0.08)] bg-white p-1 shadow-[0_18px_48px_rgba(31,42,54,0.12)]">
                   <DropdownMenuLabel className="flex items-center justify-between px-3 py-2">
-                    <span className="text-sm font-semibold text-[#1f2a36]">Notifications</span>
-                    {unreadCount > 0 && <Badge className="border-0 bg-[#557df5]/12 text-[#557df5]">{unreadCount}</Badge>}
+                    <span className="text-sm font-semibold text-[#0c111b]">Notifications</span>
+                    {unreadCount > 0 && <Badge className="border-0 bg-[#18b897]/12 text-[#127c66]">{unreadCount}</Badge>}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {mockNotifications.map((notification) => (
                     <DropdownMenuItem key={notification.id} className="flex cursor-pointer flex-col items-start gap-0.5 rounded-xl p-3">
-                      <span className={cn("text-sm text-[#1f2a36]", notification.unread && "font-semibold")}>{notification.title}</span>
-                      <span className="text-xs text-[#1f2a36]/55">{notification.body}</span>
-                      <span className="text-[11px] text-[#1f2a36]/35">{notification.time}</span>
+                      <span className={cn("text-sm text-[#0c111b]", notification.unread && "font-semibold")}>{notification.title}</span>
+                      <span className="text-xs text-[#0c111b]/55">{notification.body}</span>
+                      <span className="text-[11px] text-[#0c111b]/35">{notification.time}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button onClick={onAddLead} className="h-12 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] px-5 text-white shadow-[0_12px_28px_rgba(85,125,245,0.28)] hover:opacity-95">
+              <Button onClick={onAddLead} className="h-12 rounded-2xl bg-[var(--teal)] px-5 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95">
                 <Plus className="mr-2 h-4 w-4" />
                 Add lead
               </Button>

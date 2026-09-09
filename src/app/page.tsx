@@ -47,6 +47,8 @@ import { useWorkspaceOverlays } from "@/components/app/use-workspace-overlays"
 import { useWorkspaceSession } from "@/components/app/use-workspace-session"
 import { SettingsView } from "@/components/settings/settings-view"
 import { AiAssistantView } from "@/components/ai/ai-assistant-view"
+import { PromptsView } from "@/components/prompts/prompts-view"
+import { OnboardingWizard, IncompleteSetupBanner, useOnboarding } from "@/components/onboarding/onboarding-wizard"
 import { triggerWinCelebration, triggerSmallCelebration } from "@/lib/celebrations"
 import { toast } from "@/hooks/use-toast"
 import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
@@ -57,77 +59,11 @@ import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 // Matching landing page aesthetic
 // ============================================
 
-// Mock Data - fixed ISO dates to avoid hydration mismatch
-const _base = "2026-03-11T22:00:00.000Z"
-const _yesterday = "2026-03-10T22:00:00.000Z"
-const mockLeads: Lead[] = [
-  { id: "1", firstName: "Sarah", lastName: "Johnson", email: "sarah@techcorp.com", phone: "(555) 123-4567", company: "TechCorp Inc", title: "CTO", source: "linkedin", status: "qualified", aiScore: 92, aiConfidence: 0.89, aiInsights: { intent: "high", budget: "confirmed" }, aiNextAction: "Schedule demo call", estimatedValue: 50000, lastContactedAt: _base, createdAt: _base, tags: [{ id: "1", name: "Hot Lead", color: "#2563EB" }] },
-  { id: "2", firstName: "Michael", lastName: "Chen", email: "mchen@startup.io", phone: "(555) 234-5678", company: "Startup.io", title: "Founder", source: "referral", status: "new", aiScore: 78, aiConfidence: 0.75, aiInsights: { intent: "medium" }, aiNextAction: "Send introductory email", estimatedValue: 25000, lastContactedAt: null, createdAt: _base, tags: [] },
-  { id: "3", firstName: "Emily", lastName: "Davis", email: "emily@enterprise.com", phone: "(555) 345-6789", company: "Enterprise Solutions", title: "VP of Sales", source: "website", status: "proposal", aiScore: 85, aiConfidence: 0.82, aiInsights: { intent: "high", timeline: "Q1" }, aiNextAction: "Follow up on proposal", estimatedValue: 75000, lastContactedAt: _yesterday, createdAt: _base, tags: [{ id: "2", name: "Enterprise", color: "#0F172A" }] },
-  { id: "4", firstName: "James", lastName: "Wilson", email: "jwilson@agency.co", phone: "(555) 456-7890", company: "Creative Agency", title: "Director", source: "google", status: "negotiation", aiScore: 88, aiConfidence: 0.91, aiInsights: { intent: "high", decisionMaker: true }, aiNextAction: "Send contract", estimatedValue: 120000, lastContactedAt: _base, createdAt: _base, tags: [] },
-  { id: "5", firstName: "Lisa", lastName: "Anderson", email: "lisa@retail.com", phone: "(555) 567-8901", company: "Retail Giants", title: "CEO", source: "referral", status: "new", aiScore: 65, aiConfidence: 0.68, aiInsights: {}, aiNextAction: "Research company needs", estimatedValue: 30000, lastContactedAt: null, createdAt: _base, tags: [] },
-]
-
-const _p1Close = "2026-04-10T22:00:00.000Z"
-const _p2Close = "2026-05-10T22:00:00.000Z"
-const _p3Close = "2026-03-25T22:00:00.000Z"
-const _p4Close = "2026-03-30T22:00:00.000Z"
-const _p5Close = "2026-03-22T22:00:00.000Z"
-const mockPipelineStages = [
-  { id: "new", name: "New", color: "#0F172A", order: 0, items: [
-    { id: "p1", title: "Michael Chen - Startup.io", value: 25000, probability: 20, stageId: "new", leadId: "2", lead: mockLeads[1], aiWinProbability: 0.35, expectedClose: _p1Close },
-    { id: "p2", title: "Lisa Anderson - Retail Giants", value: 30000, probability: 15, stageId: "new", leadId: "5", lead: mockLeads[4], aiWinProbability: 0.28, expectedClose: _p2Close },
-  ]},
-  { id: "contacted", name: "Contacted", color: "#6B7280", order: 1, items: [] },
-  { id: "qualified", name: "Qualified", color: "#2563EB", order: 2, items: [
-    { id: "p3", title: "Sarah Johnson - TechCorp", value: 50000, probability: 60, stageId: "qualified", leadId: "1", lead: mockLeads[0], aiWinProbability: 0.72, expectedClose: _p3Close },
-  ]},
-  { id: "proposal", name: "Proposal", color: "#0284C7", order: 3, items: [
-    { id: "p4", title: "Emily Davis - Enterprise", value: 75000, probability: 70, stageId: "proposal", leadId: "3", lead: mockLeads[2], aiWinProbability: 0.68, expectedClose: _p4Close },
-  ]},
-  { id: "negotiation", name: "Negotiation", color: "#64748B", order: 4, items: [
-    { id: "p5", title: "James Wilson - Agency", value: 120000, probability: 85, stageId: "negotiation", leadId: "4", lead: mockLeads[3], aiWinProbability: 0.89, expectedClose: _p5Close },
-  ]},
-  { id: "won", name: "Won", color: "#059669", order: 5, items: [] },
-]
-
-// Fixed ISO timestamps to avoid hydration mismatch (no Date.now() at module load)
-const _now = "2026-03-11T22:00:00.000Z"
-const mockActivities: ActivityType[] = [
-  { id: "1", type: "email", title: "Sent proposal to Sarah Johnson", description: "Follow-up email with pricing", metadata: { opened: true }, aiSummary: "Lead showed interest in premium plan", createdAt: _now, lead: mockLeads[0] },
-  { id: "2", type: "call", title: "Discovery call with James Wilson", description: "Discussed requirements and timeline", metadata: { duration: 45 }, aiSummary: "Decision maker engaged, ready for proposal", createdAt: "2026-03-11T21:00:00.000Z", lead: mockLeads[3] },
-  { id: "3", type: "ai_analysis", title: "AI scored new lead", description: "Michael Chen scored 78/100", metadata: { score: 78 }, aiSummary: "High potential - immediate follow-up recommended", createdAt: "2026-03-11T20:00:00.000Z", lead: mockLeads[1] },
-  { id: "4", type: "meeting", title: "Demo scheduled", description: "Product demo with Enterprise Solutions", metadata: {}, aiSummary: null, createdAt: "2026-03-10T22:00:00.000Z", lead: mockLeads[2] },
-]
-
-const mockInsights: AIInsight[] = [
-  { id: "1", type: "prediction", category: "pipeline", title: "Revenue Forecast", description: "Based on current pipeline velocity, you're projected to close $280K this quarter", data: { confidence: 0.82 }, confidence: 0.82, actionable: true, dismissed: false },
-  { id: "2", type: "recommendation", category: "leads", title: "Follow-up Alert", description: "3 leads haven't been contacted in 7+ days. Immediate outreach recommended.", data: { leads: ["2", "5"] }, confidence: 0.95, actionable: true, dismissed: false },
-  { id: "3", type: "trend", category: "performance", title: "Conversion Rate Up", description: "Your lead-to-opportunity conversion increased 12% this month", data: { change: 0.12 }, confidence: 0.88, actionable: false, dismissed: false },
-  { id: "4", type: "alert", category: "pipeline", title: "Deal at Risk", description: "James Wilson deal hasn't had activity in 5 days. Consider reaching out.", data: { dealId: "p5" }, confidence: 0.76, actionable: true, dismissed: false },
-]
-
-const chartData = [
-  { month: "Jan", leads: 45, won: 12, revenue: 85000 },
-  { month: "Feb", leads: 52, won: 18, revenue: 120000 },
-  { month: "Mar", leads: 48, won: 15, revenue: 95000 },
-  { month: "Apr", leads: 61, won: 22, revenue: 145000 },
-  { month: "May", leads: 55, won: 19, revenue: 130000 },
-  { month: "Jun", leads: 67, won: 28, revenue: 180000 },
-]
-
-const sourceData = [
-  { name: "LinkedIn", value: 35, color: "#2563EB" },
-  { name: "Referral", value: 28, color: "#0F172A" },
-  { name: "Website", value: 20, color: "#0EA5E9" },
-  { name: "Google", value: 12, color: "#14B8A6" },
-  { name: "Other", value: 5, color: "#64748B" },
-]
-
+// Dashboard visual configuration. All rendered values come from authenticated APIs.
 const chartConfig: ChartConfig = {
-  leads: { label: "Leads", color: "#2563EB" },
-  won: { label: "Won", color: "#0F172A" },
-  revenue: { label: "Revenue", color: "#0EA5E9" },
+  leads: { label: "Leads", color: "#18B897" },
+  won: { label: "Won", color: "#0C111B" },
+  revenue: { label: "Revenue", color: "#127C66" },
 }
 
 type DashboardStats = {
@@ -176,7 +112,7 @@ function normalizePipelineStages(rawStages: unknown): PipelineStage[] {
     return {
       id: String(stageRecord.id),
       name: typeof stageRecord.name === "string" ? stageRecord.name : `Stage ${stageIndex + 1}`,
-      color: typeof stageRecord.color === "string" ? stageRecord.color : "#2563EB",
+      color: typeof stageRecord.color === "string" ? stageRecord.color : "#18B897",
       order: typeof stageRecord.order === "number" ? stageRecord.order : stageIndex,
       items: Array.isArray(stageRecord.items)
         ? (stageRecord.items as Record<string, unknown>[]).map((item) => ({
@@ -196,7 +132,7 @@ function normalizePipelineStages(rawStages: unknown): PipelineStage[] {
 }
 
 function formatLeadTrend(data: DashboardStats["leadTrend"] | undefined) {
-  if (!Array.isArray(data) || data.length === 0) return chartData
+  if (!Array.isArray(data) || data.length === 0) return []
   return data.map((point) => ({
     month: new Date(point.date).toLocaleDateString([], { month: "short", day: "numeric" }),
     leads: point.leads,
@@ -206,8 +142,8 @@ function formatLeadTrend(data: DashboardStats["leadTrend"] | undefined) {
 }
 
 function formatSourceBreakdown(data: DashboardStats["sourceBreakdown"] | undefined) {
-  const palette = ["#2563EB", "#0F172A", "#0EA5E9", "#14B8A6", "#64748B", "#0284C7"]
-  if (!Array.isArray(data) || data.length === 0) return sourceData
+  const palette = ["#18B897", "#0C111B", "#1FD0AA", "#127C66", "#6B6E74", "#D97706"]
+  if (!Array.isArray(data) || data.length === 0) return []
   return data.map((entry, index) => ({
     name: entry.name,
     value: entry.value,
@@ -216,10 +152,10 @@ function formatSourceBreakdown(data: DashboardStats["sourceBreakdown"] | undefin
 }
 
 function getActivityVisual(type: string) {
-  if (type === "email") return { icon: Mail, className: "bg-blue-100 text-blue-600" }
+  if (type === "email") return { icon: Mail, className: "bg-[#18b897]/12 text-[#127c66]" }
   if (type === "call" || type === "sms") return { icon: Phone, className: "bg-emerald-100 text-emerald-600" }
   if (type === "meeting") return { icon: Calendar, className: "bg-purple-100 text-purple-600" }
-  if (type.startsWith("ai")) return { icon: Brain, className: "bg-[#2563EB]/20 text-[#2563EB]" }
+  if (type.startsWith("ai")) return { icon: Brain, className: "bg-[#18b897]/20 text-[#127c66]" }
   return { icon: Activity, className: "bg-gray-100 text-gray-600" }
 }
 
@@ -250,8 +186,8 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 80 ? "bg-gradient-to-r from-[#2563EB] to-[#14B8A6] text-black" : 
-                score >= 60 ? "bg-[#0EA5E9] text-white" : "bg-[#0F172A] text-white"
+  const color = score >= 80 ? "bg-gradient-to-r from-[#18b897] to-[#127c66] text-black" : 
+                score >= 60 ? "bg-[#18b897] text-[#0c111b]" : "bg-[#0c111b] text-white"
   return (
     <div className={cn("px-2 py-0.5 rounded text-xs font-semibold", color)}>
       {score}
@@ -261,12 +197,12 @@ function ScoreBadge({ score }: { score: number }) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    new: "bg-[#0F172A] text-white",
+    new: "bg-[#0c111b] text-white",
     contacted: "bg-gray-600 text-white",
-    qualified: "bg-[#2563EB] text-black",
-    proposal: "bg-blue-600 text-white",
-    negotiation: "bg-[#64748B] text-white",
-    won: "bg-emerald-600 text-white",
+    qualified: "bg-[#18b897] text-black",
+    proposal: "bg-[#D97706] text-white",
+    negotiation: "bg-[#EA580C] text-white",
+    won: "bg-[#127C66] text-white",
     lost: "bg-red-600 text-white",
   }
   return (
@@ -361,8 +297,8 @@ function DashboardView() {
 
   const liveTrend = formatLeadTrend(stats?.leadTrend)
   const liveSources = formatSourceBreakdown(stats?.sourceBreakdown)
-  const visibleInsights = insights.length > 0 ? insights.filter((i) => !i.dismissed).slice(0, 4) : mockInsights.slice(0, 4)
-  const visibleActivities = activities.length > 0 ? activities.slice(0, 5) : mockActivities.slice(0, 5)
+  const visibleInsights = insights.filter((i) => !i.dismissed).slice(0, 4)
+  const visibleActivities = activities.slice(0, 5)
 
   return (
     <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
@@ -380,13 +316,13 @@ function DashboardView() {
                 </div>
                 <div className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  stat.color === "gold" && "bg-[#2563EB]/20",
-                  stat.color === "black" && "bg-[#0F172A]",
+                  stat.color === "gold" && "bg-[#18b897]/20",
+                  stat.color === "black" && "bg-[#0c111b]",
                   stat.color === "emerald" && "bg-emerald-100",
                 )}>
                   <stat.icon className={cn(
                     "w-5 h-5",
-                    stat.color === "gold" && "text-[#2563EB]",
+                    stat.color === "gold" && "text-[#127c66]",
                     stat.color === "black" && "text-white",
                     stat.color === "emerald" && "text-emerald-600",
                   )} />
@@ -410,26 +346,32 @@ function DashboardView() {
             <CardDescription className="text-gray-500">Monthly performance overview</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[280px]">
-              <AreaChart data={liveTrend}>
-                <defs>
-                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorWon" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0F172A" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#0F172A" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#D7DFEA" />
-                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
-                <YAxis stroke="#6B7280" fontSize={12} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area type="monotone" dataKey="leads" stroke="#2563EB" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={2} />
-                <Area type="monotone" dataKey="won" stroke="#0F172A" fillOpacity={1} fill="url(#colorWon)" strokeWidth={2} />
-              </AreaChart>
-            </ChartContainer>
+            {liveTrend.length === 0 ? (
+              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] text-sm text-gray-500">
+                Performance trends appear after your workspace records activity.
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[280px]">
+                <AreaChart data={liveTrend}>
+                  <defs>
+                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#18B897" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#18B897" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorWon" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0C111B" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#0C111B" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#DDD8CA" />
+                  <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                  <YAxis stroke="#6B7280" fontSize={12} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="leads" stroke="#18B897" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="won" stroke="#0C111B" fillOpacity={1} fill="url(#colorWon)" strokeWidth={2} />
+                </AreaChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
         
@@ -440,36 +382,34 @@ function DashboardView() {
             <CardDescription className="text-gray-500">Distribution by channel</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={liveSources}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {liveSources.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-2 mt-4">
-              {liveSources.map((source) => (
-                <div key={source.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
-                    <span className="text-sm text-gray-600">{source.name}</span>
-                  </div>
-                  <span className="text-sm font-medium text-black">{source.value}</span>
+            {liveSources.length === 0 ? (
+              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] px-6 text-center text-sm text-gray-500">
+                Lead-source data appears after you add leads.
+              </div>
+            ) : (
+              <>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie data={liveSources} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
+                        {liveSources.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                      </Pie>
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="mt-4 space-y-2">
+                  {liveSources.map((source) => (
+                    <div key={source.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: source.color }} />
+                        <span className="text-sm text-gray-600">{source.name}</span>
+                      </div>
+                      <span className="text-sm font-medium text-black">{source.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -480,12 +420,17 @@ function DashboardView() {
         <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#2563EB]" />
+              <Sparkles className="w-5 h-5 text-[#127c66]" />
               <CardTitle className="text-black">AI Insights</CardTitle>
             </div>
-            <CardDescription className="text-gray-500">Smart recommendations powered by AI</CardDescription>
+            <CardDescription className="text-gray-500">Smart recommendations based on your workspace activity</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {visibleInsights.length === 0 && (
+              <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-gray-500">
+                No live insights yet. Recommendations will appear as your workspace records activity.
+              </div>
+            )}
             {visibleInsights.map((insight) => (
               <motion.div
                 key={insight.id}
@@ -493,8 +438,8 @@ function DashboardView() {
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "p-3 rounded-lg border",
-                  insight.type === "prediction" && "bg-[#2563EB]/5 border-[#2563EB]/30",
-                  insight.type === "recommendation" && "bg-blue-50 border-blue-200",
+                  insight.type === "prediction" && "bg-[#18b897]/5 border-[#127c66]/30",
+                  insight.type === "recommendation" && "bg-[#18b897]/8 border-[#127c66]/25",
                   insight.type === "trend" && "bg-emerald-50 border-emerald-200",
                   insight.type === "alert" && "bg-amber-50 border-amber-200",
                 )}
@@ -504,8 +449,8 @@ function DashboardView() {
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "text-xs font-medium uppercase",
-                        insight.type === "prediction" && "text-[#2563EB]",
-                        insight.type === "recommendation" && "text-blue-600",
+                        insight.type === "prediction" && "text-[#127c66]",
+                        insight.type === "recommendation" && "text-[#127c66]",
                         insight.type === "trend" && "text-emerald-600",
                         insight.type === "alert" && "text-amber-600",
                       )}>
@@ -520,21 +465,7 @@ function DashboardView() {
                     <h4 className="text-sm font-medium text-black mt-1">{insight.title}</h4>
                     <p className="text-xs text-gray-500 mt-0.5">{insight.description}</p>
                   </div>
-                  {insight.actionable && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-[#2563EB] hover:bg-[#2563EB]/10 h-7 px-2"
-                      onClick={() =>
-                        toast({
-                          title: insight.title,
-                          description: 'Open the relevant lead, pipeline, or task workflow from this insight card.',
-                        })
-                      }
-                    >
-                      <ArrowUpRight className="w-4 h-4" />
-                    </Button>
-                  )}
+
                 </div>
               </motion.div>
             ))}
@@ -545,13 +476,18 @@ function DashboardView() {
         <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[#2563EB]" />
+              <Activity className="w-5 h-5 text-[#127c66]" />
               <CardTitle className="text-black">Recent Activity</CardTitle>
             </div>
             <CardDescription className="text-gray-500">Latest actions and updates</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {visibleActivities.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-gray-500">
+                  No activity yet. Real workspace actions will appear here.
+                </div>
+              )}
               {visibleActivities.map((activity) => {
                 const visual = getActivityVisual(activity.type)
                 return (
@@ -577,7 +513,7 @@ function DashboardView() {
         <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-[#2563EB]" />
+              <Bot className="w-5 h-5 text-[#127c66]" />
               <CardTitle className="text-black">AI Daily Assistant</CardTitle>
             </div>
             <CardDescription className="text-gray-500">{myDay.summary}</CardDescription>
@@ -587,7 +523,7 @@ function DashboardView() {
               <h4 className="text-sm font-semibold text-black mb-3">Priority Leads to Call</h4>
               <div className="space-y-2">
                 {myDay.leadsToCall.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="p-3 bg-[#EEF2F7] rounded-lg border border-[rgba(31,42,54,0.08)]">
+                  <div key={lead.id} className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)]">
                     <p className="text-sm font-medium text-black">{lead.name}</p>
                     <p className="text-xs text-gray-500">{lead.company || 'Unknown company'}</p>
                     <div className="flex items-center justify-between mt-2">
@@ -602,11 +538,11 @@ function DashboardView() {
               <h4 className="text-sm font-semibold text-black mb-3">Upcoming Meetings</h4>
               <div className="space-y-2">
                 {myDay.meetings.length === 0 ? (
-                  <div className="p-3 bg-[#EEF2F7] rounded-lg border border-[rgba(31,42,54,0.08)] text-sm text-gray-500">
+                  <div className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)] text-sm text-gray-500">
                     No meetings queued yet.
                   </div>
                 ) : myDay.meetings.slice(0, 5).map((meeting) => (
-                  <div key={meeting.id} className="p-3 bg-[#EEF2F7] rounded-lg border border-[rgba(31,42,54,0.08)]">
+                  <div key={meeting.id} className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)]">
                     <p className="text-sm font-medium text-black">{meeting.title}</p>
                     <p className="text-xs text-gray-500">{meeting.lead?.name || 'Unassigned lead'}</p>
                     <p className="text-xs text-gray-500 mt-1">{new Date(meeting.time).toLocaleString()}</p>
@@ -808,9 +744,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       setAssistantSource((data.source as 'llm' | 'fallback') || null)
       toast({
         title: 'AI playbook generated',
-        description: data.source === 'fallback'
-          ? 'Generated from rule-based fallback because LLM output was unavailable.'
-          : 'Offer recommendation and scripts are ready.',
+        description: 'Offer recommendation and scripts are ready.',
       })
     } catch (playbookError) {
       toast({
@@ -941,12 +875,12 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-black">Leads</h1>
-          <p className="text-gray-500">AI-powered lead management with smart scoring</p>
+          <p className="text-gray-500">Lead management with smart scoring and clear next steps</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="border-[#0F172A] text-[#0F172A] hover:bg-[#EEF2F7] gap-2"
+            className="border-[#0C111B] text-[#0c111b] hover:bg-[#f4f0e6] gap-2"
             onClick={onScrape}
           >
             <Globe className="w-4 h-4" />
@@ -954,7 +888,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           </Button>
           <Button 
             variant="outline" 
-            className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB]/10 gap-2"
+            className="border-[#127c66] text-[#127c66] hover:bg-[#18b897]/10 gap-2"
             onClick={onUploadCSV}
           >
             <Upload className="w-4 h-4" />
@@ -1008,7 +942,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#EEF2F7]">
+              <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#f4f0e6]">
                 <th className="text-left p-4 text-sm font-medium text-gray-600">Contact</th>
                 <th className="text-left p-4 text-sm font-medium text-gray-600">Company</th>
                 <th className="text-left p-4 text-sm font-medium text-gray-600">Source</th>
@@ -1033,7 +967,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9">
-                        <AvatarFallback className="bg-[#2563EB] text-black text-sm font-medium">
+                        <AvatarFallback className="bg-[#18b897] text-black text-sm font-medium">
                           {lead.firstName?.[0]}{lead.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -1076,7 +1010,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[#2563EB] hover:bg-[#2563EB]/10"
+                        className="text-[#127c66] hover:bg-[#18b897]/10"
                         onClick={(e) => {
                           e.stopPropagation()
                           void rescoreLead(lead.id)
@@ -1133,7 +1067,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               <DialogHeader>
                 <DialogTitle className="text-xl text-black">Lead Details</DialogTitle>
                 <DialogDescription className="text-gray-500">
-                  AI-powered insights for {selectedLead.firstName} {selectedLead.lastName}
+                  Lead insights for {selectedLead.firstName} {selectedLead.lastName}
                 </DialogDescription>
               </DialogHeader>
               
@@ -1171,7 +1105,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   </div>
                   <div>
                     <Label className="text-gray-500 text-xs">AI Recommended Action</Label>
-                    <p className="text-[#2563EB]">{selectedLead.aiNextAction}</p>
+                    <p className="text-[#127c66]">{selectedLead.aiNextAction}</p>
                   </div>
                   <div>
                     <Label className="text-gray-500 text-xs">Status</Label>
@@ -1185,7 +1119,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               <Card className="bg-[#fcf8ec] border-[rgba(31,42,54,0.08)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2 text-black">
-                    <Bot className="w-4 h-4 text-[#2563EB]" />
+                    <Bot className="w-4 h-4 text-[#127c66]" />
                     AI Offer Assistant
                   </CardTitle>
                   <CardDescription>
@@ -1211,14 +1145,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         </>
                       )}
                     </Button>
-                    {assistantSource && (
-                      <Badge variant="outline" className="border-[rgba(31,42,54,0.08)] text-gray-600 capitalize">
-                        Source: {assistantSource}
-                      </Badge>
-                    )}
+
                     <Button
                       variant="outline"
-                      className="border-[rgba(31,42,54,0.08)] text-gray-700 hover:bg-[#EEF2F7]"
+                      className="border-[rgba(31,42,54,0.08)] text-gray-700 hover:bg-[#f4f0e6]"
                       disabled={!assistantPlaybook || assistantSaving}
                       onClick={() => void savePlaybookToTimeline(selectedLead.id)}
                     >
@@ -1237,7 +1167,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                           </span>
                         </p>
                         <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedCarrier.rationale}</p>
-                        <p className="text-sm text-[#2563EB] mt-2">
+                        <p className="text-sm text-[#127c66] mt-2">
                           Service suggestion: {assistantPlaybook.suggestedPlanType}
                         </p>
                       </div>
@@ -1304,7 +1234,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
-                  className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#EEF2F7]"
+                  className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#f4f0e6]"
                   onClick={openEditLead}
                 >
                   <Edit className="w-4 h-4 mr-2" />
@@ -1312,7 +1242,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-[#5E6AD2] text-[#5E6AD2] hover:bg-[#5E6AD2]/10 gap-2"
+                  className="border-[#127c66] text-[#127c66] hover:bg-[#18b897]/10 gap-2"
                   onClick={() => {
                     setSelectedLead(null)
                     if (typeof window !== "undefined") {
@@ -1354,36 +1284,36 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-600">First name</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.firstName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, firstName: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.firstName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, firstName: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Last name</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.lastName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, lastName: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.lastName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, lastName: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Email</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" type="email" value={editLeadForm.email} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, email: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="email" value={editLeadForm.email} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, email: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Phone</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.phone} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, phone: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.phone} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, phone: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Company</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.company} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, company: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.company} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, company: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.title} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, title: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.title} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, title: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Source</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.source} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, source: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.source} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, source: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Status</Label>
               <Select value={editLeadForm.status} onValueChange={(value) => setEditLeadForm((prev) => ({ ...prev, status: value }))}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
@@ -1397,11 +1327,11 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
             </div>
             <div>
               <Label className="text-gray-600">Estimated value</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" type="number" value={editLeadForm.estimatedValue} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, estimatedValue: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="number" value={editLeadForm.estimatedValue} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, estimatedValue: e.target.value }))} />
             </div>
             <div className="md:col-span-2">
               <Label className="text-gray-600">AI next action</Label>
-              <Textarea className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={editLeadForm.aiNextAction} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, aiNextAction: e.target.value }))} />
+              <Textarea className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.aiNextAction} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, aiNextAction: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
@@ -1420,11 +1350,11 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">To</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={selectedLead?.phone || ''} readOnly />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={selectedLead?.phone || ''} readOnly />
             </div>
             <div>
               <Label className="text-gray-600">Message</Label>
-              <Textarea className="mt-1 min-h-28 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} />
+              <Textarea className="mt-1 min-h-28 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -1449,7 +1379,7 @@ function SortableItem({ item }: { item: PipelineItem }) {
   
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] hover:border-[#2563EB] cursor-grab active:cursor-grabbing mb-2 shadow-sm">
+      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] hover:border-[#127c66] cursor-grab active:cursor-grabbing mb-2 shadow-sm">
         <CardContent className="p-3">
           <div className="flex items-start justify-between mb-2">
             <h4 className="text-sm font-medium text-black truncate flex-1">{item.title}</h4>
@@ -1461,13 +1391,13 @@ function SortableItem({ item }: { item: PipelineItem }) {
           
           <div className="flex items-center justify-between">
             {item.aiWinProbability && (
-              <Badge variant="outline" className="text-xs border-[#2563EB]/50 text-[#2563EB]">
+              <Badge variant="outline" className="text-xs border-[#127c66]/50 text-[#127c66]">
                 {Math.round(item.aiWinProbability * 100)}% win
               </Badge>
             )}
             {item.lead && (
               <Avatar className="w-6 h-6">
-                <AvatarFallback className="bg-[#2563EB] text-black text-xs">
+                <AvatarFallback className="bg-[#18b897] text-black text-xs">
                   {item.lead.firstName?.[0]}{item.lead.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
@@ -1493,7 +1423,7 @@ function PipelineStageColumn({
       ref={setNodeRef}
       className={cn(
         "shrink-0 w-[300px] bg-white rounded-lg border shadow-sm transition-colors",
-        isOver ? "border-[#2563EB] bg-[#EFF6FF]" : "border-[rgba(31,42,54,0.08)]"
+        isOver ? "border-[#127c66] bg-[#f4f0e6]" : "border-[rgba(31,42,54,0.08)]"
       )}
     >
       {children}
@@ -1524,7 +1454,7 @@ function PipelineView() {
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       })
-      setStages(normalizePipelineStages(mockPipelineStages))
+      setStages([])
     } finally {
       setLoading(false)
     }
@@ -1606,7 +1536,7 @@ function PipelineView() {
         <div className="flex items-center gap-4">
           <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] px-4 py-2 shadow-sm">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-[#2563EB]" />
+              <DollarSign className="w-4 h-4 text-[#127c66]" />
               <span className="text-lg font-semibold text-black">${totalValue.toLocaleString()}</span>
               <span className="text-sm text-gray-500">{saving ? "saving…" : "live total"}</span>
             </div>
@@ -1637,14 +1567,14 @@ function PipelineView() {
                   >
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-black">{stage.name}</h3>
-                      <Badge variant="secondary" className="bg-[#EEF2F7] text-gray-600">
+                      <Badge variant="secondary" className="bg-[#f4f0e6] text-gray-600">
                         {stage.items.length}
                       </Badge>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-gray-400 hover:text-[#2563EB]"
+                      className="h-6 w-6 text-gray-400 hover:text-[#127c66]"
                       onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
                     >
                       <Plus className="w-3 h-3" />
@@ -1779,7 +1709,7 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
       {!loading && !error && uploads.length === 0 && (
         <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
           <CardContent className="p-12 text-center">
-            <FileSpreadsheet className="w-12 h-12 text-[#2563EB]/60 mx-auto mb-4" />
+            <FileSpreadsheet className="w-12 h-12 text-[#127c66]/60 mx-auto mb-4" />
             <p className="text-gray-600">No uploads yet. Import leads from a CSV to see history here.</p>
             <Button className="btn-gold mt-4 gap-2" onClick={onUploadCSV}>
               <Upload className="w-4 h-4" />
@@ -1797,8 +1727,8 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-[#2563EB]/20 flex items-center justify-center">
-                    <FileSpreadsheet className="w-6 h-6 text-[#2563EB]" />
+                  <div className="w-12 h-12 rounded-lg bg-[#18b897]/20 flex items-center justify-center">
+                    <FileSpreadsheet className="w-6 h-6 text-[#127c66]" />
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-black">{upload.fileName}</h3>
@@ -1809,7 +1739,7 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
                       <span className="text-xs text-gray-500">{(upload.fileSize / 1024).toFixed(1)} KB</span>
                       <span className="text-xs text-gray-500">{upload.totalRows} rows</span>
                       {upload.aiAutoScored && (
-                        <Badge variant="outline" className="text-xs border-[#2563EB]/50 text-[#2563EB]">
+                        <Badge variant="outline" className="text-xs border-[#127c66]/50 text-[#127c66]">
                           <Sparkles className="w-3 h-3 mr-1" />
                           AI Scored
                         </Badge>
@@ -1834,7 +1764,7 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
                     variant="outline"
                     className={cn(
                       upload.status === "completed" && "border-emerald-500 text-emerald-600",
-                      upload.status === "processing" && "border-blue-500 text-blue-600",
+                      upload.status === "processing" && "border-[#18b897] text-[#127c66]",
                       upload.status === "failed" && "border-red-500 text-red-600"
                     )}
                   >
@@ -1853,11 +1783,11 @@ function UploadsView({ onUploadCSV, refreshKey = 0 }: { onUploadCSV: () => void;
 
 // Linear Issue Priority Helpers
 const priorityConfig: Record<number, { label: string; color: string }> = {
-  0: { label: "No priority", color: "#6B7280" },
+  0: { label: "No priority", color: "#6B6E74" },
   1: { label: "Urgent", color: "#DC2626" },
   2: { label: "High", color: "#F59E0B" },
-  3: { label: "Medium", color: "#3B82F6" },
-  4: { label: "Low", color: "#6B7280" },
+  3: { label: "Medium", color: "#127C66" },
+  4: { label: "Low", color: "#6B6E74" },
 }
 
 interface LinearIssue {
@@ -1932,15 +1862,15 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
         </div>
         <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardContent className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#5E6AD2]/10 flex items-center justify-center mx-auto">
-              <SquareKanban className="w-8 h-8 text-[#5E6AD2]" />
+            <div className="w-16 h-16 rounded-2xl bg-[#18b897]/12 flex items-center justify-center mx-auto">
+              <SquareKanban className="w-8 h-8 text-[#127c66]" />
             </div>
             <h3 className="text-lg font-semibold text-black">Linear Not Connected</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              Add your Linear API key to the <code className="bg-[#EEF2F7] px-1.5 py-0.5 rounded text-sm">.env</code> file to enable the integration.
-              Get your key from <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-[#5E6AD2] underline">Linear Settings &rarr; API</a>.
+              Add your Linear API key to the <code className="bg-[#f4f0e6] px-1.5 py-0.5 rounded text-sm">.env</code> file to enable the integration.
+              Get your key from <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-[#127c66] underline">Linear Settings &rarr; API</a>.
             </p>
-            <div className="bg-[#EEF2F7] rounded-lg p-4 text-left max-w-sm mx-auto">
+            <div className="bg-[#f4f0e6] rounded-lg p-4 text-left max-w-sm mx-auto">
               <p className="text-xs text-gray-500 mb-1">Add to your .env file:</p>
               <code className="text-sm text-black">LINEAR_API_KEY=&quot;lin_api_...&quot;</code>
             </div>
@@ -1955,7 +1885,7 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-black flex items-center gap-2">
-            <SquareKanban className="w-6 h-6 text-[#5E6AD2]" />
+            <SquareKanban className="w-6 h-6 text-[#127c66]" />
             Linear Issues
           </h1>
           <p className="text-gray-500">Track and manage issues from your Linear workspace</p>
@@ -1963,14 +1893,14 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="border-[rgba(31,42,54,0.08)] text-gray-600 hover:bg-[#EEF2F7] gap-2"
+            className="border-[rgba(31,42,54,0.08)] text-gray-600 hover:bg-[#f4f0e6] gap-2"
             onClick={fetchData}
             disabled={loading}
           >
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
             Refresh
           </Button>
-          <Button className="gap-2 bg-[#5E6AD2] hover:bg-[#4C56B8] text-white" onClick={onCreateIssue}>
+          <Button className="gap-2 bg-[#18b897] hover:bg-[#15a88a] text-[#0c111b]" onClick={onCreateIssue}>
             <Plus className="w-4 h-4" />
             New Issue
           </Button>
@@ -1980,7 +1910,7 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { title: "Total Issues", value: issues.length, icon: SquareKanban, color: "#5E6AD2" },
+          { title: "Total Issues", value: issues.length, icon: SquareKanban, color: "#127C66" },
           { title: "In Progress", value: issues.filter(i => i.state?.name?.toLowerCase().includes("progress")).length, icon: Play, color: "#F59E0B" },
           { title: "Urgent/High", value: issues.filter(i => i.priority <= 2 && i.priority > 0).length, icon: AlertTriangle, color: "#DC2626" },
           { title: "Teams", value: teams.length, icon: Users, color: "#059669" },
@@ -2033,7 +1963,7 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#EEF2F7]">
+                <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#f4f0e6]">
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Issue</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Status</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Priority</th>
@@ -2090,7 +2020,7 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
                             <div className="flex items-center gap-2">
                               <Avatar className="w-6 h-6">
                                 {issue.assignee.avatarUrl && <AvatarImage src={issue.assignee.avatarUrl} />}
-                                <AvatarFallback className="bg-[#5E6AD2] text-white text-xs">
+                                <AvatarFallback className="bg-[#18b897] text-[#0c111b] text-xs">
                                   {issue.assignee.name.split(" ").map(n => n[0]).join("")}
                                 </AvatarFallback>
                               </Avatar>
@@ -2122,7 +2052,7 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
                             href={issue.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-[#5E6AD2] transition-colors"
+                            className="text-gray-400 hover:text-[#127c66] transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="w-4 h-4" />
@@ -2201,7 +2131,7 @@ function LinearView({ onCreateIssue }: { onCreateIssue: () => void }) {
               </div>
               <div className="flex justify-end gap-3">
                 <a href={selectedIssue.url} target="_blank" rel="noopener noreferrer">
-                  <Button className="gap-2 bg-[#5E6AD2] hover:bg-[#4C56B8] text-white">
+                  <Button className="gap-2 bg-[#18b897] hover:bg-[#15a88a] text-[#0c111b]">
                     <ExternalLink className="w-4 h-4" />
                     Open in Linear
                   </Button>
@@ -2367,8 +2297,8 @@ function AutomationView() {
           <Card key={stat.title} className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#2563EB]/20 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-[#2563EB]" />
+                <div className="w-10 h-10 rounded-lg bg-[#18b897]/20 flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-[#127c66]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-black">{stat.value}</p>
@@ -2395,14 +2325,14 @@ function AutomationView() {
           ) : (
             <div className="space-y-3">
               {automations.map((automation) => (
-                <div key={automation.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#EEF2F7] p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div key={automation.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f4f0e6] p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-black">{automation.name}</p>
                       <Badge variant="outline" className={automation.isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-gray-500'}>
                         {automation.isActive ? 'active' : 'paused'}
                       </Badge>
-                      <Badge variant="outline" className="border-[#2563EB]/60 text-[#2563EB] capitalize">
+                      <Badge variant="outline" className="border-[#127c66]/60 text-[#127c66] capitalize">
                         {automation.trigger.replaceAll('_', ' ')}
                       </Badge>
                     </div>
@@ -2434,16 +2364,16 @@ function AutomationView() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Name</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Description</Label>
-              <Textarea className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
+              <Textarea className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Trigger</Label>
               <Select value={form.trigger} onValueChange={(value) => setForm((prev) => ({ ...prev, trigger: value }))}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lead_created">Lead created</SelectItem>
                   <SelectItem value="lead_scored">Lead scored</SelectItem>
@@ -2455,7 +2385,7 @@ function AutomationView() {
             <div>
               <Label className="text-gray-600">Action type</Label>
               <Select value={form.actionType} onValueChange={(value) => setForm((prev) => ({ ...prev, actionType: value }))}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="create_task">Create task</SelectItem>
                   <SelectItem value="send_sms">Send SMS</SelectItem>
@@ -2466,7 +2396,7 @@ function AutomationView() {
             </div>
             <div>
               <Label className="text-gray-600">Action target</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={form.actionTarget} onChange={(e) => setForm((prev) => ({ ...prev, actionTarget: e.target.value }))} placeholder="Task text, phone, owner email, issue title..." />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.actionTarget} onChange={(e) => setForm((prev) => ({ ...prev, actionTarget: e.target.value }))} placeholder="Task text, phone, owner email, issue title..." />
             </div>
           </div>
           <DialogFooter>
@@ -2813,7 +2743,7 @@ function SocialMediaView() {
           <p className="text-gray-500">Elite AI content studio with queue, scheduling, and media prompt generation</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-[#2563EB] text-[#2563EB] gap-2" onClick={() => setShowMediaDialog(true)}>
+          <Button variant="outline" className="border-[#127c66] text-[#127c66] gap-2" onClick={() => setShowMediaDialog(true)}>
             <ImageIcon className="w-4 h-4" />
             Generate Media
           </Button>
@@ -2835,7 +2765,7 @@ function SocialMediaView() {
           >
             <p className="text-sm font-semibold text-black">{pack.label}</p>
             <p className="text-xs text-gray-500 mt-1">{pack.topic}</p>
-            <p className="text-xs text-[#64748B] mt-2">CTA: {pack.cta}</p>
+            <p className="text-xs text-[#545961] mt-2">CTA: {pack.cta}</p>
           </motion.button>
         ))}
       </div>
@@ -2861,7 +2791,7 @@ function SocialMediaView() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {socialAccounts.map((account) => (
-                <div key={account.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#EEF2F7] p-4 space-y-3">
+                <div key={account.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f4f0e6] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-black capitalize">{account.platform}</p>
@@ -2898,7 +2828,7 @@ function SocialMediaView() {
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={composerPlatform} onValueChange={setComposerPlatform}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter/X</SelectItem>
@@ -2909,15 +2839,15 @@ function SocialMediaView() {
             </div>
             <div>
               <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={composerTitle} onChange={(e) => setComposerTitle(e.target.value)} placeholder="Post title (optional)" />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerTitle} onChange={(e) => setComposerTitle(e.target.value)} placeholder="Post title (optional)" />
             </div>
             <div>
               <Label className="text-gray-600">Post content</Label>
-              <Textarea className="mt-1 min-h-28 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={composerContent} onChange={(e) => setComposerContent(e.target.value)} placeholder="Write a high-converting post..." />
+              <Textarea className="mt-1 min-h-28 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerContent} onChange={(e) => setComposerContent(e.target.value)} placeholder="Write a high-converting post..." />
             </div>
             <div>
               <Label className="text-gray-600">Schedule (optional)</Label>
-              <Input type="datetime-local" className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={composerScheduleAt} onChange={(e) => setComposerScheduleAt(e.target.value)} />
+              <Input type="datetime-local" className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerScheduleAt} onChange={(e) => setComposerScheduleAt(e.target.value)} />
             </div>
             <div className="flex gap-2">
               <Button
@@ -2947,7 +2877,7 @@ function SocialMediaView() {
                 <CardDescription>Manage drafts, scheduled posts, and published content.</CardDescription>
               </div>
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-[180px] bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px] bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All platforms</SelectItem>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
@@ -2971,15 +2901,15 @@ function SocialMediaView() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ y: -1 }}
-                className="p-4 bg-[#EEF2F7] border border-[rgba(31,42,54,0.08)] rounded-lg"
+                className="p-4 bg-[#f4f0e6] border border-[rgba(31,42,54,0.08)] rounded-lg"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize border-[#2563EB]/60 text-[#64748B]">{item.platform}</Badge>
+                      <Badge variant="outline" className="capitalize border-[#127c66]/60 text-[#545961]">{item.platform}</Badge>
                       <Badge variant="outline" className={cn(
                         item.status === 'published' && 'border-emerald-500 text-emerald-600',
-                        item.status === 'scheduled' && 'border-blue-500 text-blue-600',
+                        item.status === 'scheduled' && 'border-[#18b897] text-[#127c66]',
                         item.status === 'draft' && 'border-gray-400 text-gray-600'
                       )}>{item.status}</Badge>
                     </div>
@@ -3019,18 +2949,18 @@ function SocialMediaView() {
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
         <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-black flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#2563EB]" />Generate Social Content</DialogTitle>
+            <DialogTitle className="text-black flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#127c66]" />Generate Social Content</DialogTitle>
             <DialogDescription>Create premium content with AI and save directly to queue.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-3">
               <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
             </div>
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={platform} onValueChange={setPlatform}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter/X</SelectItem>
@@ -3042,7 +2972,7 @@ function SocialMediaView() {
             <div>
               <Label className="text-gray-600">Tone</Label>
               <Select value={tone} onValueChange={setTone}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="professional">Professional</SelectItem>
                   <SelectItem value="authoritative">Authoritative</SelectItem>
@@ -3061,11 +2991,11 @@ function SocialMediaView() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Generated title</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={generatedTitle} onChange={(e) => setGeneratedTitle(e.target.value)} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={generatedTitle} onChange={(e) => setGeneratedTitle(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">Generated content</Label>
-              <Textarea className="mt-1 min-h-32 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={generatedContent} onChange={(e) => setGeneratedContent(e.target.value)} />
+              <Textarea className="mt-1 min-h-32 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={generatedContent} onChange={(e) => setGeneratedContent(e.target.value)} />
             </div>
             <div className="flex flex-wrap gap-2">
               {generatedHashtags.map((h) => (
@@ -3097,18 +3027,18 @@ function SocialMediaView() {
       <Dialog open={showMediaDialog} onOpenChange={setShowMediaDialog}>
         <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-black flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[#2563EB]" />Generate Media Prompt</DialogTitle>
+            <DialogTitle className="text-black flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[#127c66]" />Generate Media Prompt</DialogTitle>
             <DialogDescription>Create image prompts and caption/CTA for high-performing visuals.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
             </div>
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={mediaPlatform} onValueChange={setMediaPlatform}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="instagram">Instagram</SelectItem>
@@ -3122,15 +3052,15 @@ function SocialMediaView() {
             </Button>
             <div>
               <Label className="text-gray-600">Image prompt</Label>
-              <Textarea className="mt-1 min-h-24 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={mediaPrompt} onChange={(e) => setMediaPrompt(e.target.value)} />
+              <Textarea className="mt-1 min-h-24 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaPrompt} onChange={(e) => setMediaPrompt(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">Caption</Label>
-              <Textarea className="mt-1 min-h-16 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={mediaCaption} onChange={(e) => setMediaCaption(e.target.value)} />
+              <Textarea className="mt-1 min-h-16 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaCaption} onChange={(e) => setMediaCaption(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">CTA</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={mediaCta} onChange={(e) => setMediaCta(e.target.value)} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaCta} onChange={(e) => setMediaCta(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -3161,7 +3091,7 @@ function SocialMediaView() {
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={socialForm.platform} onValueChange={(value) => setSocialForm((prev) => ({ ...prev, platform: value }))}>
-                <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter / X</SelectItem>
@@ -3172,15 +3102,15 @@ function SocialMediaView() {
             </div>
             <div>
               <Label className="text-gray-600">Account ID / page ID</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={socialForm.accountId} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountId: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={socialForm.accountId} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountId: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Display name</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" value={socialForm.accountName} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountName: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={socialForm.accountName} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountName: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Access token</Label>
-              <Input className="mt-1 bg-[#EEF2F7] border-[rgba(31,42,54,0.08)]" type="password" value={socialForm.accessToken} onChange={(e) => setSocialForm((prev) => ({ ...prev, accessToken: e.target.value }))} />
+              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="password" value={socialForm.accessToken} onChange={(e) => setSocialForm((prev) => ({ ...prev, accessToken: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
@@ -3200,6 +3130,19 @@ export default function EliteCRM() {
   const [activeView, setActiveView] = useState("dashboard")
   const { authLoading, currentUser, signOut } = useWorkspaceSession()
   const { theme } = useAppStore()
+
+  // Onboarding — only active once auth is resolved. useOnboarding GETs
+  // /api/onboarding and auto-opens the wizard while onboardingCompleted=false.
+  const isAuthenticated = !authLoading && !!currentUser
+  const {
+    showWizard,
+    showBanner,
+    onboardingStep,
+    handleComplete,
+    handleSkip,
+    openWizard,
+  } = useOnboarding(isAuthenticated, currentUser?.organization?.id)
+
   const {
     commandPaletteOpen,
     setCommandPaletteOpen,
@@ -3234,6 +3177,7 @@ export default function EliteCRM() {
       case "uploads": return <UploadsView onUploadCSV={() => setShowUploadDialog(true)} refreshKey={uploadsRefreshKey} />
       case "automation": return <AutomationView />
       case "assistant": return <AiAssistantView />
+      case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
       case "settings": return <SettingsView />
       default: return <DashboardView />
@@ -3250,13 +3194,34 @@ export default function EliteCRM() {
   }
   
   return (
-    <AppShell
+    <>
+      {/* Onboarding wizard overlay — resumes from the persisted step */}
+      <AnimatePresence>
+        {showWizard && currentUser && (
+          <OnboardingWizard
+            organizationName={currentUser.organization?.name || "Your Organization"}
+            userName={currentUser.name}
+            initialStep={onboardingStep}
+            onComplete={handleComplete}
+            onSkip={handleSkip}
+          />
+        )}
+      </AnimatePresence>
+
+      <AppShell
       activeView={activeView}
       setActiveView={setActiveView}
       currentUser={currentUser}
       onAddLead={() => setShowAddLeadDialog(true)}
       onSignOut={() => void signOut()}
     >
+      {/* Resume-setup banner: visible after skip or while setup is incomplete */}
+      <AnimatePresence>
+        {showBanner && !showWizard && (
+          <IncompleteSetupBanner onOpenWizard={openWizard} />
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         <motion.div
           key={activeView}
@@ -3294,5 +3259,6 @@ export default function EliteCRM() {
         onUploadCSV={() => setShowUploadDialog(true)}
       />
     </AppShell>
+    </>
   )
 }

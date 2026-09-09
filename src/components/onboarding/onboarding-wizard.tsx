@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowRight,
@@ -50,52 +50,44 @@ const STEPS: StepDef[] = [
     title: "Welcome to KingCRMHub",
     subtitle: "Let's get your workspace ready in under 3 minutes.",
     icon: Sparkles,
-    color: "#557df5",
+    color: "var(--teal)",
   },
   {
     id: "organization",
-    title: "Set up your organization",
-    subtitle: "Confirm your organization details so everything looks right.",
+    title: "Set up your workspace",
+    subtitle: "Confirm your workspace details so everything looks right.",
     icon: Building2,
-    color: "#3a5fd9",
+    color: "var(--teal)",
   },
   {
     id: "carrier",
     title: "Add your first offer package",
-    subtitle: "Add an offer or service package to your library so the AI can match leads to what you sell.",
+    subtitle: "Add an offer or service package to your library so the AI can match clients to what you sell.",
     icon: FileText,
-    color: "#2563eb",
+    color: "var(--teal)",
   },
   {
     id: "lead",
-    title: "Add your first lead",
+    title: "Add your first client",
     subtitle: "Drop in a contact to see how the CRM works end-to-end.",
     icon: UserPlus,
-    color: "#0284c7",
+    color: "var(--teal)",
     optional: true,
   },
   {
     id: "automation",
     title: "Enable a quick automation",
-    subtitle: "Set a follow-up rule that fires when a new lead lands.",
+    subtitle: "Set a follow-up rule that fires when a new client lands.",
     icon: Zap,
-    color: "#0ea5e9",
-    optional: true,
-  },
-  {
-    id: "ai-setup",
-    title: "Set Up Your AI Assistant",
-    subtitle: "Connect an AI provider for client coaching, scripts, and lead qualification.",
-    icon: Bot,
-    color: "#7c3aed",
+    color: "var(--teal)",
     optional: true,
   },
   {
     id: "done",
     title: "You're all set",
-    subtitle: "Your workspace is ready. Time to close deals.",
+    subtitle: "Your workspace is ready. Time to make your next move.",
     icon: Bot,
-    color: "#16a34a",
+    color: "var(--teal)",
   },
 ]
 
@@ -123,8 +115,8 @@ function StepIndicator({
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all duration-300",
-                status === "done" && "border-[#16a34a] bg-[#16a34a] text-white",
-                status === "active" && "border-[#557df5] bg-[#557df5] text-white shadow-[0_0_12px_rgba(85,125,245,0.5)]",
+                status === "done" && "border-[var(--teal-deep)] bg-[var(--teal-deep)] text-white",
+                status === "active" && "border-[var(--teal)] bg-[var(--teal-deep)] text-white shadow-[0_0_12px_rgba(18,124,102,0.45)]",
                 status === "skipped" && "border-amber-400 bg-amber-50 text-amber-600",
                 status === "pending" && "border-[rgba(31,42,54,0.15)] bg-white text-[rgba(31,42,54,0.35)]"
               )}
@@ -139,7 +131,7 @@ function StepIndicator({
               <div
                 className={cn(
                   "h-0.5 w-8 transition-all duration-500",
-                  index < currentIndex ? "bg-[#557df5]" : "bg-[rgba(31,42,54,0.1)]"
+                  index < currentIndex ? "bg-[var(--teal-deep)]" : "bg-[rgba(31,42,54,0.1)]"
                 )}
               />
             )}
@@ -169,9 +161,9 @@ function WelcomeStep({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] shadow-[0_20px_40px_rgba(85,125,245,0.35)]"
+        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
       >
-        <Sparkles className="h-9 w-9 text-white" />
+        <Sparkles className="h-9 w-9 text-[var(--ink)]" />
       </motion.div>
 
       <div className="space-y-3">
@@ -179,7 +171,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-3xl font-semibold tracking-[-0.03em] text-[#1f2a36]"
+          className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]"
         >
           Welcome{userName ? `, ${userName.split(" ")[0]}` : ""}
         </motion.h2>
@@ -187,17 +179,17 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="text-lg text-[#1f2a36]/60"
+          className="text-lg text-[#0c111b]/60"
         >
-          <span className="font-semibold text-[#557df5]">{organizationName}</span> is ready for setup.
+          <span className="font-semibold text-[var(--teal-deep)]">{organizationName}</span> is ready for setup.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mx-auto max-w-md text-sm leading-7 text-[#1f2a36]/55"
+          className="mx-auto max-w-md text-sm leading-7 text-[#0c111b]/55"
         >
-          We'll walk you through 3–5 quick steps to get your pipeline, offer library, and automations running.
+          We'll walk you through a few quick steps to get your pipeline, offers, and prompts running.
           Takes less than 3 minutes.
         </motion.p>
       </div>
@@ -209,16 +201,16 @@ function WelcomeStep({
         className="mx-auto grid max-w-sm grid-cols-3 gap-3"
       >
         {[
-          { label: "AI Scoring", desc: "Auto-scored leads" },
-          { label: "Offer AI", desc: "Smart offer matching" },
-          { label: "Pipeline", desc: "Drag & drop deals" },
+          { label: "Follow-up guidance", desc: "Know who to contact next" },
+          { label: "Prompt library", desc: "Copy-ready client prompts" },
+          { label: "Pipeline", desc: "Drag & drop clients" },
         ].map((feature) => (
           <div
             key={feature.label}
             className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f8f5ec] p-3 text-center"
           >
-            <p className="text-xs font-semibold text-[#1f2a36]">{feature.label}</p>
-            <p className="mt-0.5 text-[11px] text-[#1f2a36]/50">{feature.desc}</p>
+            <p className="text-xs font-semibold text-[#0c111b]">{feature.label}</p>
+            <p className="mt-0.5 text-[11px] text-[#0c111b]/50">{feature.desc}</p>
           </div>
         ))}
       </motion.div>
@@ -226,7 +218,7 @@ function WelcomeStep({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
         <Button
           onClick={onNext}
-          className="h-12 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] px-8 text-white shadow-[0_12px_28px_rgba(85,125,245,0.28)] hover:opacity-95"
+          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
         >
           Get started
           <ArrowRight className="ml-2 h-4 w-4" />
@@ -280,7 +272,7 @@ function OrganizationStep({
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Organization name
           </Label>
           <Input
@@ -291,7 +283,7 @@ function OrganizationStep({
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Logo URL{" "}
             <span className="text-[rgba(31,42,54,0.38)] normal-case font-normal tracking-normal">(optional)</span>
           </Label>
@@ -307,7 +299,7 @@ function OrganizationStep({
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -315,7 +307,7 @@ function OrganizationStep({
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_8px_20px_rgba(85,125,245,0.22)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Saving…" : "Save & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -366,7 +358,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Offer name
           </Label>
           <Input
@@ -377,7 +369,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Website{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -389,7 +381,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Notes{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -402,15 +394,15 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[rgba(85,125,245,0.18)] bg-[#f5f8ff] p-4 text-sm text-[#1f2a36]/65">
+      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-[#f4f0e6] p-4 text-sm text-[#0c111b]/65">
         You can add more offers and upload service documents in{" "}
-        <span className="font-semibold text-[#557df5]">Settings → Offers</span> at any time.
+        <span className="font-semibold text-[var(--teal-deep)]">Settings → Offers</span> at any time.
       </div>
 
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -418,7 +410,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_8px_20px_rgba(85,125,245,0.22)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Adding offer…" : "Add offer & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -456,11 +448,11 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      toast({ title: "Lead added", description: "Your first lead is in the system." })
+      toast({ title: "Client added", description: "Your first client is in the system." })
       onNext()
     } catch (error) {
       toast({
-        title: "Failed to add lead",
+        title: "Failed to add client",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       })
@@ -473,7 +465,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             First name
           </Label>
           <Input
@@ -484,7 +476,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Last name
           </Label>
           <Input
@@ -495,7 +487,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Email{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -508,7 +500,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
             Phone{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
@@ -524,7 +516,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -532,9 +524,9 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_8px_20px_rgba(85,125,245,0.22)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
-          {saving ? "Adding lead…" : "Add lead & continue"}
+          {saving ? "Adding client…" : "Add client & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
         </Button>
       </div>
@@ -552,8 +544,8 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "New lead — immediate follow-up",
-          description: "Automatically flags new leads for a 5-minute follow-up reminder.",
+          name: "New client — immediate follow-up",
+          description: "Automatically flags new clients for a 5-minute follow-up reminder.",
           trigger: "lead_created",
           triggerConfig: { source: "crm" },
           conditions: {},
@@ -563,7 +555,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      toast({ title: "Automation enabled", description: "Follow-up reminder is now active for new leads." })
+      toast({ title: "Automation enabled", description: "Follow-up reminder is now active for new clients." })
       onNext()
     } catch (error) {
       toast({
@@ -580,19 +572,19 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
     <div className="space-y-6">
       <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f8f5ec] p-5">
         <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#557df5]/12">
-            <Zap className="h-5 w-5 text-[#557df5]" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(18,124,102,0.12)]">
+            <Zap className="h-5 w-5 text-[var(--teal-deep)]" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[#1f2a36]">New lead — immediate follow-up</p>
-            <p className="mt-1 text-sm text-[#1f2a36]/60">
-              When a new lead is created, automatically create a task: "Follow up within 5 minutes".
+            <p className="text-sm font-semibold text-[var(--ink)]">New client — immediate follow-up</p>
+            <p className="mt-1 text-sm text-[#0c111b]/60">
+              When a new client is created, automatically create a task: "Follow up within 5 minutes".
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-[rgba(85,125,245,0.25)] bg-[rgba(85,125,245,0.08)] px-3 py-1 text-xs text-[#557df5]">
-                Trigger: Lead created
+              <span className="rounded-full border border-[rgba(18,124,102,0.28)] bg-[rgba(18,124,102,0.08)] px-3 py-1 text-xs text-[var(--teal-deep)]">
+                Trigger: Client created
               </span>
-              <span className="rounded-full border border-[rgba(85,125,245,0.25)] bg-[rgba(85,125,245,0.08)] px-3 py-1 text-xs text-[#557df5]">
+              <span className="rounded-full border border-[rgba(18,124,102,0.28)] bg-[rgba(18,124,102,0.08)] px-3 py-1 text-xs text-[var(--teal-deep)]">
                 Action: Create task
               </span>
             </div>
@@ -600,15 +592,15 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         </div>
       </div>
 
-      <p className="text-sm text-[#1f2a36]/55">
+      <p className="text-sm text-[#0c111b]/55">
         You can customize triggers and actions in the{" "}
-        <span className="font-semibold text-[#557df5]">AI Automation</span> section at any time.
+        <span className="font-semibold text-[var(--teal-deep)]">AI Automation</span> section at any time.
       </p>
 
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
           onClick={onSkip}
         >
           Skip for now
@@ -616,147 +608,9 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         <Button
           onClick={() => void handleEnable()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_8px_20px_rgba(85,125,245,0.22)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Enabling…" : "Enable automation & finish"}
-          <ChevronRight className="ml-1.5 h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function AiSetupStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
-  const [provider, setProvider] = useState<"groq" | "openai" | "anthropic">("groq")
-  const [apiKey, setApiKey] = useState("")
-  const [saving, setSaving] = useState(false)
-
-  const providers = [
-    {
-      id: "groq" as const,
-      name: "Groq",
-      badge: "Free",
-      desc: "Free API. Get a key at console.groq.com in 60 seconds.",
-      model: "Llama 3.3 70B",
-    },
-    {
-      id: "openai" as const,
-      name: "OpenAI",
-      badge: "GPT-4o",
-      desc: "Requires an OpenAI API key from platform.openai.com.",
-      model: "GPT-4o",
-    },
-    {
-      id: "anthropic" as const,
-      name: "Anthropic",
-      badge: "Claude",
-      desc: "Requires an Anthropic API key from console.anthropic.com.",
-      model: "Claude Sonnet",
-    },
-  ]
-
-  const handleSave = async () => {
-    if (!apiKey.trim()) {
-      toast({ title: "API key required", description: "Paste your API key to connect the AI assistant.", variant: "destructive" })
-      return
-    }
-    setSaving(true)
-    try {
-      const res = await fetch("/api/settings/ai", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aiProvider: provider, aiApiKey: apiKey.trim() }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      toast({ title: "AI assistant connected", description: `${data.providerLabel} is now powering your AI assistant.` })
-      onNext()
-    } catch (error) {
-      toast({
-        title: "Failed to save",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-[rgba(124,58,237,0.18)] bg-[#f8f5ff] px-4 py-3 text-sm text-[#4c1d95]">
-        <span className="font-semibold">Groq is 100% free</span> — sign up at{" "}
-        <span className="font-semibold">console.groq.com</span>, create an API key, paste it below. No credit card needed.
-      </div>
-
-      <div className="grid gap-2">
-        {providers.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setProvider(p.id)}
-            className={cn(
-              "flex w-full items-start gap-4 rounded-2xl border px-4 py-3.5 text-left transition-all",
-              provider === p.id
-                ? "border-[#7c3aed] bg-[#f5f0ff] shadow-[0_0_0_1px_#7c3aed]"
-                : "border-[rgba(31,42,54,0.1)] bg-white hover:border-[rgba(124,58,237,0.3)]"
-            )}
-          >
-            <div className={cn(
-              "mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition-all",
-              provider === p.id ? "border-[#7c3aed] bg-[#7c3aed]" : "border-[rgba(31,42,54,0.25)]"
-            )} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-[#1f2a36]">{p.name}</span>
-                <span className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                  p.id === "groq"
-                    ? "bg-[#dcfce7] text-[#15803d]"
-                    : "bg-[rgba(31,42,54,0.07)] text-[#1f2a36]/60"
-                )}>
-                  {p.badge}
-                </span>
-              </div>
-              <p className="mt-0.5 text-xs text-[#1f2a36]/55">{p.desc}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div>
-        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#1f2a36]/52">
-          API Key
-        </Label>
-        <Input
-          className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono text-sm shadow-sm"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder={
-            provider === "groq"
-              ? "gsk_…"
-              : provider === "openai"
-              ? "sk-…"
-              : "sk-ant-…"
-          }
-          type="password"
-          autoComplete="off"
-        />
-      </div>
-
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#1f2a36]/60"
-          onClick={onSkip}
-        >
-          Skip for now
-        </Button>
-        <Button
-          onClick={() => void handleSave()}
-          disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#7c3aed,#6d28d9)] text-white shadow-[0_8px_20px_rgba(124,58,237,0.22)] hover:opacity-95"
-        >
-          {saving ? "Connecting…" : "Connect AI & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
         </Button>
       </div>
@@ -777,9 +631,9 @@ function DoneStep({
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 180, delay: 0.05 }}
-        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#16a34a,#15803d)] shadow-[0_20px_40px_rgba(22,163,74,0.3)]"
+        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
       >
-        <Check className="h-9 w-9 text-white" />
+        <Check className="h-9 w-9 text-[var(--ink)]" />
       </motion.div>
 
       <div className="space-y-2">
@@ -787,7 +641,7 @@ function DoneStep({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="text-3xl font-semibold tracking-[-0.03em] text-[#1f2a36]"
+          className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]"
         >
           You're all set
         </motion.h2>
@@ -795,9 +649,9 @@ function DoneStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="text-lg text-[#1f2a36]/60"
+          className="text-lg text-[#0c111b]/60"
         >
-          Your KingCRMHub workspace is ready to run.
+          Your workspace is ready. Time to make your next move.
         </motion.p>
         {skippedCount > 0 && (
           <motion.p
@@ -820,13 +674,13 @@ function DoneStep({
       >
         {[
           "Dashboard shows live stats and AI insights",
-          "Leads tab has your full contact table + AI scoring",
+          "Your contacts table has AI scoring built in",
           "Pipeline is your drag-and-drop kanban board",
           "Settings → Offers to upload documents for AI",
           "Settings → AI Configuration to change your AI provider",
         ].map((item) => (
-          <div key={item} className="flex items-center gap-3 text-sm text-[#1f2a36]/65">
-            <Check className="h-4 w-4 shrink-0 text-[#16a34a]" />
+          <div key={item} className="flex items-center gap-3 text-sm text-[#0c111b]/65">
+            <Check className="h-4 w-4 shrink-0 text-[var(--teal-deep)]" />
             {item}
           </div>
         ))}
@@ -835,7 +689,7 @@ function DoneStep({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
         <Button
           onClick={onFinish}
-          className="h-12 rounded-2xl bg-[linear-gradient(135deg,#16a34a,#15803d)] px-8 text-white shadow-[0_12px_28px_rgba(22,163,74,0.25)] hover:opacity-95"
+          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
         >
           Go to dashboard
           <ArrowRight className="ml-2 h-4 w-4" />
@@ -907,7 +761,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
       await fetch("/api/onboarding", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: true, step: totalSteps - 1 }),
+        body: JSON.stringify({ completed: false, step: currentStep }),
       })
     } catch {
       // Non-fatal
@@ -943,7 +797,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         {!isDoneStep && (
           <button
             onClick={() => void handleSkipAll()}
-            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[#1f2a36]/35 transition-colors hover:bg-[rgba(31,42,54,0.06)] hover:text-[#1f2a36]"
+            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[#0c111b]/35 transition-colors hover:bg-[rgba(31,42,54,0.06)] hover:text-[#0c111b]"
             aria-label="Skip setup"
           >
             <X className="h-4 w-4" />
@@ -956,7 +810,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
             <div className="flex items-center justify-between gap-6">
               <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
               <div className="min-w-[80px] text-right">
-                <p className="text-xs font-medium text-[#1f2a36]/45">
+                <p className="text-xs font-medium text-[#0c111b]/45">
                   Step {currentStep} of {totalSteps - 2}
                 </p>
               </div>
@@ -971,13 +825,13 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
             <div className="flex items-center gap-3">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-2xl"
-                style={{ backgroundColor: `${step.color}18` }}
+                style={{ backgroundColor: `color-mix(in srgb, ${step.color} 10%, transparent)` }}
               >
                 <step.icon className="h-5 w-5" style={{ color: step.color }} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-[#1f2a36]">{step.title}</h3>
-                <p className="text-sm text-[#1f2a36]/55">{step.subtitle}</p>
+                <h3 className="text-lg font-semibold text-[#0c111b]">{step.title}</h3>
+                <p className="text-sm text-[#0c111b]/55">{step.subtitle}</p>
               </div>
             </div>
           </div>
@@ -993,40 +847,35 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
-              {currentStep === 0 && (
+              {/* Render by step id so adding or reordering steps does not shift the rendering branches. */}
+              {step.id === "welcome" && (
                 <WelcomeStep
                   organizationName={organizationName}
                   userName={userName}
                   onNext={() => void advance(false)}
                 />
               )}
-              {currentStep === 1 && (
+              {step.id === "organization" && (
                 <OrganizationStep
                   initialName={organizationName}
                   onNext={() => void advance(false)}
                   onSkip={() => void advance(true)}
                 />
               )}
-              {currentStep === 2 && (
+              {step.id === "carrier" && (
                 <CarrierStep
                   onNext={() => void advance(false)}
                   onSkip={() => void advance(true)}
                 />
               )}
-              {currentStep === 3 && (
+              {step.id === "lead" && (
                 <LeadStep
                   onNext={() => void advance(false)}
                   onSkip={() => void advance(true)}
                 />
               )}
-              {currentStep === 4 && (
+              {step.id === "automation" && (
                 <AutomationStep
-                  onNext={() => void advance(false)}
-                  onSkip={() => void advance(true)}
-                />
-              )}
-              {currentStep === 5 && !isDoneStep && (
-                <AiSetupStep
                   onNext={() => void advance(false)}
                   onSkip={() => void advance(true)}
                 />
@@ -1080,11 +929,39 @@ export function IncompleteSetupBanner({ onOpenWizard }: { onOpenWizard: () => vo
 // HOOK: useOnboarding
 // ============================================
 
-export function useOnboarding(isAuthenticated: boolean) {
+export function useOnboarding(isAuthenticated: boolean, organizationId?: string | null) {
   const [showWizard, setShowWizard] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [onboardingLoaded, setOnboardingLoaded] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState(0)
+
+  // "Skip setup" must survive reloads, but the org row intentionally stays
+  // incomplete so the wizard can be resumed from Settings. The dismissal is
+  // therefore browser-persisted separately from server completion state
+  // (cubic P2, PR #161: persisting completed:false made the overlay re-open
+  // on every reload; persisting completed:true made resume impossible).
+  //
+  // The flag is scoped per organization: a global key would let one
+  // workspace's skip suppress the next account's first-run wizard in the
+  // same browser profile (cubic P2 round 3).
+  // Read via ref so callbacks never capture a stale pre-auth key (cubic P2
+  // round 4: orgId loads async; []-dep callbacks froze the ':anon' key).
+  const dismissKey = `kingcrm-onboarding-dismissed:${organizationId ?? 'anon'}`
+  const dismissKeyRef = useRef(dismissKey)
+  useEffect(() => {
+    dismissKeyRef.current = dismissKey
+  }, [dismissKey])
+  const isDismissed = () => {
+    try { return localStorage.getItem(dismissKeyRef.current) === "1" } catch { return false }
+  }
+  const setDismissed = (value: boolean) => {
+    try {
+      if (value) localStorage.setItem(dismissKeyRef.current, "1")
+      else localStorage.removeItem(dismissKeyRef.current)
+    } catch {
+      // private mode — dismissal degrades to per-tab, still better than reopen loop
+    }
+  }
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -1098,7 +975,7 @@ export function useOnboarding(isAuthenticated: boolean) {
         if (!data.error) {
           const completed: boolean = data.onboardingCompleted === true
           setOnboardingStep(typeof data.onboardingStep === "number" ? data.onboardingStep : 0)
-          setShowWizard(!completed)
+          setShowWizard(!completed && !isDismissed())
           setShowBanner(!completed)
         }
       } catch {
@@ -1111,20 +988,23 @@ export function useOnboarding(isAuthenticated: boolean) {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, organizationId])
 
   const handleComplete = useCallback(() => {
     setShowWizard(false)
     setShowBanner(false)
+    setDismissed(false)
   }, [])
 
   const handleSkip = useCallback(() => {
     setShowWizard(false)
     // Keep the banner visible after skipping
     setShowBanner(true)
+    setDismissed(true)
   }, [])
 
   const openWizard = useCallback(() => {
+    setDismissed(false)
     setShowWizard(true)
   }, [])
 

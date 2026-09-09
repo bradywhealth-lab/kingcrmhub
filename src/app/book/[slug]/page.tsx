@@ -17,7 +17,7 @@ export default async function PublicBookingRoute({ params }: BookingRouteProps) 
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.22),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#fff7ed_48%,_#ffffff_100%)] px-6 py-12 text-zinc-950">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.22),_transparent_32%),linear-gradient(180deg,_#fcf8ec_0%,_#fff7ed_48%,_#fcfcfc_100%)] px-6 py-12 text-zinc-950">
       <div className="mx-auto max-w-6xl">
         <div className="mb-10 max-w-3xl">
           <p className="text-sm uppercase tracking-[0.4em] text-amber-700">King CRM Hub</p>

@@ -89,10 +89,10 @@ export function CreateLinearIssueDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border-[#D7DFEA] bg-white">
+      <DialogContent className="max-w-lg border-[var(--ink-line)] bg-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-black">
-            <SquareKanban className="h-5 w-5 text-[#5E6AD2]" />
+            <SquareKanban className="h-5 w-5 text-[#127c66]" />
             Create Linear Issue
           </DialogTitle>
           <DialogDescription className="text-gray-500">
@@ -106,7 +106,7 @@ export function CreateLinearIssueDialog({
               <div className="mt-1 text-sm text-gray-400">Loading teams...</div>
             ) : (
               <Select value={form.teamId} onValueChange={(value) => setForm((current) => ({ ...current, teamId: value }))}>
-                <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]">
+                <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]">
                   <SelectValue placeholder="Select a team" />
                 </SelectTrigger>
                 <SelectContent>
@@ -120,7 +120,7 @@ export function CreateLinearIssueDialog({
           <div>
             <Label className="text-gray-600">Title</Label>
             <Input
-              className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"
+              className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"
               value={form.title}
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
               placeholder="Issue title"
@@ -130,7 +130,7 @@ export function CreateLinearIssueDialog({
           <div>
             <Label className="text-gray-600">Description</Label>
             <Textarea
-              className="mt-1 min-h-[80px] border-[#D7DFEA] bg-[#EEF2F7]"
+              className="mt-1 min-h-[80px] border-[var(--ink-line)] bg-[#f4f0e6]"
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
               placeholder="Optional description..."
@@ -139,7 +139,7 @@ export function CreateLinearIssueDialog({
           <div>
             <Label className="text-gray-600">Priority</Label>
             <Select value={String(form.priority)} onValueChange={(value) => setForm((current) => ({ ...current, priority: parseInt(value, 10) }))}>
-              <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]">
+              <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -152,8 +152,8 @@ export function CreateLinearIssueDialog({
             </Select>
           </div>
           <DialogFooter className="gap-2 pt-4">
-            <Button type="button" variant="outline" className="border-[#D7DFEA]" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" className="bg-[#5E6AD2] text-white hover:bg-[#4C56B8]" disabled={saving || !form.teamId}>
+            <Button type="button" variant="outline" className="border-[var(--ink-line)]" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" className="bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]" disabled={saving || !form.teamId}>
               {saving ? "Creating..." : "Create Issue"}
             </Button>
           </DialogFooter>

@@ -39,7 +39,7 @@ export default function AuthPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0f172a]" role="status" aria-label="Loading sign in">
+        <div className="min-h-screen bg-[var(--ink)]" role="status" aria-label="Loading sign in">
           <div className="mx-auto max-w-7xl px-6 py-10">
             <div className="h-10 w-40 animate-pulse rounded-2xl bg-white/10" />
           </div>
@@ -168,10 +168,17 @@ function AuthPageInner() {
 
       const email = mode === 'login' ? loginEmail : signupEmail
       const password = mode === 'login' ? loginPassword : signupPassword
-      const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: '/' })
+      // Validate ?callbackUrl before signing in (cubic P2 round 3): only
+      // same-origin absolute paths are honoured; everything else → '/'.
+      const rawCallback = searchParams.get('callbackUrl') ?? ''
+      const safeCallback =
+        rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+          ? rawCallback
+          : '/'
+      const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: safeCallback })
       if (!result || result.error) throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Authentication failed.')
       const session = await getSession()
-      router.push(session?.user?.mustChangePassword ? '/auth/password' : '/')
+      router.push(session?.user?.mustChangePassword ? '/auth/password' : safeCallback)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.')
@@ -257,14 +264,14 @@ function AuthPageInner() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(85,125,245,0.18),transparent_32%),linear-gradient(180deg,#f9f5eb_0%,#eef3fb_100%)] px-4 py-6 lg:px-8 lg:py-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)] px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden rounded-[32px] border border-white/60 bg-[rgba(252,252,252,0.76)] shadow-[0_30px_100px_rgba(31,42,54,0.14)] backdrop-blur-xl lg:min-h-[calc(100vh-4rem)]">
-        <section className="relative hidden flex-1 overflow-hidden bg-[#0f172a] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-14">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(85,125,245,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
+        <section className="relative hidden flex-1 overflow-hidden bg-[var(--ink)] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-14">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] shadow-[0_12px_32px_rgba(85,125,245,0.45)]">
-                <Sparkles className="h-5 w-5 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_32px_rgba(24,184,151,0.45)]">
+                <Sparkles className="h-5 w-5 text-[var(--ink)]" />
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">King CRM Hub</p>
@@ -272,20 +279,20 @@ function AuthPageInner() {
               </div>
             </div>
             <div className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-medium text-white/70">
-              Premium CRM system
+              Freelancer client system
             </div>
           </div>
 
           <div className="relative z-10 max-w-2xl space-y-8">
             <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#557df5]/35 bg-[#557df5]/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#cfe0ff]">
-                <LockKeyhole className="h-3.5 w-3.5" /> Secure, fast, operator-grade
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--teal)]/40 bg-[var(--teal)]/14 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--teal)]">
+                <LockKeyhole className="h-3.5 w-3.5" /> Secure, focused, freelancer-ready
               </div>
               <h1 className="text-5xl font-semibold leading-[1.02] tracking-[-0.04em] text-white xl:text-6xl">
-                Run the whole CRM like a control room, not a spreadsheet.
+                Run your client pipeline like a one-person agency.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-white/68">
-                Leads, pipeline, automations, AI support, and follow-up execution in one polished workspace built for serious one-person businesses.
+                See who to follow up with, what to say, and when to send it — then make the next move.
               </p>
             </div>
 
@@ -301,7 +308,7 @@ function AuthPageInner() {
             <div className="grid gap-4 md:grid-cols-3">
               {VALUE_POINTS.map((point) => (
                 <div key={point.title} className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#557df5]/18 text-[#cfe0ff]">
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)]/22 text-[var(--teal)]">
                     <point.icon className="h-5 w-5" />
                   </div>
                   <p className="text-lg font-semibold text-white">{point.title}</p>
@@ -313,11 +320,11 @@ function AuthPageInner() {
 
           <div className="relative z-10 rounded-[28px] border border-white/10 bg-white/6 p-5">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-[#8dd6b4]" />
+              <CheckCircle2 className="h-5 w-5 text-[var(--teal)]" />
               <p className="text-sm font-medium text-white">Secure access, password recovery, and account protection are active.</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-white/58">
-              Use the token-based reset flow for internal/admin-controlled recovery, then return to login without losing your workspace context.
+              Sign in securely, recover your password when needed, and get straight back to your client work.
             </p>
           </div>
         </section>
@@ -326,20 +333,20 @@ function AuthPageInner() {
           <div>
             <div className="mb-10 flex items-center justify-between lg:hidden">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] shadow-[0_12px_30px_rgba(85,125,245,0.32)]">
-                  <Sparkles className="h-5 w-5 text-white" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_30px_rgba(24,184,151,0.32)]">
+                  <Sparkles className="h-5 w-5 text-[var(--ink)]" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1f2a36]/50">King CRM Hub</p>
-                  <p className="text-sm font-semibold text-[#1f2a36]">Operator console</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#0c111b]/50">King CRM Hub</p>
+                  <p className="text-sm font-semibold text-[#0c111b]">Freelancer workspace</p>
                 </div>
               </div>
             </div>
 
             <div className="mb-8 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#557df5]">Secure workspace access</p>
-              <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#1f2a36]">{currentModeTitle}</h2>
-              <p className="text-sm leading-6 text-[#1f2a36]/55">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--teal-deep)]">Secure workspace access</p>
+              <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]">{currentModeTitle}</h2>
+              <p className="text-sm leading-6 text-[#0c111b]/55">
                 {mode === 'login' && 'Sign in to manage leads, pipeline execution, automations, and AI workflows.'}
                 {mode === 'signup' && 'Create your workspace, owner account, and operating foundation in one move.'}
                 {mode === 'forgot' && 'Request a reset token for controlled password recovery.'}
@@ -349,7 +356,7 @@ function AuthPageInner() {
 
             {(mode === 'login' || mode === 'signup') && (
               <>
-                <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f4f7fc] p-1">
+                <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[var(--paper)] p-1">
                   {(['login', 'signup'] as Mode[]).map((tab) => (
                     <button
                       key={tab}
@@ -357,8 +364,8 @@ function AuthPageInner() {
                       className={cn(
                         'rounded-[14px] px-4 py-3 text-sm font-semibold transition-all',
                         mode === tab
-                          ? 'bg-white text-[#1f2a36] shadow-[0_10px_25px_rgba(31,42,54,0.08)]'
-                          : 'text-[#1f2a36]/45 hover:text-[#1f2a36]'
+                          ? 'bg-white text-[#0c111b] shadow-[0_10px_25px_rgba(31,42,54,0.08)]'
+                          : 'text-[#0c111b]/45 hover:text-[#0c111b]'
                       )}
                     >
                       {tab === 'login' ? 'Sign in' : 'Create account'}
@@ -370,18 +377,18 @@ function AuthPageInner() {
                   {mode === 'signup' && (
                     <>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Owner name</Label>
+                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
                         <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
                       </div>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Organization</Label>
+                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
                         <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Email</Label>
+                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
                     <Input
                       type="email"
                       required
@@ -394,7 +401,7 @@ function AuthPageInner() {
                   </div>
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Password</Label>
+                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
                     <Input
                       type="password"
                       required
@@ -409,7 +416,7 @@ function AuthPageInner() {
 
                   {mode === 'signup' && (
                     <div>
-                      <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Confirm password</Label>
+                      <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
                       <Input
                         type="password"
                         required
@@ -425,7 +432,7 @@ function AuthPageInner() {
 
                   {mode === 'login' && (
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => switchMode('forgot')} className="text-sm font-medium text-[#557df5] hover:opacity-80">
+                      <button type="button" onClick={() => switchMode('forgot')} className="text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
                         Forgot password?
                       </button>
                     </div>
@@ -437,16 +444,16 @@ function AuthPageInner() {
                   <Button
                     onClick={() => void handleLoginSignup()}
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-sm font-semibold text-white shadow-[0_16px_34px_rgba(85,125,245,0.28)] hover:opacity-95"
+                    className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)] hover:opacity-95"
                   >
                     {loading ? 'Working…' : mode === 'login' ? 'Sign in' : 'Create workspace'}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
 
-                  <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f7f4ec] p-4 text-sm text-[#1f2a36]/60">
-                    Need a reset token instead?{' '}
-                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[#557df5] hover:opacity-80">
-                      Go to reset password
+                  <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f7f4ec] p-4 text-sm text-[#0c111b]/60">
+                    Already have a password-reset link?{' '}
+                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[var(--teal-deep)] hover:opacity-80">
+                      Finish resetting your password
                     </button>
                   </div>
                 </div>
@@ -455,30 +462,30 @@ function AuthPageInner() {
 
             {mode === 'forgot' && (
               <div className="space-y-4">
-                <button onClick={() => switchMode('login')} className="inline-flex items-center gap-2 text-sm font-medium text-[#1f2a36]/55 hover:text-[#1f2a36]">
+                <button onClick={() => switchMode('login')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Email address</Label>
+                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
                   <Input type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleForgotPassword()} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
                 {resetTokenDisplay ? (
-                  <div className="rounded-[24px] border border-[#557df5]/18 bg-[#f5f8ff] p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#557df5]">Reset token</p>
-                    <div className="mt-3 flex items-center gap-2 rounded-2xl border border-[#557df5]/15 bg-white p-3">
-                      <code className="min-w-0 flex-1 break-all text-xs text-[#1f2a36]">{resetTokenDisplay}</code>
+                  <div className="rounded-[24px] border border-[var(--teal)]/25 bg-[var(--paper)] p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--teal-deep)]">Reset token</p>
+                    <div className="mt-3 flex items-center gap-2 rounded-2xl border border-[var(--teal)]/20 bg-white p-3">
+                      <code className="min-w-0 flex-1 break-all text-xs text-[#0c111b]">{resetTokenDisplay}</code>
                       <Button variant="outline" className="rounded-xl border-[rgba(31,42,54,0.08)]" onClick={() => void copyResetToken()}>
                         <Copy className="mr-2 h-4 w-4" /> Copy
                       </Button>
                     </div>
-                    <Button className="mt-3 h-11 w-full rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white" onClick={() => { setResetToken(resetTokenDisplay); switchMode('reset') }}>
+                    <Button className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => { setResetToken(resetTokenDisplay); switchMode('reset') }}>
                       Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <Button onClick={() => void handleForgotPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_16px_34px_rgba(85,125,245,0.28)]">
+                  <Button onClick={() => void handleForgotPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
                     {loading ? 'Generating token…' : 'Generate reset token'}
                   </Button>
                 )}
@@ -487,24 +494,24 @@ function AuthPageInner() {
 
             {mode === 'reset' && (
               <div className="space-y-4">
-                <button onClick={() => switchMode('forgot')} className="inline-flex items-center gap-2 text-sm font-medium text-[#1f2a36]/55 hover:text-[#1f2a36]">
+                <button onClick={() => switchMode('forgot')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Reset token</Label>
+                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
                   <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">New password</Label>
+                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
                   <Input type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#1f2a36]/52">Confirm password</Label>
+                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
                   <Input type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword()} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
-                <Button onClick={() => void handleResetPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#557df5,#3a5fd9)] text-white shadow-[0_16px_34px_rgba(85,125,245,0.28)]">
+                <Button onClick={() => void handleResetPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
                   {loading ? 'Resetting password…' : 'Reset password'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -512,7 +519,7 @@ function AuthPageInner() {
             )}
           </div>
 
-          <p className="mt-10 text-center text-xs text-[#1f2a36]/35">
+          <p className="mt-10 text-center text-xs text-[#0c111b]/35">
             © 2026 King CRM Hub. Proof. Decision. Next Move.
           </p>
         </section>

@@ -61,7 +61,7 @@ function Sidebar({
     <motion.aside
       initial={false}
       animate={{ width: sidebarOpen ? 260 : 80 }}
-      className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-[#334155] bg-[#0F172A]"
+      className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-[#334155] bg-[#0c111b]"
     >
       <div className="flex h-16 items-center justify-between border-b border-[#334155] px-4">
         <AnimatePresence mode="wait">
@@ -72,10 +72,10 @@ function Sidebar({
               exit={{ opacity: 0 }}
               className="flex items-center gap-2"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-[#2563EB] to-[#14B8A6]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-[#18b897] to-[#127c66]">
                 <Bot className="h-5 w-5 text-black" />
               </div>
-              <span className="text-xl font-bold text-white">Elite<span className="text-[#2563EB]">CRM</span></span>
+              <span className="text-xl font-bold text-white">Elite<span className="text-[#127c66]">CRM</span></span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -83,7 +83,7 @@ function Sidebar({
           variant="ghost"
           size="icon"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="text-gray-400 hover:bg-[#1E293B] hover:text-white"
+          className="text-gray-400 hover:bg-[#14202e] hover:text-white"
         >
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
@@ -97,8 +97,8 @@ function Sidebar({
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200",
               activeView === item.id
-                ? "border-l-2 border-[#2563EB] bg-linear-to-r from-[#2563EB]/20 to-transparent text-[#2563EB]"
-                : "text-gray-400 hover:bg-[#1E293B] hover:text-white",
+                ? "border-l-2 border-[#127c66] bg-linear-to-r from-[#18b897]/20 to-transparent text-[#18b897]"
+                : "text-gray-400 hover:bg-[#14202e] hover:text-white",
             )}
           >
             <item.icon className="h-5 w-5 shrink-0" />
@@ -119,9 +119,9 @@ function Sidebar({
       </nav>
 
       <div className="border-t border-[#334155] p-3">
-        <div className={cn("flex items-center gap-3 rounded-lg bg-[#1E293B] p-2", !sidebarOpen && "justify-center")}>
-          <Avatar className="h-9 w-9 border-2 border-[#2563EB]">
-            <AvatarFallback className="bg-[#2563EB] font-semibold text-black">JD</AvatarFallback>
+        <div className={cn("flex items-center gap-3 rounded-lg bg-[#14202e] p-2", !sidebarOpen && "justify-center")}>
+          <Avatar className="h-9 w-9 border-2 border-[#127c66]">
+            <AvatarFallback className="bg-[#18b897] font-semibold text-black">JD</AvatarFallback>
           </Avatar>
           <AnimatePresence mode="wait">
             {sidebarOpen && (
@@ -132,7 +132,7 @@ function Sidebar({
                 className="min-w-0 flex-1"
               >
                 <p className="truncate text-sm font-medium text-white">{currentUser?.name || "Workspace User"}</p>
-                <p className="truncate text-xs capitalize text-[#2563EB]">{currentUser?.role || "member"}</p>
+                <p className="truncate text-xs capitalize text-[#18b897]">{currentUser?.role || "member"}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -153,13 +153,13 @@ function Header({
   const unreadCount = mockNotifications.filter((notification) => notification.unread).length
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#D7DFEA] bg-white/80 px-6 backdrop-blur-sm">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--ink-line)] bg-white/80 px-6 backdrop-blur-sm">
       <div className="flex flex-1 items-center gap-4">
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search leads, deals, contacts..."
-            className="border-[#D7DFEA] bg-[#EEF2F7] pl-10 focus:border-[#2563EB] focus:ring-[#2563EB]"
+            className="border-[var(--ink-line)] bg-[#f4f0e6] pl-10 focus:border-[#127c66] focus:ring-[#18b897]"
           />
         </div>
       </div>
@@ -170,17 +170,17 @@ function Header({
             <Button
               variant="ghost"
               size="icon"
-              className="relative text-gray-500 hover:bg-[#F5F7FB] hover:text-[#2563EB]"
+              className="relative text-gray-500 hover:bg-[#faf7ee] hover:text-[#127c66]"
             >
               <Bell className="h-5 w-5" />
-              {unreadCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#2563EB]" />}
+              {unreadCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#18b897]" />}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 border-[#D7DFEA] bg-white">
+          <DropdownMenuContent align="end" className="w-80 border-[var(--ink-line)] bg-white">
             <DropdownMenuLabel className="flex items-center justify-between">
               <span>Notifications</span>
               {unreadCount > 0 && (
-                <Badge variant="secondary" className="bg-[#2563EB]/20 text-[#0EA5E9]">
+                <Badge variant="secondary" className="bg-[#18b897]/20 text-[#127c66]">
                   {unreadCount}
                 </Badge>
               )}
@@ -196,7 +196,7 @@ function Header({
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-center font-medium text-[#2563EB]" onSelect={() => setNotificationsOpen(false)}>
+            <DropdownMenuItem className="text-center font-medium text-[#127c66]" onSelect={() => setNotificationsOpen(false)}>
               Mark all as read
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -206,7 +206,7 @@ function Header({
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Add Lead</span>
         </Button>
-        <Button variant="outline" size="icon" className="border-[#D7DFEA]" onClick={onSignOut}>
+        <Button variant="outline" size="icon" className="border-[var(--ink-line)]" onClick={onSignOut}>
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
@@ -232,7 +232,7 @@ export function AppChrome({
   const { sidebarOpen } = useAppStore()
 
   return (
-    <div className="min-h-screen bg-[#F5F7FB]">
+    <div className="min-h-screen bg-[#faf7ee]">
       <Sidebar activeView={activeView} setActiveView={setActiveView} currentUser={currentUser} />
       <div className="transition-all duration-300" style={{ marginLeft: sidebarOpen ? 260 : 80 }}>
         <Header onAddLead={onAddLead} onSignOut={onSignOut} />

@@ -106,7 +106,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
   }
 }
 
-function getDefaultModel(provider: AIProvider): string {
+export function getDefaultModel(provider: AIProvider): string {
   switch (provider) {
     case 'groq': return 'llama-3.3-70b-versatile'
     case 'openai': return 'gpt-4o'

@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { AISettingsPanel } from '@/components/settings/ai-settings-panel'
 
+
 function OrganizationSettingsPanel() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -63,7 +64,7 @@ function OrganizationSettingsPanel() {
         name: organization?.name || '',
         slug: organization?.slug || '',
         logo: organization?.logo || '',
-        plan: organization?.plan || 'pro',
+        plan: organization?.plan || 'free',
         sessionTimeoutMinutes: String(organization?.sessionTimeoutMinutes || 60),
         twoFactorRequired: organization?.twoFactorRequired === true,
         usage: organization?.usage || { leadsThisMonth: 0, teamSeatsUsed: 0 },
@@ -93,7 +94,7 @@ function OrganizationSettingsPanel() {
           name: form.name,
           slug: form.slug,
           logo: form.logo,
-          plan: form.plan,
+
           sessionTimeoutMinutes: Number(form.sessionTimeoutMinutes),
           twoFactorRequired: form.twoFactorRequired,
         }),
@@ -114,11 +115,11 @@ function OrganizationSettingsPanel() {
   }
 
   if (loading) {
-    return <Card className="bg-white border-[#D7DFEA] shadow-sm"><CardContent className="p-6 text-sm text-gray-500">Loading organization…</CardContent></Card>
+    return <Card className="bg-white border-[var(--ink-line)] shadow-sm"><CardContent className="p-6 text-sm text-gray-500">Loading organization…</CardContent></Card>
   }
 
   return (
-    <Card className="bg-white border-[#D7DFEA] shadow-sm">
+    <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
         <CardTitle className="text-black">Organization profile</CardTitle>
         <CardDescription>Your workspace identity, plan, and session policy</CardDescription>
@@ -127,36 +128,36 @@ function OrganizationSettingsPanel() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <Label className="text-gray-600">Organization name</Label>
-            <Input className="mt-1 bg-[#EEF2F7] border-[#D7DFEA]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+            <Input className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
           </div>
           <div>
             <Label className="text-gray-600">URL slug</Label>
-            <Input className="mt-1 bg-[#EEF2F7] border-[#D7DFEA]" value={form.slug} onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))} />
+            <Input className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.slug} onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))} />
           </div>
         </div>
         <div>
           <Label className="text-gray-600">Logo URL</Label>
-          <Input className="mt-1 bg-[#EEF2F7] border-[#D7DFEA]" value={form.logo} onChange={(e) => setForm((prev) => ({ ...prev, logo: e.target.value }))} placeholder="https://..." />
+          <Input className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.logo} onChange={(e) => setForm((prev) => ({ ...prev, logo: e.target.value }))} placeholder="https://..." />
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <Label className="text-gray-600">Plan</Label>
-            <Select value={form.plan} onValueChange={(value) => setForm((prev) => ({ ...prev, plan: value }))}>
-              <SelectTrigger className="mt-1 bg-[#EEF2F7] border-[#D7DFEA]"><SelectValue /></SelectTrigger>
+            <Select value={form.plan} disabled>
+              <SelectTrigger className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="starter">Starter</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="starter">Pro</SelectItem>
+                <SelectItem value="pro">Studio</SelectItem>
+                <SelectItem value="enterprise">Elite</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label className="text-gray-600">Session timeout (minutes)</Label>
-            <Input type="number" className="mt-1 bg-[#EEF2F7] border-[#D7DFEA]" value={form.sessionTimeoutMinutes} onChange={(e) => setForm((prev) => ({ ...prev, sessionTimeoutMinutes: e.target.value }))} />
+            <Input type="number" className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.sessionTimeoutMinutes} onChange={(e) => setForm((prev) => ({ ...prev, sessionTimeoutMinutes: e.target.value }))} />
           </div>
         </div>
-        <div className="flex items-center justify-between rounded-lg bg-[#EEF2F7] p-3">
+        <div className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-3">
           <div>
             <p className="font-medium text-black">Require two-factor authentication</p>
             <p className="text-sm text-gray-500">Applies to all workspace admins and owners</p>
@@ -164,11 +165,11 @@ function OrganizationSettingsPanel() {
           <Switch checked={form.twoFactorRequired} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, twoFactorRequired: checked }))} />
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-lg bg-[#EEF2F7] p-4">
+          <div className="rounded-lg bg-[var(--paper)] p-4">
             <p className="text-sm text-gray-500">Leads in workspace</p>
             <p className="text-2xl font-bold text-black">{form.usage.leadsThisMonth}</p>
           </div>
-          <div className="rounded-lg bg-[#EEF2F7] p-4">
+          <div className="rounded-lg bg-[var(--paper)] p-4">
             <p className="text-sm text-gray-500">Team seats used</p>
             <p className="text-2xl font-bold text-black">{form.usage.teamSeatsUsed}</p>
           </div>
@@ -260,7 +261,7 @@ function TeamSettingsPanel() {
 
   return (
     <>
-      <Card className="bg-white border-[#D7DFEA] shadow-sm">
+      <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -285,10 +286,10 @@ function TeamSettingsPanel() {
           ) : (
             <div className="space-y-3">
               {members.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-lg bg-[#EEF2F7] p-3">
+                <div key={m.id} className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-[#2563EB] text-sm text-black">{(m.name || m.email).split(' ').map((n) => n[0]).join('').slice(0, 2)}</AvatarFallback>
+                      <AvatarFallback className="bg-[var(--teal)] text-sm text-black">{(m.name || m.email).split(' ').map((n) => n[0]).join('').slice(0, 2)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium text-black">{m.name || 'Unnamed user'}</p>
@@ -297,7 +298,7 @@ function TeamSettingsPanel() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Select value={m.role} onValueChange={(value) => void updateMember(m.id, { role: value })}>
-                      <SelectTrigger className="h-8 w-[130px] border-[#D7DFEA] bg-white"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-8 w-[130px] border-[var(--ink-line)] bg-white"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="owner">Owner</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
@@ -315,7 +316,7 @@ function TeamSettingsPanel() {
       </Card>
 
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
-        <DialogContent className="border-[#D7DFEA] bg-white">
+        <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
             <DialogTitle className="text-black">Invite team member</DialogTitle>
             <DialogDescription>Create a team account inside this organization.</DialogDescription>
@@ -323,16 +324,16 @@ function TeamSettingsPanel() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Name</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={inviteForm.name} onChange={(e) => setInviteForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={inviteForm.name} onChange={(e) => setInviteForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Email</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" type="email" value={inviteForm.email} onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" type="email" value={inviteForm.email} onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Role</Label>
               <Select value={inviteForm.role} onValueChange={(value) => setInviteForm((prev) => ({ ...prev, role: value }))}>
-                <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="agent">Agent</SelectItem>
@@ -342,7 +343,7 @@ function TeamSettingsPanel() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-[#D7DFEA]" onClick={() => setShowInvite(false)}>Cancel</Button>
+            <Button variant="outline" className="border-[var(--ink-line)]" onClick={() => setShowInvite(false)}>Cancel</Button>
             <Button className="btn-gold" onClick={() => void inviteMember()} disabled={saving}>
               {saving ? 'Creating...' : 'Create member'}
             </Button>
@@ -442,35 +443,35 @@ function SecuritySettingsPanel() {
 
   return (
     <>
-      <Card className="bg-white border-[#D7DFEA] shadow-sm">
+      <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
           <CardTitle className="text-black">Security</CardTitle>
           <CardDescription>2FA policy, API keys, and session governance</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg bg-[#EEF2F7] p-4">
+          <div className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-4">
             <div className="flex items-center gap-3">
-              <Shield className="h-5 w-5 text-[#2563EB]" />
+              <Shield className="h-5 w-5 text-[var(--teal-deep)]" />
               <div>
                 <p className="font-medium text-black">Two-factor enforcement</p>
                 <p className="text-xs text-gray-500">Managed from Organization settings</p>
               </div>
             </div>
-            <Badge variant="outline" className="border-[#D7DFEA]">Org policy</Badge>
+            <Badge variant="outline" className="border-[var(--ink-line)]">Org policy</Badge>
           </div>
-          <div className="flex items-center justify-between rounded-lg bg-[#EEF2F7] p-4">
+          <div className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-4">
             <div className="flex items-center gap-3">
-              <Key className="h-5 w-5 text-[#2563EB]" />
+              <Key className="h-5 w-5 text-[var(--teal-deep)]" />
               <div>
                 <p className="font-medium text-black">API keys</p>
                 <p className="text-xs text-gray-500">Generate and revoke workspace keys</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="border-[#2563EB] text-[#2563EB]" onClick={() => setShowKeys(true)}>Manage</Button>
+            <Button variant="outline" size="sm" className="border-[var(--teal-deep)] text-[var(--teal-deep)]" onClick={() => setShowKeys(true)}>Manage</Button>
           </div>
-          <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4">
+          <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4">
             <div className="mb-3 flex items-center gap-3">
-              <Shield className="h-5 w-5 text-[#2563EB]" />
+              <Shield className="h-5 w-5 text-[var(--teal-deep)]" />
               <div>
                 <p className="font-medium text-black">Active sessions</p>
                 <p className="text-xs text-gray-500">Review devices signed into this account and revoke old sessions.</p>
@@ -480,7 +481,7 @@ function SecuritySettingsPanel() {
               {sessions.length === 0 ? (
                 <p className="text-sm text-gray-500">No active sessions found.</p>
               ) : sessions.map((session) => (
-                <div key={session.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#D7DFEA] bg-white p-3">
+                <div key={session.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-white p-3">
                   <div>
                     <p className="text-sm font-medium text-black">
                       {[session.device, session.browser, session.os].filter(Boolean).join(' • ') || 'Current device'}
@@ -491,7 +492,7 @@ function SecuritySettingsPanel() {
                       {session.city || session.country ? ` • ${[session.city, session.country].filter(Boolean).join(', ')}` : ''}
                     </p>
                   </div>
-                  <Button variant="outline" className="border-[#D7DFEA]" onClick={() => void revokeSession(session.id)} disabled={session.isCurrent}>
+                  <Button variant="outline" className="border-[var(--ink-line)]" onClick={() => void revokeSession(session.id)} disabled={session.isCurrent}>
                     {session.isCurrent ? 'Current' : 'Revoke'}
                   </Button>
                 </div>
@@ -502,7 +503,7 @@ function SecuritySettingsPanel() {
       </Card>
 
       <Dialog open={showKeys} onOpenChange={setShowKeys}>
-        <DialogContent className="border-[#D7DFEA] bg-white">
+        <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
             <DialogTitle className="text-black">Workspace API keys</DialogTitle>
             <DialogDescription>Create a key once, then store the raw value securely.</DialogDescription>
@@ -514,12 +515,12 @@ function SecuritySettingsPanel() {
               </div>
             ) : null}
             <div className="flex gap-2">
-              <Input className="border-[#D7DFEA] bg-[#EEF2F7]" placeholder="Key name" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} />
+              <Input className="border-[var(--ink-line)] bg-[var(--paper)]" placeholder="Key name" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} />
               <Button className="btn-gold" onClick={() => void createKey()}>Create key</Button>
             </div>
             <div className="max-h-64 space-y-2 overflow-y-auto">
               {keys.map((key) => (
-                <div key={key.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-3">
+                <div key={key.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3">
                   <div>
                     <p className="text-sm font-medium text-black">{key.name}</p>
                     <p className="text-xs text-gray-500">
@@ -527,7 +528,7 @@ function SecuritySettingsPanel() {
                       {key.revokedAt ? ` • revoked ${new Date(key.revokedAt).toLocaleString()}` : ''}
                     </p>
                   </div>
-                  <Button variant="outline" className="border-[#D7DFEA]" onClick={() => void deleteKey(key.id)} disabled={Boolean(key.revokedAt)}>
+                  <Button variant="outline" className="border-[var(--ink-line)]" onClick={() => void deleteKey(key.id)} disabled={Boolean(key.revokedAt)}>
                     {key.revokedAt ? 'Revoked' : 'Revoke'}
                   </Button>
                 </div>
@@ -541,8 +542,7 @@ function SecuritySettingsPanel() {
 }
 
 function BillingSettingsPanel() {
-  const [plan, setPlan] = useState('pro')
-  const [saving, setSaving] = useState(false)
+  const [plan, setPlan] = useState('free')
 
   useEffect(() => {
     void fetch('/api/settings/organization')
@@ -553,30 +553,8 @@ function BillingSettingsPanel() {
       .catch(() => null)
   }, [])
 
-  const savePlan = async () => {
-    setSaving(true)
-    try {
-      const res = await fetch('/api/settings/organization', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      toast({ title: 'Plan updated', description: `Workspace plan set to ${plan}.` })
-    } catch (error) {
-      toast({
-        title: 'Failed to update plan',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
-    <Card className="bg-white border-[#D7DFEA] shadow-sm">
+    <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
         <CardTitle className="text-black">Billing & plan</CardTitle>
         <CardDescription>Persist the active workspace plan inside the CRM</CardDescription>
@@ -584,17 +562,17 @@ function BillingSettingsPanel() {
       <CardContent className="space-y-4">
         <div>
           <Label className="text-gray-600">Current plan</Label>
-          <Select value={plan} onValueChange={setPlan}>
-            <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
+          <Select value={plan} disabled>
+            <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="free">Free</SelectItem>
-              <SelectItem value="starter">Starter</SelectItem>
-              <SelectItem value="pro">Pro</SelectItem>
-              <SelectItem value="enterprise">Enterprise</SelectItem>
+              <SelectItem value="starter">Pro</SelectItem>
+              <SelectItem value="pro">Studio</SelectItem>
+              <SelectItem value="enterprise">Elite</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Button className="btn-gold" onClick={() => void savePlan()} disabled={saving}>{saving ? 'Saving...' : 'Upgrade or change plan'}</Button>
+        <Button className="btn-gold" onClick={() => { window.location.href = '/pricing' }}>View upgrade options</Button>
       </CardContent>
     </Card>
   )
@@ -627,7 +605,7 @@ function AuditLogPanel() {
   }, [loadLogs])
 
   return (
-    <Card className="bg-white border-[#D7DFEA] shadow-sm">
+    <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
         <CardTitle className="text-black">Audit log</CardTitle>
         <CardDescription>Recent actions across the organization</CardDescription>
@@ -638,14 +616,14 @@ function AuditLogPanel() {
         ) : (
           <div className="space-y-2">
             {logs.map((e) => (
-              <div key={e.id} className="flex items-center justify-between gap-3 border-b border-[#D7DFEA] py-2 last:border-0">
+              <div key={e.id} className="flex items-center justify-between gap-3 border-b border-[var(--ink-line)] py-2 last:border-0">
                 <span className="text-sm text-black">{e.description}</span>
                 <span className="text-right text-xs text-gray-500">{e.action} • {e.entityType} • {new Date(e.createdAt).toLocaleString()}</span>
               </div>
             ))}
           </div>
         )}
-        <Button variant="outline" className="mt-4 w-full border-[#D7DFEA]" onClick={() => void loadLogs(100)}>View full audit log</Button>
+        <Button variant="outline" className="mt-4 w-full border-[var(--ink-line)]" onClick={() => void loadLogs(100)}>View full audit log</Button>
       </CardContent>
     </Card>
   )
@@ -766,17 +744,17 @@ function CarrierLibrarySettings() {
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-      <Card className="bg-white border-[#D7DFEA] shadow-sm">
+      <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
           <CardTitle className="text-black">Offer Library</CardTitle>
           <CardDescription>Store your services, packages, and proposal libraries.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input className="border-[#D7DFEA] bg-[#EEF2F7]" placeholder="Offer name" value={newCarrierName} onChange={(e) => setNewCarrierName(e.target.value)} />
-          <Input className="border-[#D7DFEA] bg-[#EEF2F7]" placeholder="Website (optional)" value={newCarrierWebsite} onChange={(e) => setNewCarrierWebsite(e.target.value)} />
+          <Input className="border-[var(--ink-line)] bg-[var(--paper)]" placeholder="Offer name" value={newCarrierName} onChange={(e) => setNewCarrierName(e.target.value)} />
+          <Input className="border-[var(--ink-line)] bg-[var(--paper)]" placeholder="Website (optional)" value={newCarrierWebsite} onChange={(e) => setNewCarrierWebsite(e.target.value)} />
           <Button className="btn-gold w-full" onClick={() => void createCarrier()} disabled={loading}>Add Offer</Button>
           <Separator />
-          <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-3">
+          <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3">
             <p className="text-xs font-medium text-black">Freelancer workflow shortcuts</p>
             <p className="mt-1 text-xs text-gray-500">Store each offer’s brochure, scope guide, and proposal template with version tracking.</p>
           </div>
@@ -788,7 +766,7 @@ function CarrierLibrarySettings() {
                 onClick={() => setSelectedCarrierId(carrier.id)}
                 className={cn(
                   'w-full rounded-lg border p-3 text-left',
-                  selectedCarrierId === carrier.id ? 'border-[#2563EB] bg-[#2563EB]/10' : 'border-[#D7DFEA] bg-[#EEF2F7]',
+                  selectedCarrierId === carrier.id ? 'border-[var(--teal-deep)] bg-[var(--teal-tint)]' : 'border-[var(--ink-line)] bg-[var(--paper)]',
                 )}
               >
                 <p className="text-sm font-medium text-black">{carrier.name}</p>
@@ -799,7 +777,7 @@ function CarrierLibrarySettings() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-[#D7DFEA] shadow-sm xl:col-span-2">
+      <Card className="bg-white border-[var(--ink-line)] shadow-sm xl:col-span-2">
         <CardHeader>
           <CardTitle className="text-black">Offer Document Library</CardTitle>
           <CardDescription>
@@ -811,12 +789,12 @@ function CarrierLibrarySettings() {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <div className="md:col-span-2">
                 <Label className="text-gray-600">Document name</Label>
-                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={uploadName} onChange={(e) => setUploadName(e.target.value)} placeholder="2026 Website Redesign Package" />
+                <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={uploadName} onChange={(e) => setUploadName(e.target.value)} placeholder="2026 Website Redesign Package" />
               </div>
               <div>
                 <Label className="text-gray-600">Type</Label>
                 <Select value={uploadType} onValueChange={setUploadType}>
-                  <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(OFFER_DOC_TYPE_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -826,11 +804,11 @@ function CarrierLibrarySettings() {
               </div>
               <div>
                 <Label className="text-gray-600">Version</Label>
-                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={uploadVersion} onChange={(e) => setUploadVersion(e.target.value)} placeholder="v1.0" />
+                <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={uploadVersion} onChange={(e) => setUploadVersion(e.target.value)} placeholder="v1.0" />
               </div>
               <div className="md:col-span-3">
                 <Label className="text-gray-600">File</Label>
-                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
+                <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
               </div>
               <div className="flex items-end">
                 <Button className="btn-gold w-full" onClick={() => void uploadDocument()} disabled={loading || !uploadFile}>
@@ -843,7 +821,7 @@ function CarrierLibrarySettings() {
             <div>
               <Label className="text-gray-600">Document filter</Label>
               <Select value={docFilter} onValueChange={setDocFilter}>
-                <SelectTrigger className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {Object.entries(OFFER_DOC_TYPE_LABELS).map(([value, label]) => (
@@ -852,7 +830,7 @@ function CarrierLibrarySettings() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-3">
+            <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3">
               <p className="text-xs font-medium text-black">Offer Prep Checklist</p>
               <div className="mt-1 space-y-1">
                 {offerPrepChecklist.slice(0, 3).map((item) => (
@@ -864,7 +842,7 @@ function CarrierLibrarySettings() {
           <Separator />
           <div className="space-y-2">
             {filteredDocuments.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[#D7DFEA] p-5 text-sm text-gray-500">
+              <div className="rounded-lg border border-dashed border-[var(--ink-line)] p-5 text-sm text-gray-500">
                 No documents yet. Upload brochures and scope guides here.
               </div>
             ) : filteredDocuments.map((doc) => (
@@ -872,13 +850,13 @@ function CarrierLibrarySettings() {
                 key={doc.id}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between gap-3 rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-3"
+                className="flex items-center justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-black">{doc.name}</p>
                   <p className="text-xs text-gray-500">{offerDocTypeLabel(doc.type)} {doc.version ? `• ${doc.version}` : ''}</p>
                 </div>
-                <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-[#2563EB] hover:underline">Open</a>
+                <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-[var(--teal-deep)] hover:underline">Open</a>
               </motion.div>
             ))}
           </div>
@@ -971,12 +949,12 @@ function TwilioIntegrationCard() {
   }
 
   return (
-    <Card className="bg-white border-[#D7DFEA] shadow-sm">
+    <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-black">
-              <Phone className="h-5 w-5 text-[#2563EB]" />
+              <Phone className="h-5 w-5 text-[var(--teal-deep)]" />
               Twilio SMS
             </CardTitle>
             <CardDescription>Send live SMS and receive delivery/inbound updates.</CardDescription>
@@ -996,24 +974,24 @@ function TwilioIntegrationCard() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <Label className="text-gray-600">Account SID</Label>
-                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={accountSid} onChange={(e) => setAccountSid(e.target.value)} placeholder="AC..." />
+                <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={accountSid} onChange={(e) => setAccountSid(e.target.value)} placeholder="AC..." />
               </div>
               <div>
                 <Label className="text-gray-600">From phone</Label>
-                <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={fromPhone} onChange={(e) => setFromPhone(e.target.value)} placeholder="+15551234567" />
+                <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={fromPhone} onChange={(e) => setFromPhone(e.target.value)} placeholder="+15551234567" />
               </div>
             </div>
             <div>
               <Label className="text-gray-600">Auth token</Label>
               <Input
                 type="password"
-                className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]"
+                className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"
                 value={authToken}
                 onChange={(e) => setAuthToken(e.target.value)}
                 placeholder={hasAuthToken ? 'Stored. Enter a new token only to rotate it.' : 'Twilio auth token'}
               />
             </div>
-            <div className="flex items-center justify-between rounded-lg bg-[#EEF2F7] p-3">
+            <div className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-3">
               <div>
                 <p className="text-sm font-medium text-black">Webhook target</p>
                 <p className="break-all text-xs text-gray-500">
@@ -1121,7 +1099,7 @@ function SettingsIntegrationsPanel() {
 
   return (
     <>
-      <Card className="bg-white border-[#D7DFEA] shadow-sm">
+      <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
           <CardTitle className="text-black">Integrations</CardTitle>
           <CardDescription>Connect email, calendar, SMS, and more</CardDescription>
@@ -1133,9 +1111,9 @@ function SettingsIntegrationsPanel() {
             const item = integrations[i.type]
             const connected = item?.isActive
             return (
-              <div key={i.type} className="flex items-center justify-between rounded-lg bg-[#EEF2F7] p-4">
+              <div key={i.type} className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-4">
                 <div className="flex items-center gap-3">
-                  <i.icon className="h-5 w-5 text-[#2563EB]" />
+                  <i.icon className="h-5 w-5 text-[var(--teal-deep)]" />
                   <div>
                     <p className="text-sm font-medium text-black">{i.name}</p>
                     <p className="text-xs text-gray-500">{i.description}</p>
@@ -1147,7 +1125,7 @@ function SettingsIntegrationsPanel() {
                   )}>
                     {connected ? (item?.syncStatus || 'connected') : 'disconnected'}
                   </Badge>
-                  <Button variant="outline" size="sm" className="border-[#D7DFEA]" onClick={() => openConfig(i.type, i.name)}>
+                  <Button variant="outline" size="sm" className="border-[var(--ink-line)]" onClick={() => openConfig(i.type, i.name)}>
                     {connected ? 'Configure' : 'Connect'}
                   </Button>
                 </div>
@@ -1158,7 +1136,7 @@ function SettingsIntegrationsPanel() {
       </Card>
 
       <Dialog open={!!selectedType} onOpenChange={(open) => !open && setSelectedType(null)}>
-        <DialogContent className="border-[#D7DFEA] bg-white">
+        <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
             <DialogTitle className="text-black">{configName || 'Configure Integration'}</DialogTitle>
             <DialogDescription>Save a basic integration record so the app can use and display it.</DialogDescription>
@@ -1166,19 +1144,19 @@ function SettingsIntegrationsPanel() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Display name</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={configName} onChange={(e) => setConfigName(e.target.value)} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={configName} onChange={(e) => setConfigName(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">Config field</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={configField} onChange={(e) => setConfigField(e.target.value)} placeholder="calendarId, workspaceId, smtpHost..." />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={configField} onChange={(e) => setConfigField(e.target.value)} placeholder="calendarId, workspaceId, smtpHost..." />
             </div>
             <div>
               <Label className="text-gray-600">Config value</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={configValue} onChange={(e) => setConfigValue(e.target.value)} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={configValue} onChange={(e) => setConfigValue(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-[#D7DFEA]" onClick={() => setSelectedType(null)}>Cancel</Button>
+            <Button variant="outline" className="border-[var(--ink-line)]" onClick={() => setSelectedType(null)}>Cancel</Button>
             <Button className="btn-gold" onClick={() => void saveIntegration()} disabled={saving}>
               {saving ? 'Saving...' : 'Save'}
             </Button>
@@ -1276,7 +1254,7 @@ function WebhooksSettingsPanel() {
 
   return (
     <>
-      <Card className="bg-white border-[#D7DFEA] shadow-sm">
+      <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -1293,19 +1271,19 @@ function WebhooksSettingsPanel() {
           {loading ? (
             <div className="text-sm text-gray-500">Loading webhooks…</div>
           ) : hooks.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[#D7DFEA] p-6 text-center text-sm text-gray-500">
+            <div className="rounded-lg border border-dashed border-[var(--ink-line)] p-6 text-center text-sm text-gray-500">
               No webhooks yet. Add one to receive lead.created, deal.won, etc.
             </div>
           ) : (
             <div className="space-y-3">
               {hooks.map((hook) => (
-                <div key={hook.id} className="flex items-start justify-between gap-3 rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4">
+                <div key={hook.id} className="flex items-start justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-black">{hook.name}</p>
                     <p className="break-all text-xs text-gray-500">{hook.url}</p>
                     <p className="mt-1 text-xs text-gray-500">{hook.events.join(', ')}</p>
                   </div>
-                  <Button variant="outline" size="sm" className="border-[#D7DFEA]" onClick={() => void deleteHook(hook.id)}>
+                  <Button variant="outline" size="sm" className="border-[var(--ink-line)]" onClick={() => void deleteHook(hook.id)}>
                     Delete
                   </Button>
                 </div>
@@ -1316,7 +1294,7 @@ function WebhooksSettingsPanel() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border-[#D7DFEA] bg-white">
+        <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
             <DialogTitle className="text-black">Add Webhook</DialogTitle>
             <DialogDescription>Create a webhook endpoint for CRM events.</DialogDescription>
@@ -1324,23 +1302,23 @@ function WebhooksSettingsPanel() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Name</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">URL</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.url} onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.url} onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Events</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.events} onChange={(e) => setForm((prev) => ({ ...prev, events: e.target.value }))} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.events} onChange={(e) => setForm((prev) => ({ ...prev, events: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Secret</Label>
-              <Input className="mt-1 border-[#D7DFEA] bg-[#EEF2F7]" value={form.secret} onChange={(e) => setForm((prev) => ({ ...prev, secret: e.target.value }))} />
+              <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.secret} onChange={(e) => setForm((prev) => ({ ...prev, secret: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-[#D7DFEA]" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="border-[var(--ink-line)]" onClick={() => setOpen(false)}>Cancel</Button>
             <Button className="btn-gold" onClick={() => void createHook()} disabled={saving}>
               {saving ? 'Saving...' : 'Create Webhook'}
             </Button>
@@ -1355,47 +1333,47 @@ export function SettingsView() {
   const [activeSettingsTab, setActiveSettingsTab] = useState('organization')
 
   return (
-    <div className="min-h-screen space-y-6 bg-[#F5F7FB] p-6">
+    <div className="min-h-screen space-y-6 bg-[var(--paper)] p-6">
       <div>
         <h1 className="text-2xl font-bold text-black">Settings</h1>
         <p className="text-gray-500">Multi-tenant organization, team, security, and integrations</p>
       </div>
 
       <Tabs value={activeSettingsTab} onValueChange={setActiveSettingsTab} className="w-full">
-        <TabsList className="flex h-auto flex-wrap gap-1 border border-[#D7DFEA] bg-[#EEF2F7] p-1">
-          <TabsTrigger value="organization" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+        <TabsList className="flex h-auto flex-wrap gap-1 border border-[var(--ink-line)] bg-[var(--paper)] p-1">
+          <TabsTrigger value="organization" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Building2 className="h-4 w-4" />
             Organization
           </TabsTrigger>
-          <TabsTrigger value="team" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="team" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Users className="h-4 w-4" />
             Team & roles
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Shield className="h-4 w-4" />
             Security
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="integrations" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Zap className="h-4 w-4" />
             Integrations
           </TabsTrigger>
-          <TabsTrigger value="carriers" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="carriers" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <FileText className="h-4 w-4" />
             Offers &amp; Docs
           </TabsTrigger>
-          <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Webhook className="h-4 w-4" />
             Webhooks
           </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="ai" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Bot className="h-4 w-4" />
             AI
           </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <DollarSign className="h-4 w-4" />
             Billing
           </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2 data-[state=active]:bg-[#2563EB] data-[state=active]:text-black">
+          <TabsTrigger value="audit" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <History className="h-4 w-4" />
             Audit log
           </TabsTrigger>

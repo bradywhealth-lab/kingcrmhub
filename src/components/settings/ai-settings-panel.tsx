@@ -24,13 +24,11 @@ import { toast } from '@/hooks/use-toast'
 type ProviderInfo = {
   id: string
   label: string
-  defaultModel: string
   requiresKey: boolean
 }
 
 type AISettings = {
   provider: string
-  model: string
   hasKey: boolean
   maskedKey: string | null
   providerLabel: string
@@ -154,7 +152,7 @@ export function AISettingsPanel() {
 
   if (loading) {
     return (
-      <Card className="border-[#D7DFEA] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
         <CardContent className="flex items-center justify-center py-12 text-gray-500">
           <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
           Loading AI settings…
@@ -166,11 +164,14 @@ export function AISettingsPanel() {
   return (
     <div className="space-y-6">
       {/* Current Status */}
-      <Card className="border-[#D7DFEA] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563EB] to-[#14B8A6]">
-              <Sparkles className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--teal)] to-[var(--teal-deep)]">
+              {/* Ink icon: 7.50:1 on teal, 3.69:1 on teal-deep — both PASS
+                  non-text contrast (WCAG 1.4.11 ≥3:1). White measured 2.52:1
+                  on teal-deep = FAIL, so white icons are banned on this chip. */}
+              <Sparkles className="h-5 w-5 text-[var(--ink)]" />
             </div>
             <div>
               <CardTitle className="text-black">AI Assistant Configuration</CardTitle>
@@ -182,13 +183,13 @@ export function AISettingsPanel() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Current Provider Badge */}
-          <div className="flex items-center gap-3 rounded-lg border border-[#D7DFEA] bg-[#EEF2F7] p-4">
-            <Bot className="h-5 w-5 text-[#2563EB]" />
+          <div className="flex items-center gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4">
+            <Bot className="h-5 w-5 text-[var(--teal-deep)]" />
             <div className="flex-1">
               <p className="text-sm font-medium text-black">
                 Current: {settings?.providerLabel}
               </p>
-              <p className="text-xs text-gray-500">Model: {settings?.model}</p>
+
             </div>
             {settings?.hasKey ? (
               <Badge className="border-emerald-500 bg-emerald-50 text-emerald-700" variant="outline">
@@ -196,7 +197,7 @@ export function AISettingsPanel() {
                 Custom key active
               </Badge>
             ) : selectedProvider === 'groq' ? (
-              <Badge className="border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" variant="outline">
+              <Badge className="border-[var(--teal-deep)] bg-[var(--teal-tint)] text-[var(--teal-deep)]" variant="outline">
                 <Zap className="mr-1 h-3 w-3" />
                 Free tier
               </Badge>
@@ -217,7 +218,7 @@ export function AISettingsPanel() {
               onValueChange={(value) => void saveProvider(value)}
               disabled={saving}
             >
-              <SelectTrigger className="border-[#D7DFEA] bg-[#EEF2F7]">
+              <SelectTrigger className="border-[var(--ink-line)] bg-[var(--paper)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -242,11 +243,11 @@ export function AISettingsPanel() {
                   : 'Groq can run only if this deployment has a platform GROQ_API_KEY configured, unless your org adds its own key.'
                 : selectedProvider === 'openai'
                   ? settings?.platformFallbacks?.openai
-                    ? 'OpenAI platform fallback is available on this deployment, or you can use your own key.'
-                    : 'OpenAI GPT-4o requires your own API key on this deployment.'
+                    ? 'Advanced platform fallback is available on this deployment, or you can use your own key.'
+                    : 'Advanced tier requires your own API key on this deployment.'
                   : settings?.platformFallbacks?.anthropic
-                    ? 'Anthropic platform fallback is available on this deployment, or you can use your own key.'
-                    : 'Anthropic Claude requires your own API key on this deployment.'}
+                    ? 'Advanced platform fallback is available on this deployment, or you can use your own key.'
+                    : 'Advanced tier requires your own API key on this deployment.'}
             </p>
           </div>
 
@@ -290,7 +291,7 @@ export function AISettingsPanel() {
                       }
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      className="border-[#D7DFEA] bg-[#EEF2F7] pr-10"
+                      className="border-[var(--ink-line)] bg-[var(--paper)] pr-10"
                     />
                     <button
                       type="button"
@@ -301,7 +302,7 @@ export function AISettingsPanel() {
                     </button>
                   </div>
                   <Button
-                    className="bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
+                    className="bg-[var(--teal)] text-[var(--ink)] hover:bg-[var(--teal-hover)]"
                     onClick={() => void saveApiKey()}
                     disabled={saving || !apiKey.trim()}
                   >
@@ -322,17 +323,17 @@ export function AISettingsPanel() {
           {selectedProvider === 'groq' && (
             <>
               <Separator />
-              <div className="rounded-lg border border-[#D7DFEA] bg-[#F5F7FB] p-4 space-y-2">
+              <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4 space-y-2">
                 <p className="text-sm font-medium text-black">Free Tier Details</p>
                 <ul className="text-xs text-gray-600 space-y-1">
-                  <li>• Powered by Llama 3.3 70B via Groq inference when a platform or org key is actually available</li>
+                  <li>• Standard tier AI assistant included — powered by Groq inference when a platform or org key is available</li>
                   <li>• Great for lead qualification, email/SMS drafting, sales coaching</li>
-                  <li>• Upgrade to OpenAI or Anthropic anytime for premium models</li>
+                  <li>• Upgrade to Advanced tier anytime for premium capabilities</li>
                   <li>• If the assistant still fails, this deployment may not have a usable fallback key configured</li>
-                  <li>• Current deployment fallback status: {settings?.platformFallbacks?.groq ? 'Groq available' : 'Groq not detected'}</li>
+                  <li>• Current deployment fallback status: {settings?.platformFallbacks?.groq ? 'Standard tier available' : 'Standard tier not detected'}</li>
                 </ul>
                 {!settings?.hasKey && (
-                  <p className="text-xs text-[#2563EB] font-medium mt-2">
+                  <p className="text-xs text-[var(--teal-deep)] font-medium mt-2">
                     Optional: Add a Groq API key from console.groq.com for higher rate limits.
                   </p>
                 )}
