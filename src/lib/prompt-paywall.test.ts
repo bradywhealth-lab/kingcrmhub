@@ -39,7 +39,14 @@ function walk(dir: string): string[] {
 describe('paid prompt bodies never ship to the client bundle', () => {
   const importers = walk(SRC)
     .filter((file) => file !== join(SRC, 'lib', 'prompts.ts'))
-    .filter((file) => readFileSync(file, 'utf8').includes('@/lib/prompts'))
+    .filter((file) => {
+      const text = readFileSync(file, 'utf8')
+      if (!text.includes('@/lib/prompts')) return false
+      // `import type {...}` is erased at compile time — it ships no runtime
+      // bytes, so type-only usage of the library surface is bundle-safe.
+      const valueImports = text.match(/^\s*import\s+(?!type\s)[^\n]*@\/lib\/prompts[^\n]*/gm)
+      return valueImports !== null && valueImports.length > 0
+    })
     .map((file) => file.slice(repoRoot.length + 1))
 
   it('every importer of the full library is server-allowed', () => {
