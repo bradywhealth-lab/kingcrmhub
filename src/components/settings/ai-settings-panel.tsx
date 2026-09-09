@@ -24,13 +24,11 @@ import { toast } from '@/hooks/use-toast'
 type ProviderInfo = {
   id: string
   label: string
-  defaultModel: string
   requiresKey: boolean
 }
 
 type AISettings = {
   provider: string
-  model: string
   hasKey: boolean
   maskedKey: string | null
   providerLabel: string
@@ -191,7 +189,7 @@ export function AISettingsPanel() {
               <p className="text-sm font-medium text-black">
                 Current: {settings?.providerLabel}
               </p>
-              <p className="text-xs text-gray-500">AI tier: {settings?.providerLabel}</p>
+
             </div>
             {settings?.hasKey ? (
               <Badge className="border-emerald-500 bg-emerald-50 text-emerald-700" variant="outline">

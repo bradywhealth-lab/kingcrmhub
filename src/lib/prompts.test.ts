@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -54,19 +52,6 @@ const BANNED = [
   'insurance', 'carrier', 'broker', 'underwriting', 'policy number',
 ]
 
-const repoRoot = join(import.meta.dirname, '..', '..')
-
-/**
- * Strip comments so the banned-token gate measures RENDERED copy, not
- * engineering notes. A doc comment saying "legacy insurance-era rows" is not
- * user-visible; a prompt body saying it would be.
- */
-function renderedCopyOnly(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
-    .replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1') // line comments (not inside strings)
-}
-
 describe('prompt library', () => {
   it('contains exactly the 22 specified prompts', () => {
     expect(PROMPT_LIBRARY).toHaveLength(22)
@@ -118,35 +103,35 @@ describe('prompt library', () => {
     expect(PROMPT_LIBRARY.filter(p => p.plan === 'studio')).toHaveLength(6)
   })
 
-  it('gates by tier: a plan unlocks its own tier plus everything below', () => {
+  it('gates by tier: a stored plan unlocks its mapped tier plus everything below', () => {
     expect(isPromptUnlockedForPlan('free', 'free')).toBe(true)
     expect(isPromptUnlockedForPlan('free', 'pro')).toBe(false)
     expect(isPromptUnlockedForPlan('free', 'studio')).toBe(false)
 
+    expect(isPromptUnlockedForPlan('starter', 'free')).toBe(true)
+    expect(isPromptUnlockedForPlan('starter', 'pro')).toBe(true)
+    expect(isPromptUnlockedForPlan('starter', 'studio')).toBe(false)
+
     expect(isPromptUnlockedForPlan('pro', 'free')).toBe(true)
     expect(isPromptUnlockedForPlan('pro', 'pro')).toBe(true)
-    expect(isPromptUnlockedForPlan('pro', 'studio')).toBe(false)
-
-    expect(isPromptUnlockedForPlan('studio', 'free')).toBe(true)
-    expect(isPromptUnlockedForPlan('studio', 'pro')).toBe(true)
-    expect(isPromptUnlockedForPlan('studio', 'studio')).toBe(true)
+    expect(isPromptUnlockedForPlan('pro', 'studio')).toBe(true)
   })
 
-  it('fails closed on unknown or legacy plan values instead of over-unlocking', () => {
-    // Legacy insurance-era rows may carry starter/enterprise. Those must NOT
-    // silently grant paid tiers.
-    expect(isPromptUnlockedForPlan('enterprise', 'pro')).toBe(false)
+  it('maps stored plan identifiers to the customer-facing prompt tiers', () => {
+    expect(isPromptUnlockedForPlan('enterprise', 'studio')).toBe(true)
+    expect(isPromptUnlockedForPlan('pro', 'studio')).toBe(true)
+    expect(isPromptUnlockedForPlan('starter', 'pro')).toBe(true)
     expect(isPromptUnlockedForPlan('starter', 'studio')).toBe(false)
     expect(isPromptUnlockedForPlan('', 'pro')).toBe(false)
     expect(isPromptUnlockedForPlan(null, 'pro')).toBe(false)
     expect(isPromptUnlockedForPlan(undefined, 'pro')).toBe(false)
-    expect(promptsForPlan('enterprise').filter(p => p.unlocked)).toHaveLength(6)
+    expect(promptsForPlan('enterprise').filter(p => p.unlocked)).toHaveLength(22)
   })
 
   it('unlocks 6 / 16 / 22 prompts per tier while always listing all 22', () => {
     expect(promptsForPlan('free').filter(p => p.unlocked)).toHaveLength(6)
-    expect(promptsForPlan('pro').filter(p => p.unlocked)).toHaveLength(16)
-    expect(promptsForPlan('studio').filter(p => p.unlocked)).toHaveLength(22)
+    expect(promptsForPlan('starter').filter(p => p.unlocked)).toHaveLength(16)
+    expect(promptsForPlan('pro').filter(p => p.unlocked)).toHaveLength(22)
     // locked prompts stay listed so the upgrade CTA has something to point at
     expect(promptsForPlan('free')).toHaveLength(22)
   })
@@ -172,11 +157,20 @@ describe('prompt library', () => {
     }
   })
 
-  it('contains no banned token in rendered copy of the shipped module', () => {
-    const source = readFileSync(join(repoRoot, 'src', 'lib', 'prompts.ts'), 'utf8')
-    const rendered = renderedCopyOnly(source).toLowerCase()
-    const hits = BANNED.filter(token => rendered.includes(token.toLowerCase()))
-    expect(hits, `banned tokens in rendered copy of src/lib/prompts.ts: ${hits.join(', ')}`).toEqual([])
+  it('contains no banned token in customer-visible prompt fields', () => {
+    for (const p of PROMPT_LIBRARY) {
+      const rendered = `${p.title} ${p.body} ${p.category} ${p.tags.join(' ')}`.toLowerCase()
+      const hits = BANNED.filter(token => rendered.includes(token.toLowerCase()))
+      expect(hits, `banned tokens in prompt ${p.id}: ${hits.join(', ')}`).toEqual([])
+    }
+  })
+
+  it('never sends paid bodies for a free catalog response', () => {
+    const freeCatalog = promptsForPlan('free')
+    expect(freeCatalog.filter(p => p.unlocked)).toHaveLength(6)
+    expect(freeCatalog.filter(p => !p.unlocked)).toHaveLength(16)
+    expect(freeCatalog.filter(p => !p.unlocked).every(p => !('body' in p))).toBe(true)
+    expect(freeCatalog.filter(p => p.unlocked).every(p => typeof p.body === 'string')).toBe(true)
   })
 
   it('never mentions a model or provider name in any prompt body', () => {

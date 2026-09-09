@@ -59,73 +59,7 @@ import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 // Matching landing page aesthetic
 // ============================================
 
-// Mock Data - fixed ISO dates to avoid hydration mismatch
-const _base = "2026-03-11T22:00:00.000Z"
-const _yesterday = "2026-03-10T22:00:00.000Z"
-const mockLeads: Lead[] = [
-  { id: "1", firstName: "Sarah", lastName: "Johnson", email: "sarah@techcorp.com", phone: "(555) 123-4567", company: "TechCorp Inc", title: "CTO", source: "linkedin", status: "qualified", aiScore: 92, aiConfidence: 0.89, aiInsights: { intent: "high", budget: "confirmed" }, aiNextAction: "Schedule demo call", estimatedValue: 50000, lastContactedAt: _base, createdAt: _base, tags: [{ id: "1", name: "Hot Lead", color: "#18B897" }] },
-  { id: "2", firstName: "Michael", lastName: "Chen", email: "mchen@startup.io", phone: "(555) 234-5678", company: "Startup.io", title: "Founder", source: "referral", status: "new", aiScore: 78, aiConfidence: 0.75, aiInsights: { intent: "medium" }, aiNextAction: "Send introductory email", estimatedValue: 25000, lastContactedAt: null, createdAt: _base, tags: [] },
-  { id: "3", firstName: "Emily", lastName: "Davis", email: "emily@enterprise.com", phone: "(555) 345-6789", company: "Enterprise Solutions", title: "VP of Sales", source: "website", status: "proposal", aiScore: 85, aiConfidence: 0.82, aiInsights: { intent: "high", timeline: "Q1" }, aiNextAction: "Follow up on proposal", estimatedValue: 75000, lastContactedAt: _yesterday, createdAt: _base, tags: [{ id: "2", name: "Enterprise", color: "#0C111B" }] },
-  { id: "4", firstName: "James", lastName: "Wilson", email: "jwilson@agency.co", phone: "(555) 456-7890", company: "Creative Agency", title: "Director", source: "google", status: "negotiation", aiScore: 88, aiConfidence: 0.91, aiInsights: { intent: "high", decisionMaker: true }, aiNextAction: "Send contract", estimatedValue: 120000, lastContactedAt: _base, createdAt: _base, tags: [] },
-  { id: "5", firstName: "Lisa", lastName: "Anderson", email: "lisa@retail.com", phone: "(555) 567-8901", company: "Retail Giants", title: "CEO", source: "referral", status: "new", aiScore: 65, aiConfidence: 0.68, aiInsights: {}, aiNextAction: "Research company needs", estimatedValue: 30000, lastContactedAt: null, createdAt: _base, tags: [] },
-]
-
-const _p1Close = "2026-04-10T22:00:00.000Z"
-const _p2Close = "2026-05-10T22:00:00.000Z"
-const _p3Close = "2026-03-25T22:00:00.000Z"
-const _p4Close = "2026-03-30T22:00:00.000Z"
-const _p5Close = "2026-03-22T22:00:00.000Z"
-const mockPipelineStages = [
-  { id: "new", name: "New", color: "#0C111B", order: 0, items: [
-    { id: "p1", title: "Michael Chen - Startup.io", value: 25000, probability: 20, stageId: "new", leadId: "2", lead: mockLeads[1], aiWinProbability: 0.35, expectedClose: _p1Close },
-    { id: "p2", title: "Lisa Anderson - Retail Giants", value: 30000, probability: 15, stageId: "new", leadId: "5", lead: mockLeads[4], aiWinProbability: 0.28, expectedClose: _p2Close },
-  ]},
-  { id: "contacted", name: "Contacted", color: "#6B7280", order: 1, items: [] },
-  { id: "qualified", name: "Qualified", color: "#18B897", order: 2, items: [
-    { id: "p3", title: "Sarah Johnson - TechCorp", value: 50000, probability: 60, stageId: "qualified", leadId: "1", lead: mockLeads[0], aiWinProbability: 0.72, expectedClose: _p3Close },
-  ]},
-  { id: "proposal", name: "Proposal", color: "#D97706", order: 3, items: [
-    { id: "p4", title: "Emily Davis - Enterprise", value: 75000, probability: 70, stageId: "proposal", leadId: "3", lead: mockLeads[2], aiWinProbability: 0.68, expectedClose: _p4Close },
-  ]},
-  { id: "negotiation", name: "Negotiation", color: "#EA580C", order: 4, items: [
-    { id: "p5", title: "James Wilson - Agency", value: 120000, probability: 85, stageId: "negotiation", leadId: "4", lead: mockLeads[3], aiWinProbability: 0.89, expectedClose: _p5Close },
-  ]},
-  { id: "won", name: "Won", color: "#059669", order: 5, items: [] },
-]
-
-// Fixed ISO timestamps to avoid hydration mismatch (no Date.now() at module load)
-const _now = "2026-03-11T22:00:00.000Z"
-const mockActivities: ActivityType[] = [
-  { id: "1", type: "email", title: "Sent proposal to Sarah Johnson", description: "Follow-up email with pricing", metadata: { opened: true }, aiSummary: "Lead showed interest in premium plan", createdAt: _now, lead: mockLeads[0] },
-  { id: "2", type: "call", title: "Discovery call with James Wilson", description: "Discussed requirements and timeline", metadata: { duration: 45 }, aiSummary: "Decision maker engaged, ready for proposal", createdAt: "2026-03-11T21:00:00.000Z", lead: mockLeads[3] },
-  { id: "3", type: "ai_analysis", title: "AI scored new lead", description: "Michael Chen scored 78/100", metadata: { score: 78 }, aiSummary: "High potential - immediate follow-up recommended", createdAt: "2026-03-11T20:00:00.000Z", lead: mockLeads[1] },
-  { id: "4", type: "meeting", title: "Demo scheduled", description: "Product demo with Enterprise Solutions", metadata: {}, aiSummary: null, createdAt: "2026-03-10T22:00:00.000Z", lead: mockLeads[2] },
-]
-
-const mockInsights: AIInsight[] = [
-  { id: "1", type: "prediction", category: "pipeline", title: "Revenue Forecast", description: "Based on current pipeline velocity, you're projected to close $280K this quarter", data: { confidence: 0.82 }, confidence: 0.82, actionable: true, dismissed: false },
-  { id: "2", type: "recommendation", category: "leads", title: "Follow-up Alert", description: "3 leads haven't been contacted in 7+ days. Immediate outreach recommended.", data: { leads: ["2", "5"] }, confidence: 0.95, actionable: true, dismissed: false },
-  { id: "3", type: "trend", category: "performance", title: "Conversion Rate Up", description: "Your lead-to-opportunity conversion increased 12% this month", data: { change: 0.12 }, confidence: 0.88, actionable: false, dismissed: false },
-  { id: "4", type: "alert", category: "pipeline", title: "Deal at Risk", description: "James Wilson deal hasn't had activity in 5 days. Consider reaching out.", data: { dealId: "p5" }, confidence: 0.76, actionable: true, dismissed: false },
-]
-
-const chartData = [
-  { month: "Jan", leads: 45, won: 12, revenue: 85000 },
-  { month: "Feb", leads: 52, won: 18, revenue: 120000 },
-  { month: "Mar", leads: 48, won: 15, revenue: 95000 },
-  { month: "Apr", leads: 61, won: 22, revenue: 145000 },
-  { month: "May", leads: 55, won: 19, revenue: 130000 },
-  { month: "Jun", leads: 67, won: 28, revenue: 180000 },
-]
-
-const sourceData = [
-  { name: "LinkedIn", value: 35, color: "#18B897" },
-  { name: "Referral", value: 28, color: "#0C111B" },
-  { name: "Website", value: 20, color: "#1FD0AA" },
-  { name: "Google", value: 12, color: "#14B8A6" },
-  { name: "Other", value: 5, color: "#6B6E74" },
-]
-
+// Dashboard visual configuration. All rendered values come from authenticated APIs.
 const chartConfig: ChartConfig = {
   leads: { label: "Leads", color: "#18B897" },
   won: { label: "Won", color: "#0C111B" },
@@ -198,7 +132,7 @@ function normalizePipelineStages(rawStages: unknown): PipelineStage[] {
 }
 
 function formatLeadTrend(data: DashboardStats["leadTrend"] | undefined) {
-  if (!Array.isArray(data) || data.length === 0) return chartData
+  if (!Array.isArray(data) || data.length === 0) return []
   return data.map((point) => ({
     month: new Date(point.date).toLocaleDateString([], { month: "short", day: "numeric" }),
     leads: point.leads,
@@ -209,7 +143,7 @@ function formatLeadTrend(data: DashboardStats["leadTrend"] | undefined) {
 
 function formatSourceBreakdown(data: DashboardStats["sourceBreakdown"] | undefined) {
   const palette = ["#18B897", "#0C111B", "#1FD0AA", "#127C66", "#6B6E74", "#D97706"]
-  if (!Array.isArray(data) || data.length === 0) return sourceData
+  if (!Array.isArray(data) || data.length === 0) return []
   return data.map((entry, index) => ({
     name: entry.name,
     value: entry.value,
@@ -363,8 +297,8 @@ function DashboardView() {
 
   const liveTrend = formatLeadTrend(stats?.leadTrend)
   const liveSources = formatSourceBreakdown(stats?.sourceBreakdown)
-  const visibleInsights = insights.length > 0 ? insights.filter((i) => !i.dismissed).slice(0, 4) : mockInsights.slice(0, 4)
-  const visibleActivities = activities.length > 0 ? activities.slice(0, 5) : mockActivities.slice(0, 5)
+  const visibleInsights = insights.filter((i) => !i.dismissed).slice(0, 4)
+  const visibleActivities = activities.slice(0, 5)
 
   return (
     <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
@@ -412,26 +346,32 @@ function DashboardView() {
             <CardDescription className="text-gray-500">Monthly performance overview</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[280px]">
-              <AreaChart data={liveTrend}>
-                <defs>
-                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#18B897" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#18B897" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorWon" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0C111B" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#0C111B" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#DDD8CA" />
-                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
-                <YAxis stroke="#6B7280" fontSize={12} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area type="monotone" dataKey="leads" stroke="#18B897" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={2} />
-                <Area type="monotone" dataKey="won" stroke="#0C111B" fillOpacity={1} fill="url(#colorWon)" strokeWidth={2} />
-              </AreaChart>
-            </ChartContainer>
+            {liveTrend.length === 0 ? (
+              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] text-sm text-gray-500">
+                Performance trends appear after your workspace records activity.
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[280px]">
+                <AreaChart data={liveTrend}>
+                  <defs>
+                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#18B897" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#18B897" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorWon" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0C111B" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#0C111B" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#DDD8CA" />
+                  <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                  <YAxis stroke="#6B7280" fontSize={12} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="leads" stroke="#18B897" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="won" stroke="#0C111B" fillOpacity={1} fill="url(#colorWon)" strokeWidth={2} />
+                </AreaChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
         
@@ -442,36 +382,34 @@ function DashboardView() {
             <CardDescription className="text-gray-500">Distribution by channel</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={liveSources}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {liveSources.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-2 mt-4">
-              {liveSources.map((source) => (
-                <div key={source.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
-                    <span className="text-sm text-gray-600">{source.name}</span>
-                  </div>
-                  <span className="text-sm font-medium text-black">{source.value}</span>
+            {liveSources.length === 0 ? (
+              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] px-6 text-center text-sm text-gray-500">
+                Lead-source data appears after you add leads.
+              </div>
+            ) : (
+              <>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie data={liveSources} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
+                        {liveSources.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                      </Pie>
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="mt-4 space-y-2">
+                  {liveSources.map((source) => (
+                    <div key={source.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: source.color }} />
+                        <span className="text-sm text-gray-600">{source.name}</span>
+                      </div>
+                      <span className="text-sm font-medium text-black">{source.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -485,9 +423,14 @@ function DashboardView() {
               <Sparkles className="w-5 h-5 text-[#127c66]" />
               <CardTitle className="text-black">AI Insights</CardTitle>
             </div>
-            <CardDescription className="text-gray-500">Smart recommendations powered by AI</CardDescription>
+            <CardDescription className="text-gray-500">Smart recommendations based on your workspace activity</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {visibleInsights.length === 0 && (
+              <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-gray-500">
+                No live insights yet. Recommendations will appear as your workspace records activity.
+              </div>
+            )}
             {visibleInsights.map((insight) => (
               <motion.div
                 key={insight.id}
@@ -522,21 +465,7 @@ function DashboardView() {
                     <h4 className="text-sm font-medium text-black mt-1">{insight.title}</h4>
                     <p className="text-xs text-gray-500 mt-0.5">{insight.description}</p>
                   </div>
-                  {insight.actionable && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-[#127c66] hover:bg-[#18b897]/10 h-7 px-2"
-                      onClick={() =>
-                        toast({
-                          title: insight.title,
-                          description: 'Open the relevant lead, pipeline, or task workflow from this insight card.',
-                        })
-                      }
-                    >
-                      <ArrowUpRight className="w-4 h-4" />
-                    </Button>
-                  )}
+
                 </div>
               </motion.div>
             ))}
@@ -554,6 +483,11 @@ function DashboardView() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {visibleActivities.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-gray-500">
+                  No activity yet. Real workspace actions will appear here.
+                </div>
+              )}
               {visibleActivities.map((activity) => {
                 const visual = getActivityVisual(activity.type)
                 return (
@@ -810,9 +744,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       setAssistantSource((data.source as 'llm' | 'fallback') || null)
       toast({
         title: 'AI playbook generated',
-        description: data.source === 'fallback'
-          ? 'Generated from rule-based fallback because LLM output was unavailable.'
-          : 'Offer recommendation and scripts are ready.',
+        description: 'Offer recommendation and scripts are ready.',
       })
     } catch (playbookError) {
       toast({
@@ -943,7 +875,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-black">Leads</h1>
-          <p className="text-gray-500">AI-powered lead management with smart scoring</p>
+          <p className="text-gray-500">Lead management with smart scoring and clear next steps</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -1135,7 +1067,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               <DialogHeader>
                 <DialogTitle className="text-xl text-black">Lead Details</DialogTitle>
                 <DialogDescription className="text-gray-500">
-                  AI-powered insights for {selectedLead.firstName} {selectedLead.lastName}
+                  Lead insights for {selectedLead.firstName} {selectedLead.lastName}
                 </DialogDescription>
               </DialogHeader>
               
@@ -1213,11 +1145,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         </>
                       )}
                     </Button>
-                    {assistantSource && (
-                      <Badge variant="outline" className="border-[rgba(31,42,54,0.08)] text-gray-600 capitalize">
-                        Source: {assistantSource}
-                      </Badge>
-                    )}
+
                     <Button
                       variant="outline"
                       className="border-[rgba(31,42,54,0.08)] text-gray-700 hover:bg-[#f4f0e6]"
@@ -1495,7 +1423,7 @@ function PipelineStageColumn({
       ref={setNodeRef}
       className={cn(
         "shrink-0 w-[300px] bg-white rounded-lg border shadow-sm transition-colors",
-        isOver ? "border-[#127c66] bg-[#EFF6FF]" : "border-[rgba(31,42,54,0.08)]"
+        isOver ? "border-[#127c66] bg-[#f4f0e6]" : "border-[rgba(31,42,54,0.08)]"
       )}
     >
       {children}
@@ -1526,7 +1454,7 @@ function PipelineView() {
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       })
-      setStages(normalizePipelineStages(mockPipelineStages))
+      setStages([])
     } finally {
       setLoading(false)
     }
@@ -3211,7 +3139,7 @@ export default function EliteCRM() {
     showBanner,
     onboardingStep,
     handleComplete,
-    handleSkip,
+
     openWizard,
   } = useOnboarding(isAuthenticated)
 
@@ -3249,7 +3177,7 @@ export default function EliteCRM() {
       case "uploads": return <UploadsView onUploadCSV={() => setShowUploadDialog(true)} refreshKey={uploadsRefreshKey} />
       case "automation": return <AutomationView />
       case "assistant": return <AiAssistantView />
-      case "prompts": return <PromptsView onUpgrade={() => setActiveView("settings")} onRunInAssistant={() => setActiveView("assistant")} />
+      case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
       case "settings": return <SettingsView />
       default: return <DashboardView />
@@ -3275,7 +3203,7 @@ export default function EliteCRM() {
             userName={currentUser.name}
             initialStep={onboardingStep}
             onComplete={handleComplete}
-            onSkip={handleSkip}
+            onSkip={handleComplete}
           />
         )}
       </AnimatePresence>

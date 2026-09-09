@@ -143,7 +143,7 @@ function MessageBubble({ message }: { message: Message }) {
         {isUser ? (
           <span className="text-xs font-bold text-[#0c111b]">U</span>
         ) : (
-          <Bot className="w-4 h-4 text-[#127c66]" />
+          <Bot className="w-4 h-4 text-[#18b897]" />
         )}
       </div>
 
@@ -380,7 +380,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
         <div className="p-4 border-b border-[var(--ink-line)] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-[#127c66]" />
+              <Bot className="w-4 h-4 text-[#18b897]" />
             </div>
             <span className="font-semibold text-black text-sm">AI Assistant</span>
           </div>
@@ -445,14 +445,14 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
           <>
             {/* Chat header */}
             <div className="px-6 py-4 border-b border-[var(--ink-line)] bg-white flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#18b897] to-[#127c66] flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-[#18b897] flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-[#0c111b]" />
               </div>
               <div>
                 <h2 className="font-semibold text-black text-sm">
                   {activeChat.title === "New conversation" ? "AI Sales Assistant" : activeChat.title}
                 </h2>
-                <p className="text-xs text-gray-400">AI-powered · King CRM</p>
+                <p className="text-xs text-gray-400">Workspace assistant · King CRM</p>
               </div>
             </div>
 
@@ -483,8 +483,8 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center py-10"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#18b897] to-[#127c66] flex items-center justify-center mx-auto mb-4">
-                      <Bot className="w-8 h-8 text-white" />
+                    <div className="w-16 h-16 rounded-2xl bg-[#18b897] flex items-center justify-center mx-auto mb-4">
+                      <Bot className="w-8 h-8 text-[#0c111b]" />
                     </div>
                     <h3 className="text-xl font-semibold text-black">How can I help you close?</h3>
                     <p className="text-gray-500 text-sm mt-2 mb-8">
@@ -527,7 +527,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         className="flex items-start gap-3"
                       >
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0 mt-0.5">
-                          <Bot className="w-4 h-4 text-[#127c66]" />
+                          <Bot className="w-4 h-4 text-[#18b897]" />
                         </div>
                         <div className="max-w-[75%] px-4 py-3 bg-white border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                           {streamingContent}
@@ -537,7 +537,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     ) : (
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0">
-                          <Bot className="w-4 h-4 text-[#127c66]" />
+                          <Bot className="w-4 h-4 text-[#18b897]" />
                         </div>
                         <div className="bg-white border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm">
                           <TypingDots />

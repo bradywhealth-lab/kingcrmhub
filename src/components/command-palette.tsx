@@ -366,7 +366,7 @@ export function CommandPalette({
           </div>
           <span className="flex items-center gap-1 text-[#D4AF37]">
             <Sparkles className="w-3 h-3" />
-            AI-powered search
+            Smart workspace search
           </span>
         </div>
       </DialogContent>

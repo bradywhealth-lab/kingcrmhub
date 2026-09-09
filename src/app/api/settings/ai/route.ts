@@ -74,15 +74,11 @@ export async function GET(request: NextRequest) {
       const provider = (AI_PROVIDERS.includes(settings.aiProvider as AIProvider)
         ? settings.aiProvider
         : 'groq') as AIProvider
-      const model =
-        typeof settings.aiModel === 'string' && settings.aiModel
-          ? settings.aiModel
-          : getDefaultModel(provider)
       const hasKey = typeof settings.aiApiKey === 'string' && settings.aiApiKey.length > 0
 
       return NextResponse.json({
         provider,
-        model,
+
         hasKey,
         maskedKey: hasKey ? maskKey(settings.aiApiKey as string) : null,
         providerLabel: getProviderLabel(provider, hasKey),
@@ -90,7 +86,7 @@ export async function GET(request: NextRequest) {
         availableProviders: AI_PROVIDERS.map((p) => ({
           id: p,
           label: PROVIDER_LABELS[p],
-          defaultModel: getDefaultModel(p),
+
           requiresKey: !getPlatformFallbacks()[p],
         })),
       })
@@ -163,7 +159,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({
         success: true,
         provider,
-        model: settings.aiModel || getDefaultModel(provider),
+
         hasKey,
         maskedKey: maskKey(settings.aiApiKey as string | null),
         providerLabel: getProviderLabel(provider, hasKey),

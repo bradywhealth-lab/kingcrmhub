@@ -2,20 +2,9 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { buildNextAuthOptions } from '@/lib/next-auth'
 
-const PRICE_IDS: Record<string, Record<string, string>> = {
-  starter: {
-    monthly: 'price_crm_starter_monthly_PLACEHOLDER',
-    yearly: 'price_crm_starter_yearly_PLACEHOLDER',
-  },
-  pro: {
-    monthly: 'price_crm_pro_monthly_PLACEHOLDER',
-    yearly: 'price_crm_pro_yearly_PLACEHOLDER',
-  },
-  enterprise: {
-    monthly: 'price_crm_enterprise_monthly_PLACEHOLDER',
-    yearly: 'price_crm_enterprise_yearly_PLACEHOLDER',
-  },
-}
+const PAID_PLAN_IDS = new Set(['starter', 'pro', 'enterprise'])
+const BILLING_OFFLINE_MESSAGE =
+  'Paid upgrades are not active yet. Your account has not been charged, and we will publish billing terms before checkout opens.'
 
 export async function POST(request: Request) {
   const session = await getServerSession(buildNextAuthOptions())
@@ -23,7 +12,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Parse and validate request body — return 400 on malformed JSON or missing fields
   let planId: string | undefined
   let interval: 'monthly' | 'yearly' | undefined
   try {
@@ -37,33 +25,15 @@ export async function POST(request: Request) {
   if (!planId || !interval) {
     return NextResponse.json({ error: 'planId and interval are required' }, { status: 400 })
   }
-
-  const priceId = PRICE_IDS[planId]?.[interval]
-  if (!priceId) {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+  if (!PAID_PLAN_IDS.has(planId)) {
+    return NextResponse.json({ error: 'Invalid paid plan' }, { status: 400 })
   }
 
-  try {
-    // TODO: Wire Stripe when ready:
-    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
-    // const checkoutSession = await stripe.checkout.sessions.create({
-    //   customer_email: session.user.email!,
-    //   line_items: [{ price: priceId, quantity: 1 }],
-    //   mode: 'subscription',
-    //   success_url: process.env.NEXTAUTH_URL + '/settings?upgraded=1',
-    //   cancel_url: process.env.NEXTAUTH_URL + '/pricing',
-    //   metadata: { userId: session.user.id },
-    // })
-    // return NextResponse.json({ url: checkoutSession.url })
-
-    return NextResponse.json({
-      url: null,
-      message: 'Payments are launching very soon. You will be notified by email when billing goes live.',
-      planId,
-      interval,
-    })
-  } catch (error) {
-    console.error('[billing/checkout] error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  return NextResponse.json({
+    status: 'coming_soon',
+    url: null,
+    message: BILLING_OFFLINE_MESSAGE,
+    planId,
+    interval,
+  })
 }

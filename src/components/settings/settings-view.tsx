@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { AISettingsPanel } from '@/components/settings/ai-settings-panel'
 
+
 function OrganizationSettingsPanel() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -63,7 +64,7 @@ function OrganizationSettingsPanel() {
         name: organization?.name || '',
         slug: organization?.slug || '',
         logo: organization?.logo || '',
-        plan: organization?.plan || 'pro',
+        plan: organization?.plan || 'free',
         sessionTimeoutMinutes: String(organization?.sessionTimeoutMinutes || 60),
         twoFactorRequired: organization?.twoFactorRequired === true,
         usage: organization?.usage || { leadsThisMonth: 0, teamSeatsUsed: 0 },
@@ -93,7 +94,7 @@ function OrganizationSettingsPanel() {
           name: form.name,
           slug: form.slug,
           logo: form.logo,
-          plan: form.plan,
+
           sessionTimeoutMinutes: Number(form.sessionTimeoutMinutes),
           twoFactorRequired: form.twoFactorRequired,
         }),
@@ -141,13 +142,13 @@ function OrganizationSettingsPanel() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <Label className="text-gray-600">Plan</Label>
-            <Select value={form.plan} onValueChange={(value) => setForm((prev) => ({ ...prev, plan: value }))}>
+            <Select value={form.plan} disabled>
               <SelectTrigger className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="starter">Starter</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="starter">Pro</SelectItem>
+                <SelectItem value="pro">Studio</SelectItem>
+                <SelectItem value="enterprise">Elite</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -541,8 +542,7 @@ function SecuritySettingsPanel() {
 }
 
 function BillingSettingsPanel() {
-  const [plan, setPlan] = useState('pro')
-  const [saving, setSaving] = useState(false)
+  const [plan, setPlan] = useState('free')
 
   useEffect(() => {
     void fetch('/api/settings/organization')
@@ -553,28 +553,6 @@ function BillingSettingsPanel() {
       .catch(() => null)
   }, [])
 
-  const savePlan = async () => {
-    setSaving(true)
-    try {
-      const res = await fetch('/api/settings/organization', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      toast({ title: 'Plan updated', description: `Workspace plan set to ${plan}.` })
-    } catch (error) {
-      toast({
-        title: 'Failed to update plan',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
@@ -584,17 +562,17 @@ function BillingSettingsPanel() {
       <CardContent className="space-y-4">
         <div>
           <Label className="text-gray-600">Current plan</Label>
-          <Select value={plan} onValueChange={setPlan}>
+          <Select value={plan} disabled>
             <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="free">Free</SelectItem>
-              <SelectItem value="starter">Starter</SelectItem>
-              <SelectItem value="pro">Pro</SelectItem>
-              <SelectItem value="enterprise">Enterprise</SelectItem>
+              <SelectItem value="starter">Pro</SelectItem>
+              <SelectItem value="pro">Studio</SelectItem>
+              <SelectItem value="enterprise">Elite</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Button className="btn-gold" onClick={() => void savePlan()} disabled={saving}>{saving ? 'Saving...' : 'Upgrade or change plan'}</Button>
+        <Button className="btn-gold" onClick={() => { window.location.href = '/pricing' }}>View upgrade options</Button>
       </CardContent>
     </Card>
   )

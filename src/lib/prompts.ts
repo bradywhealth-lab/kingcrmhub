@@ -1,9 +1,8 @@
 /**
- * Prompt library — tier-gated, static (zero migration).
+ * Prompt library — tier-gated library served through the plan gate.
  *
- * Gating rides `Organization.plan`, which already reaches the client through
- * the NextAuth session (`currentUser.organization.plan`). No new column,
- * no extra fetch, no DB migration.
+ * Gating rides `Organization.plan` server-side; the client receives only
+ * metadata plus bodies the plan unlocks. No new column, no migration.
  *
  * PROVENANCE (do not treat as approved copy):
  *   - The six `free` TITLES below are Atlas's verbatim Starter Six from
@@ -12,9 +11,8 @@
  *   - All 22 titles, categories, tags and pack fixtures are Atlas Gate
  *     v1.3 VERBATIM (ratified). Bodies are CodeForge drafts pending Brady.
  *
- * PLAN VALUES: the DB default is "free". Legacy insurance-era rows may carry
- * "starter"/"enterprise"; unknown values fail closed to the free tier rather
- * than over-unlocking paid content.
+ * PLAN VALUES: stored identifiers stay free/starter/pro/enterprise. Customer
+ * labels map to Free/Pro/Studio/Elite without a risky identifier migration.
  */
 
 export type PromptPlan = 'free' | 'pro' | 'studio'
@@ -39,11 +37,11 @@ export type PromptPack = {
   cta: string
 }
 
-/** Resolve an arbitrary/legacy plan string to a known tier, failing closed. */
+/** Resolve canonical and legacy organization plans to prompt entitlement tiers. */
 function normalizePlan(plan: string | null | undefined): PromptPlan {
-  return PROMPT_PLAN_ORDER.includes(plan as PromptPlan)
-    ? (plan as PromptPlan)
-    : 'free'
+  if (plan === 'pro' || plan === 'enterprise') return 'studio'
+  if (plan === 'starter') return 'pro'
+  return 'free'
 }
 
 export function isPromptUnlockedForPlan(

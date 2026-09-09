@@ -272,20 +272,20 @@ function AuthPageInner() {
               </div>
             </div>
             <div className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-medium text-white/70">
-              Premium CRM system
+              Freelancer client system
             </div>
           </div>
 
           <div className="relative z-10 max-w-2xl space-y-8">
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--teal)]/40 bg-[var(--teal)]/14 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--teal)]">
-                <LockKeyhole className="h-3.5 w-3.5" /> Secure, fast, operator-grade
+                <LockKeyhole className="h-3.5 w-3.5" /> Secure, focused, freelancer-ready
               </div>
               <h1 className="text-5xl font-semibold leading-[1.02] tracking-[-0.04em] text-white xl:text-6xl">
-                Run the whole CRM like a control room, not a spreadsheet.
+                Run your client pipeline like a one-person agency.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-white/68">
-                Leads, pipeline, automations, AI support, and follow-up execution in one polished workspace built for serious one-person businesses.
+                See who to follow up with, what to say, and when to send it — then make the next move.
               </p>
             </div>
 
@@ -317,7 +317,7 @@ function AuthPageInner() {
               <p className="text-sm font-medium text-white">Secure access, password recovery, and account protection are active.</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-white/58">
-              Use the token-based reset flow for internal/admin-controlled recovery, then return to login without losing your workspace context.
+              Sign in securely, recover your password when needed, and get straight back to your client work.
             </p>
           </div>
         </section>
@@ -331,7 +331,7 @@ function AuthPageInner() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#0c111b]/50">King CRM Hub</p>
-                  <p className="text-sm font-semibold text-[#0c111b]">Operator console</p>
+                  <p className="text-sm font-semibold text-[#0c111b]">Freelancer workspace</p>
                 </div>
               </div>
             </div>
@@ -444,9 +444,9 @@ function AuthPageInner() {
                   </Button>
 
                   <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f7f4ec] p-4 text-sm text-[#0c111b]/60">
-                    Need a reset token instead?{' '}
+                    Already have a password-reset link?{' '}
                     <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[var(--teal-deep)] hover:opacity-80">
-                      Go to reset password
+                      Finish resetting your password
                     </button>
                   </div>
                 </div>

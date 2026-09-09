@@ -51,6 +51,15 @@ describe('no-model-names law on AI settings render paths', () => {
     expect(panel).not.toMatch(/settings\?\.model/)
   })
 
+  it('does not return model slugs in the customer-facing API response shape', () => {
+    const route = renderedCopy('src/app/api/settings/ai/route.ts')
+    // Cubic P2: slugs injected at runtime via `model:` / `defaultModel:` response keys
+    // are invisible to source scans of the panel — gate the response shape itself.
+    expect(route).not.toMatch(/^\s*model[,:]?\s*$/m)
+    expect(route).not.toMatch(/model:\s/)
+    expect(route).not.toContain('defaultModel')
+  })
+
   it('uses Atlas customer-safe tier labels instead of vendor/model labels', () => {
     const route = renderedCopy('src/app/api/settings/ai/route.ts')
     expect(route).toContain('Standard — included')

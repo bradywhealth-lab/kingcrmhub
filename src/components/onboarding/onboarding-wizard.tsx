@@ -825,7 +825,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
             <div className="flex items-center gap-3">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-2xl"
-                style={{ backgroundColor: `${step.color}18` }}
+                style={{ backgroundColor: `color-mix(in srgb, ${step.color} 10%, transparent)` }}
               >
                 <step.icon className="h-5 w-5" style={{ color: step.color }} />
               </div>
@@ -847,9 +847,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
-              {/* Render by step id, never by index — the step list is
-                  insertion-sensitive (claim + prompts steps were added
-                  mid-wave) and index branches silently shift. */}
+              {/* Render by step id so adding or reordering steps does not shift the rendering branches. */}
               {step.id === "welcome" && (
                 <WelcomeStep
                   organizationName={organizationName}

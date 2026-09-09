@@ -240,7 +240,7 @@
 
 .btn-outline {
   background: transparent;
-  color: var(--cobalt);
+  color: var(--teal-deep);
   font-weight: 500;
   border: 1.5px solid var(--cobalt);
   border-radius: 0.75rem;
@@ -288,7 +288,7 @@
 
 .btn-gold:hover,
 .btn-brand:hover {
-  background: #1fd0aa;
+  background: var(--teal-hover);
   color: var(--ink);
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(24, 184, 151, 0.38);
@@ -374,9 +374,9 @@
 
 .badge-new { background: var(--navy); color: white; }
 .badge-contacted { background: rgba(12, 17, 27, 0.6); color: white; }
-.badge-qualified { background: var(--cobalt); color: var(--ink); }
-.badge-proposal { background: #d97706; color: var(--ink); }
-.badge-negotiation { background: #ea580c; color: var(--ink); }
+.badge-qualified { background: var(--teal); color: var(--ink); }
+.badge-proposal { background: #b45309; color: white; }
+.badge-negotiation { background: #c2410c; color: white; }
 .badge-won { background: var(--success); color: white; }
 .badge-lost { background: var(--destructive); color: white; }
 
@@ -475,8 +475,8 @@
 }
 
 .nav-item.active {
-  background: var(--cobalt);
-  color: white;
+  background: var(--teal);
+  color: var(--ink);
 }
 
 /* ============================================
@@ -491,7 +491,7 @@
    LINKS
    ============================================ */
 .link-cobalt {
-  color: var(--cobalt);
+  color: var(--teal-deep);
   text-decoration: none;
   font-weight: 500;
   transition: opacity 0.2s ease;

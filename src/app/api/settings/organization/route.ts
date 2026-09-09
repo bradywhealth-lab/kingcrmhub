@@ -6,11 +6,12 @@ import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 
+
 const organizationSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   slug: z.string().min(1).max(120).optional(),
   logo: z.string().url().optional().or(z.literal('')),
-  plan: z.enum(['free', 'starter', 'pro', 'enterprise']).optional(),
+
   sessionTimeoutMinutes: z.coerce.number().int().min(5).max(1440).optional(),
   twoFactorRequired: z.boolean().optional(),
 })
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         organization: {
           ...organization,
+
           sessionTimeoutMinutes,
           twoFactorRequired,
           usage: {
@@ -90,7 +92,7 @@ export async function PATCH(request: NextRequest) {
           name: parsed.data.name?.trim(),
           slug: parsed.data.slug?.trim(),
           logo: parsed.data.logo === '' ? null : parsed.data.logo?.trim(),
-          plan: parsed.data.plan,
+
           settings: settings as Prisma.InputJsonValue,
         },
         select: {

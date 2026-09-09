@@ -51,6 +51,12 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // Public pricing — visitors must be able to evaluate plans before signup.
+  if (pathname === '/pricing' || pathname.startsWith('/pricing/')) {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Public booking pages (/book/[slug]) — accessible without a session
   if (pathname === '/book' || pathname.startsWith('/book/')) {
     const response = NextResponse.next()

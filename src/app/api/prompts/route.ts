@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { promptsForPlan } from '@/lib/prompts'
 import { withRequestOrgContext } from '@/lib/request-context'
 
+/** Metadata for all tiers; bodies included only for prompts the org plan unlocks. */
 export async function GET(request: NextRequest) {
   try {
     return withRequestOrgContext(request, async ({ organizationId }) => {

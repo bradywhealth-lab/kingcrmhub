@@ -132,7 +132,7 @@ function Sidebar({
                 className="min-w-0 flex-1"
               >
                 <p className="truncate text-sm font-medium text-white">{currentUser?.name || "Workspace User"}</p>
-                <p className="truncate text-xs capitalize text-[#127c66]">{currentUser?.role || "member"}</p>
+                <p className="truncate text-xs capitalize text-[#18b897]">{currentUser?.role || "member"}</p>
               </motion.div>
             )}
           </AnimatePresence>

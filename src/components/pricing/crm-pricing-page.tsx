@@ -30,20 +30,20 @@ const PLANS = [
       { text: "Automation rules", included: false },
       { text: "CSV import", included: false },
       { text: "Lead scraping", included: false },
-      { text: "Underwriting AI Grader", included: false },
+      { text: "AI lead prioritization", included: false },
     ],
   },
   {
     id: "starter" as PlanId,
-    name: "Starter",
-    monthlyPrice: 39,
-    yearlyPrice: 31,
-    description: "Built for growing insurance teams ready to systematize.",
+    name: "Pro",
+    monthlyPrice: 19,
+    yearlyPrice: 16,
+    description: "For freelancers ready to systematize client work and follow-up.",
     icon: Zap,
     color: "border-[#127c66]/40",
     btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
     features: [
-      { text: "3 user seats", included: true },
+      { text: "1 user seat", included: true },
       { text: "Up to 500 leads", included: true },
       { text: "Full Kanban pipeline", included: true },
       { text: "CSV import", included: true },
@@ -52,21 +52,21 @@ const PLANS = [
       { text: "AI Assistant", included: false },
       { text: "SMS / Twilio", included: false },
       { text: "Lead scraping", included: false },
-      { text: "Underwriting AI Grader", included: false },
+      { text: "AI lead prioritization", included: false },
     ],
   },
   {
     id: "pro" as PlanId,
-    name: "Pro",
-    monthlyPrice: 99,
-    yearlyPrice: 79,
-    description: "The full operator stack. Everything your agency needs to dominate.",
+    name: "Studio",
+    monthlyPrice: 39,
+    yearlyPrice: 32,
+    description: "The complete client operations stack for established solo businesses.",
     icon: Crown,
     color: "border-[#127c66]",
     popular: true,
-    btnClass: "bg-gradient-to-r from-[#18b897] to-[#15a88a] text-[#0c111b] hover:brightness-110",
+    btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
     features: [
-      { text: "10 user seats", included: true },
+      { text: "3 user seats", included: true },
       { text: "Unlimited leads", included: true },
       { text: "Full Kanban pipeline", included: true },
       { text: "CSV import", included: true },
@@ -74,29 +74,29 @@ const PLANS = [
       { text: "AI Assistant (unlimited)", included: true },
       { text: "SMS via Twilio (BYOK)", included: true },
       { text: "AI lead scraping", included: true },
-      { text: "Underwriting AI Grader", included: true },
+      { text: "AI lead prioritization", included: true },
       { text: "Priority support", included: true },
     ],
   },
   {
     id: "enterprise" as PlanId,
-    name: "Enterprise",
-    monthlyPrice: 249,
-    yearlyPrice: 199,
-    description: "Custom scale for large agencies and regional carriers.",
+    name: "Elite",
+    monthlyPrice: 69,
+    yearlyPrice: 57,
+    description: "Advanced scale, support, and customization for growing studios.",
     icon: Building2,
     color: "border-gray-200",
     btnClass: "bg-[#0c111b] text-white hover:bg-[#14202e]",
     features: [
       { text: "Unlimited seats", included: true },
-      { text: "Everything in Pro", included: true },
+      { text: "Everything in Studio", included: true },
       { text: "Custom onboarding", included: true },
       { text: "Dedicated account manager", included: true },
-      { text: "SLA guarantee", included: true },
-      { text: "API access (coming soon)", included: true },
-      { text: "White-label options", included: true },
-      { text: "Custom integrations", included: true },
-      { text: "Invoice billing available", included: true },
+      { text: "Priority service agreement", included: true },
+      { text: "API access (planned)", included: false },
+      { text: "White-label options (planned)", included: false },
+      { text: "Custom integrations (planned)", included: false },
+      { text: "Flexible billing options (planned)", included: false },
       { text: "Security review", included: true },
     ],
   },
@@ -111,37 +111,37 @@ const COMPARE_FEATURES = [
   "AI Assistant",
   "SMS / Twilio",
   "Lead scraping",
-  "Underwriting Grader",
+  "AI lead prioritization",
   "Priority support",
 ];
 
 const FEATURE_MAP: Record<PlanId, (string | boolean)[]> = {
-  free:       ["1 seat", "50 leads", true, false, false, false, false, false, false, false],
-  starter:    ["3 seats", "500 leads", true, true, "5 rules", false, false, false, false, false],
-  pro:        ["10 seats", "Unlimited", true, true, "Unlimited", true, true, true, true, true],
+  free:   ["1 seat", "50 leads", true, false, false, false, false, false, false, false],
+  starter:    ["1 seat", "500 leads", true, true, "5 rules", false, false, false, false, false],
+  pro:        ["3 seats", "Unlimited", true, true, "Unlimited", true, true, true, true, true],
   enterprise: ["Unlimited", "Unlimited", true, true, "Unlimited", true, true, true, true, true],
 };
 
 const FAQ = [
   {
     q: "Can I upgrade or downgrade anytime?",
-    a: "Yes. Plan changes take effect at the start of your next billing cycle. Upgrades are prorated immediately.",
+    a: "Paid upgrades are not active yet. We will show the exact billing terms before taking any payment.",
   },
   {
-    q: "Is there a free trial?",
-    a: "All paid plans include a 7-day free trial. No credit card required to start.",
+    q: "Can I use King CRM Hub now?",
+    a: "Yes. Create a free workspace now; paid upgrades will open after billing is fully verified.",
   },
   {
-    q: "What payment methods do you accept?",
-    a: "All major credit and debit cards via Stripe. Invoice billing is available on Enterprise plans.",
+    q: "What happens when I choose a paid plan?",
+    a: "Sign in or create a workspace and we will show an availability notice. You will not be charged while billing is offline.",
   },
   {
-    q: "Can I cancel anytime?",
-    a: "Yes, cancel at any time with no cancellation fees. Your access continues through the end of the billing period.",
+    q: "Will my free workspace keep working?",
+    a: "Yes. The free plan remains available while paid billing is being prepared.",
   },
   {
-    q: "Do you offer refunds?",
-    a: "We offer a 7-day money-back guarantee on all paid plans. Contact support within 7 days of your first charge.",
+    q: "When will billing terms be available?",
+    a: "Before paid checkout launches. Pricing, cancellation, and support terms will be published before any charge can occur.",
   },
 ];
 
@@ -170,6 +170,10 @@ export function CrmPricingPage() {
         body: JSON.stringify({ planId, interval }),
       });
       const data = (await res.json()) as { url?: string | null; message?: string; error?: string };
+      if (res.status === 401) {
+        router.push(`/auth?callbackUrl=${encodeURIComponent(`/pricing?plan=${planId}&interval=${interval}`)}`);
+        return;
+      }
       if (!res.ok) {
         showToast(data.error ?? "Something went wrong. Please try again.");
         return;
@@ -208,16 +212,16 @@ export function CrmPricingPage() {
       <section className="px-6 pb-12 pt-12 text-center sm:px-10 sm:pt-16">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#127c66]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#127c66] shadow-sm backdrop-blur-sm">
           <Star className="h-3 w-3 fill-[#18b897]" />
-          Transparent pricing. No surprises.
+          Paid-plan preview. Billing is not active yet.
         </div>
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-[#0c111b] sm:text-5xl">
           Plans built for{" "}
-          <span className="bg-gradient-to-r from-[#18b897] to-[#127c66] bg-clip-text text-transparent">
-            insurance operators
+          <span className="text-[#127c66]">
+            independent client work
           </span>
         </h1>
         <p className="mx-auto mt-4 max-w-lg text-base text-[#545961] sm:text-lg">
-          From solo producers to regional agencies — pick the tier that matches your operation and scale without limits.
+          Start free, then choose the tier that matches your freelance business as it grows.
         </p>
 
         {/* Toggle */}
@@ -240,7 +244,7 @@ export function CrmPricingPage() {
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-all ${
               interval === "yearly" ? "bg-emerald-400/30 text-emerald-200" : "bg-emerald-100 text-emerald-700"
             }`}>
-              Save 20%
+              Save up to 18%
             </span>
           </button>
         </div>
@@ -262,14 +266,14 @@ export function CrmPricingPage() {
               >
                 {plan.popular && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#18b897] to-[#15a88a] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0c111b] shadow-md">
+                    <span className="flex items-center gap-1 rounded-full bg-[#18b897] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--ink)] shadow-md">
                       <Crown className="h-3 w-3" />
                       Most Popular
                     </span>
                   </div>
                 )}
-                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-gradient-to-br from-[#18b897] to-[#127c66]" : "bg-[#f4f0e6]"}`}>
-                  <Icon className={`h-5 w-5 ${plan.popular ? "text-white" : "text-[#127c66]"}`} />
+                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#18b897]" : "bg-[#f4f0e6]"}`}>
+                  <Icon className={`h-5 w-5 ${plan.popular ? "text-[var(--ink)]" : "text-[#127c66]"}`} />
                 </div>
                 <h3 className="text-lg font-bold text-[#0c111b]">{plan.name}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-[#545961]">{plan.description}</p>
@@ -299,9 +303,9 @@ export function CrmPricingPage() {
                   ) : plan.id === "free" ? (
                     "Get started free"
                   ) : plan.id === "enterprise" ? (
-                    "Contact sales"
+                    "Get Elite access"
                   ) : (
-                    <>Start 7-day trial <ArrowRight className="h-3.5 w-3.5" /></>
+                    <>Get early access <ArrowRight className="h-3.5 w-3.5" /></>
                   )}
                 </button>
                 <ul className="flex-1 space-y-2.5">
@@ -362,26 +366,13 @@ export function CrmPricingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Honest launch status — never fabricate customer proof or active billing. */}
       <section className="bg-[#0c111b] px-6 py-16 sm:px-10">
-        <h2 className="mb-10 text-center text-2xl font-bold text-white">What operators are saying</h2>
-        <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-3">
-          {[
-            { name: "Marcus T.", role: "Independent Producer, TX", quote: "Went from juggling spreadsheets to having a real system in one afternoon. The pipeline alone is worth it." },
-            { name: "Dena R.", role: "Agency Owner, FL", quote: "The AI assistant is legitimately useful. It knows insurance ops, not just generic CRM fluff." },
-            { name: "James P.", role: "Sales Manager, GA", quote: "CSV import + lead scraping cut our prospecting time by 60%. The team finally has a real workflow." },
-          ].map((t) => (
-            <div key={t.name} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="mb-3 flex gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-[#18b897] text-[#127c66]" />
-                ))}
-              </div>
-              <p className="mb-4 text-sm leading-relaxed text-white/75">&ldquo;{t.quote}&rdquo;</p>
-              <p className="text-sm font-semibold text-white">{t.name}</p>
-              <p className="text-xs text-white/50">{t.role}</p>
-            </div>
-          ))}
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-2xl font-bold text-white">Use the free workspace now</h2>
+          <p className="mt-3 text-base leading-7 text-white/75">
+            The paid ladder is a preview. Checkout stays disabled until billing, entitlements, and cancellation terms are fully verified.
+          </p>
         </div>
       </section>
 
@@ -409,10 +400,10 @@ export function CrmPricingPage() {
       </section>
 
       {/* Bottom CTA */}
-      <section className="bg-gradient-to-br from-[#18b897] to-[#127c66] px-6 py-16 text-center sm:px-10">
-        <h2 className="text-3xl font-bold text-white">Ready to run a tighter operation?</h2>
-        <p className="mx-auto mt-3 max-w-md text-base text-white/80">
-          Start free. Upgrade when you&apos;re ready. No long-term contracts.
+      <section className="bg-[#18b897] px-6 py-16 text-center sm:px-10">
+        <h2 className="text-3xl font-bold text-[#0c111b]">Ready to run a tighter operation?</h2>
+        <p className="mx-auto mt-3 max-w-md text-base text-[#0c111b]/80">
+          Start free today. Paid options will open only after the full billing flow is verified.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
@@ -423,16 +414,16 @@ export function CrmPricingPage() {
           </button>
           <button
             onClick={() => void handleCta("pro")}
-            className="flex h-12 items-center gap-2 rounded-2xl border border-white/40 px-8 text-sm font-semibold text-white transition hover:bg-white/10"
+            className="flex h-12 items-center gap-2 rounded-2xl border border-[#0c111b]/40 px-8 text-sm font-semibold text-[#0c111b] transition hover:bg-[#0c111b]/10"
           >
-            Try Pro free for 7 days
+            Preview Studio plan
           </button>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-[var(--ink-line)] py-8 text-center text-xs text-[#6b6e74]">
-        © {new Date().getFullYear()} King CRM Hub. All rights reserved.
+        © {new Date().getFullYear()} King CRM Hub. Proof. Decision. Next Move.
       </footer>
 
       {/* Toast */}
