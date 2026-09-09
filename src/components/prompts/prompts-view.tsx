@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import type { PromptPlan, PromptWithUnlock } from '@/lib/prompts'
+import { buildApiPath } from '@/lib/api-client'
 
 /**
  * Prompts tab — tier-gated library.
@@ -46,7 +47,8 @@ export function PromptsView({
 
     ;(async () => {
       try {
-        const response = await fetch('/api/prompts', { cache: 'no-store' })
+        // buildApiPath keeps the request under NEXT_PUBLIC_BASE_PATH (cubic P2).
+        const response = await fetch(buildApiPath('/api/prompts'), { cache: 'no-store' })
         if (!response.ok) throw new Error('Failed to load prompts')
         const data = await response.json() as { prompts?: PromptWithUnlock[] }
         if (!cancelled) setPrompts(Array.isArray(data.prompts) ? data.prompts : [])

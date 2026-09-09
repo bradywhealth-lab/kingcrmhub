@@ -57,7 +57,8 @@ describe('paid prompt bodies never ship to the client bundle', () => {
   it('the workspace PromptsView fetches the catalog instead of importing it', () => {
     const view = readFileSync(join(repoRoot, 'src/components/prompts/prompts-view.tsx'), 'utf8')
     expect(view).not.toContain('PROMPT_LIBRARY')
-    expect(view).toContain("fetch('/api/prompts'")
+    expect(view).toContain('buildApiPath')
+    expect(view).toContain("fetch(buildApiPath('/api/prompts')")
   })
 
   it('the prompts API route serializes through the plan gate', () => {

@@ -3139,7 +3139,7 @@ export default function EliteCRM() {
     showBanner,
     onboardingStep,
     handleComplete,
-
+    handleSkip,
     openWizard,
   } = useOnboarding(isAuthenticated)
 
@@ -3203,7 +3203,7 @@ export default function EliteCRM() {
             userName={currentUser.name}
             initialStep={onboardingStep}
             onComplete={handleComplete}
-            onSkip={handleComplete}
+            onSkip={handleSkip}
           />
         )}
       </AnimatePresence>

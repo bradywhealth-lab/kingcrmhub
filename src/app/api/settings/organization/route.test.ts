@@ -58,23 +58,23 @@ describe('/api/settings/organization', () => {
     expect(json.organization.twoFactorRequired).toBe(true)
   })
 
-  it('updates organization settings and logs the change', async () => {
+  it('updates organization settings, never the plan, and logs the change', async () => {
     mockDb.organization.findUnique.mockResolvedValueOnce({
       settings: { sessionTimeoutMinutes: 60 },
     })
     mockDb.organization.update.mockResolvedValueOnce({
       id: 'org_1',
-      name: 'Insurafuze Elite',
-      slug: 'insurafuze',
+      name: 'Solo Studio',
+      slug: 'solo-studio',
       logo: null,
-      plan: 'enterprise',
+      plan: 'free',
       settings: { sessionTimeoutMinutes: 120, twoFactorRequired: true },
     })
 
     const request = new NextRequest('http://localhost/api/settings/organization', {
       method: 'PATCH',
       body: JSON.stringify({
-        name: 'Insurafuze Elite',
+        name: 'Solo Studio',
         plan: 'enterprise',
         sessionTimeoutMinutes: 120,
         twoFactorRequired: true,
@@ -86,7 +86,10 @@ describe('/api/settings/organization', () => {
     const json = await response.json()
 
     expect(response.status).toBe(200)
-    expect(json.organization.plan).toBe('enterprise')
+    // Plan changes are NOT this endpoint's job — entitlements move only via
+    // verified billing flows. A client-sent plan must never reach the DB write.
+    expect(mockDb.organization.update.mock.calls[0][0].data).not.toHaveProperty('plan')
     expect(mockDb.auditLog.create).toHaveBeenCalledOnce()
+    void json
   })
 })

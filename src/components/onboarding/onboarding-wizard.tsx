@@ -935,6 +935,24 @@ export function useOnboarding(isAuthenticated: boolean) {
   const [onboardingLoaded, setOnboardingLoaded] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState(0)
 
+  // "Skip setup" must survive reloads, but the org row intentionally stays
+  // incomplete so the wizard can be resumed from Settings. The dismissal is
+  // therefore browser-persisted separately from server completion state
+  // (cubic P2, PR #161: persisting completed:false made the overlay re-open
+  // on every reload; persisting completed:true made resume impossible).
+  const DISMISS_KEY = "kingcrm-onboarding-dismissed"
+  const isDismissed = () => {
+    try { return localStorage.getItem(DISMISS_KEY) === "1" } catch { return false }
+  }
+  const setDismissed = (value: boolean) => {
+    try {
+      if (value) localStorage.setItem(DISMISS_KEY, "1")
+      else localStorage.removeItem(DISMISS_KEY)
+    } catch {
+      // private mode — dismissal degrades to per-tab, still better than reopen loop
+    }
+  }
+
   useEffect(() => {
     if (!isAuthenticated) return
 
@@ -947,7 +965,7 @@ export function useOnboarding(isAuthenticated: boolean) {
         if (!data.error) {
           const completed: boolean = data.onboardingCompleted === true
           setOnboardingStep(typeof data.onboardingStep === "number" ? data.onboardingStep : 0)
-          setShowWizard(!completed)
+          setShowWizard(!completed && !isDismissed())
           setShowBanner(!completed)
         }
       } catch {
@@ -965,15 +983,18 @@ export function useOnboarding(isAuthenticated: boolean) {
   const handleComplete = useCallback(() => {
     setShowWizard(false)
     setShowBanner(false)
+    setDismissed(false)
   }, [])
 
   const handleSkip = useCallback(() => {
     setShowWizard(false)
     // Keep the banner visible after skipping
     setShowBanner(true)
+    setDismissed(true)
   }, [])
 
   const openWizard = useCallback(() => {
+    setDismissed(false)
     setShowWizard(true)
   }, [])
 

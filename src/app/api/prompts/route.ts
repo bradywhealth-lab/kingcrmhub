@@ -6,7 +6,9 @@ import { withRequestOrgContext } from '@/lib/request-context'
 /** Metadata for all tiers; bodies included only for prompts the org plan unlocks. */
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async ({ organizationId }) => {
+    // Awaited deliberately: returning the promise un-awaited would let route
+    // errors escape this catch (cubic P2, PR #161).
+    return await withRequestOrgContext(request, async ({ organizationId }) => {
       const organization = await db.organization.findUnique({
         where: { id: organizationId },
         select: { plan: true },
