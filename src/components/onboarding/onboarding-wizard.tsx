@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowRight,
@@ -944,14 +944,20 @@ export function useOnboarding(isAuthenticated: boolean, organizationId?: string 
   // The flag is scoped per organization: a global key would let one
   // workspace's skip suppress the next account's first-run wizard in the
   // same browser profile (cubic P2 round 3).
-  const DISMISS_KEY = `kingcrm-onboarding-dismissed:${organizationId ?? 'anon'}`
+  // Read via ref so callbacks never capture a stale pre-auth key (cubic P2
+  // round 4: orgId loads async; []-dep callbacks froze the ':anon' key).
+  const dismissKey = `kingcrm-onboarding-dismissed:${organizationId ?? 'anon'}`
+  const dismissKeyRef = useRef(dismissKey)
+  useEffect(() => {
+    dismissKeyRef.current = dismissKey
+  }, [dismissKey])
   const isDismissed = () => {
-    try { return localStorage.getItem(DISMISS_KEY) === "1" } catch { return false }
+    try { return localStorage.getItem(dismissKeyRef.current) === "1" } catch { return false }
   }
   const setDismissed = (value: boolean) => {
     try {
-      if (value) localStorage.setItem(DISMISS_KEY, "1")
-      else localStorage.removeItem(DISMISS_KEY)
+      if (value) localStorage.setItem(dismissKeyRef.current, "1")
+      else localStorage.removeItem(dismissKeyRef.current)
     } catch {
       // private mode — dismissal degrades to per-tab, still better than reopen loop
     }

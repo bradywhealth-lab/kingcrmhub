@@ -2571,12 +2571,10 @@ function ScrapingView({ onNewJob }: { onNewJob: () => void }) {
     void loadJobs()
     const timer = setInterval(() => { void loadJobs() }, 8000)
     return () => clearInterval(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (selectedJobId) void loadContacts(selectedJobId)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedJobId])
 
   const importContact = async (contact: ScrapeContactRow) => {

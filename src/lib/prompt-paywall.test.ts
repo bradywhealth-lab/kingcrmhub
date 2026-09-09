@@ -28,25 +28,28 @@ function isServerAllowed(relPath: string): boolean {
 
 /**
  * True when the file has a VALUE (runtime) import of @/lib/prompts.
- * For each '@/lib/prompts' string specifier, the statement head is everything
- * from the LAST `import` keyword before it to the specifier — an `import`
- * appearing earlier belongs to a different statement only if another `from`
- * intervened, which cannot happen between the last `import` and this
- * specifier. Only `import type …` heads are compile-time-erased; anything
- * else (named default, multi-line, side-effect) fails closed as a value
- * import (cubic P1 round 3: line-anchored regexes silently pass multi-line
- * value imports, re-enabling the exact leak the gate exists to catch).
+ * Comments are stripped first (so `import /* import type *​/` cannot forge a
+ * type-only head — cubic P2 round 4), then each full import statement ending
+ * in '@/lib/prompts' is matched in one pass: `import`, optional `type`, the
+ * clause (no quotes in it — a specifier can't contain one before `from`),
+ * `from`, the specifier. Side-effect imports match the optional-clause
+ * branch as '' and count as value imports. Anything not matching a strict
+ * `import type` head fails CLOSED (cubic P1 round 3: no silent passes).
  */
 export function hasValuePromptsImport(text: string): boolean {
-  const specifier = /['"]@\/lib\/prompts['"]/g
+  const code = text
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1') // skip // inside strings
+  const statement = /\bimport(\s+type)?\s*(?:[^'"]*?\bfrom\s*)?['"]@\/lib\/prompts['"]/g
   let match: RegExpExecArray | null
-  while ((match = specifier.exec(text)) !== null) {
-    const before = text.slice(0, match.index)
-    const idx = before.lastIndexOf('import')
-    if (idx === -1) return true // specifier without a visible import — fail closed
-    const head = before.slice(idx).replace(/\s+/g, ' ').trim()
-    if (!/^import\s+type(\s|$)/.test(head)) return true
+  while ((match = statement.exec(code)) !== null) {
+    if (!match[1]) return true // value import
   }
+  // A specifier present in code but not matched by any legal statement
+  // shape is unparseable — fail closed.
+  const specCount = (code.match(/['"]@\/lib\/prompts['"]/g) ?? []).length
+  const stmtCount = (code.match(/\bimport[^;]*['"]@\/lib\/prompts['"]/g) ?? []).length
+  if (specCount > 0 && stmtCount < specCount) return true
   return false
 }
 
@@ -76,6 +79,9 @@ describe('paid prompt bodies never ship to the client bundle', () => {
     expect(hasValuePromptsImport("import type { PromptPlan } from '@/lib/prompts'")).toBe(false)
     expect(hasValuePromptsImport("import type {\n  PromptPlan,\n  PromptWithUnlock,\n} from '@/lib/prompts'")).toBe(false)
     expect(hasValuePromptsImport("const x = 1\nimport '@/lib/prompts'")).toBe(true) // bare side-effect import — fail closed
+    // cubic P2 round 4: comment must not be able to forge a type-only head
+    expect(hasValuePromptsImport("import /* import type */ {\n  PROMPT_LIBRARY,\n} from '@/lib/prompts'")).toBe(true)
+    expect(hasValuePromptsImport("// import type x\nimport {\n  PROMPT_LIBRARY,\n} from '@/lib/prompts'")).toBe(true)
   })
 
   it('every importer of the full library is server-allowed', () => {

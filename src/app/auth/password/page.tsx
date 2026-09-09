@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { getSession, signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +10,29 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export default function PasswordSetupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[var(--paper)] flex items-center justify-center text-gray-500">
+          Loading password setup…
+        </main>
+      }
+    >
+      <PasswordSetupPageInner />
+    </Suspense>
+  )
+}
+
+function PasswordSetupPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Preserve the validated callbackUrl forwarded from /auth (cubic P2 round
+  // 4): after forced password setup, land where the user was headed.
+  const rawCallback = searchParams.get('callbackUrl') ?? '/'
+  const safeCallback =
+    rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+      ? rawCallback
+      : '/'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,10 +86,10 @@ export default function PasswordSetupPage() {
         redirect: false,
         email,
         password: newPassword,
-        callbackUrl: '/',
+        callbackUrl: safeCallback,
       })
       if (!result || result.error) throw new Error('Failed to start a new session')
-      router.replace('/')
+      router.replace(safeCallback)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update password')
