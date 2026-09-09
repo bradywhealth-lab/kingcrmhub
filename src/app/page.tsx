@@ -3249,7 +3249,7 @@ export default function EliteCRM() {
       case "uploads": return <UploadsView onUploadCSV={() => setShowUploadDialog(true)} refreshKey={uploadsRefreshKey} />
       case "automation": return <AutomationView />
       case "assistant": return <AiAssistantView />
-      case "prompts": return <PromptsView plan={currentUser?.organization?.plan} onUpgrade={() => setActiveView("settings")} />
+      case "prompts": return <PromptsView onUpgrade={() => setActiveView("settings")} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
       case "settings": return <SettingsView />
       default: return <DashboardView />

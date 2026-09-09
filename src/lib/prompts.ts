@@ -55,14 +55,32 @@ export function isPromptUnlockedForPlan(
   return promptTier <= userTier
 }
 
-export type PromptWithUnlock = Prompt & { unlocked: boolean }
+export type PromptWithUnlock = Omit<Prompt, 'body'> & (
+  | { unlocked: true; body: string }
+  | { unlocked: false; body?: never }
+)
 
-/** All prompts, each annotated with whether this plan unlocks it. */
+function promptMetadata(prompt: Prompt): Omit<Prompt, 'body'> {
+  return {
+    id: prompt.id,
+    plan: prompt.plan,
+    title: prompt.title,
+    category: prompt.category,
+    tags: prompt.tags,
+  }
+}
+
+/**
+ * All prompt metadata, annotated for the authorized plan. Bodies are included
+ * only when that plan unlocks them so API responses cannot leak paid content.
+ */
 export function promptsForPlan(userPlan: string | null | undefined): PromptWithUnlock[] {
-  return PROMPT_LIBRARY.map(prompt => ({
-    ...prompt,
-    unlocked: isPromptUnlockedForPlan(userPlan, prompt.plan),
-  }))
+  return PROMPT_LIBRARY.map(prompt => {
+    const unlocked = isPromptUnlockedForPlan(userPlan, prompt.plan)
+    if (unlocked) return { ...prompt, unlocked }
+
+    return { ...promptMetadata(prompt), unlocked }
+  })
 }
 
 export const PROMPT_LIBRARY: Prompt[] = [

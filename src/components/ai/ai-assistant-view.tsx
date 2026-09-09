@@ -141,7 +141,7 @@ function MessageBubble({ message }: { message: Message }) {
         )}
       >
         {isUser ? (
-          <span className="text-xs font-bold text-white">U</span>
+          <span className="text-xs font-bold text-[#0c111b]">U</span>
         ) : (
           <Bot className="w-4 h-4 text-[#127c66]" />
         )}

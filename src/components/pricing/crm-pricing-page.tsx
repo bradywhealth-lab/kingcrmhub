@@ -64,7 +64,7 @@ const PLANS = [
     icon: Crown,
     color: "border-[#127c66]",
     popular: true,
-    btnClass: "bg-gradient-to-r from-[#18b897] to-[#127c66] text-white hover:brightness-110",
+    btnClass: "bg-gradient-to-r from-[#18b897] to-[#15a88a] text-[#0c111b] hover:brightness-110",
     features: [
       { text: "10 user seats", included: true },
       { text: "Unlimited leads", included: true },
@@ -262,7 +262,7 @@ export function CrmPricingPage() {
               >
                 {plan.popular && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#18b897] to-[#127c66] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-md">
+                    <span className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#18b897] to-[#15a88a] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0c111b] shadow-md">
                       <Crown className="h-3 w-3" />
                       Most Popular
                     </span>

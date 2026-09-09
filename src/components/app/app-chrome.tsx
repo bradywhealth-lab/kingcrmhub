@@ -97,7 +97,7 @@ function Sidebar({
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200",
               activeView === item.id
-                ? "border-l-2 border-[#127c66] bg-linear-to-r from-[#18b897]/20 to-transparent text-[#127c66]"
+                ? "border-l-2 border-[#127c66] bg-linear-to-r from-[#18b897]/20 to-transparent text-[#18b897]"
                 : "text-gray-400 hover:bg-[#14202e] hover:text-white",
             )}
           >

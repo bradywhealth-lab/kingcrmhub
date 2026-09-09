@@ -55,7 +55,7 @@ function getPlatformFallbacks() {
 }
 
 function getProviderLabel(provider: AIProvider, hasKey: boolean) {
-  if (provider === 'groq' && !hasKey) return TIER_LABELS.standard
+  if (provider === 'groq') return TIER_LABELS.standard
   if (hasKey) return TIER_LABELS.advanced
   return TIER_LABELS.standard
 }

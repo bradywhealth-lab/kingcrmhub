@@ -761,7 +761,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
       await fetch("/api/onboarding", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: true, step: totalSteps - 1 }),
+        body: JSON.stringify({ completed: false, step: currentStep }),
       })
     } catch {
       // Non-fatal

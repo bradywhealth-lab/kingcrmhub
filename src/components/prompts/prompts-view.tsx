@@ -1,18 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Copy, Check, Lock, Sparkles, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
-import { PROMPT_LIBRARY, promptsForPlan, type PromptPlan } from '@/lib/prompts'
+import type { PromptPlan, PromptWithUnlock } from '@/lib/prompts'
 
 /**
  * Prompts tab — tier-gated library.
  *
- * Gating reads `plan` off the existing NextAuth session
- * (currentUser.organization.plan). No API call, no migration.
+ * The server derives the plan from the authenticated organization and omits
+ * locked prompt bodies from its response.
  *
  * Locked prompts stay VISIBLE with the upgrade CTA rather than being hidden —
  * per Atlas spec, hiding them removes the reason to upgrade.
@@ -31,40 +31,66 @@ const PLAN_LABEL: Record<PromptPlan, string> = {
 }
 
 export function PromptsView({
-  plan,
   onUpgrade,
+  onRunInAssistant,
 }: {
-  plan: string | null | undefined
   onUpgrade?: () => void
+  onRunInAssistant?: () => void
 }) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [prompts, setPrompts] = useState<PromptWithUnlock[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const prompts = useMemo(() => promptsForPlan(plan), [plan])
+  useEffect(() => {
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const response = await fetch('/api/prompts', { cache: 'no-store' })
+        if (!response.ok) throw new Error('Failed to load prompts')
+        const data = await response.json() as { prompts?: PromptWithUnlock[] }
+        if (!cancelled) setPrompts(Array.isArray(data.prompts) ? data.prompts : [])
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: 'Prompts unavailable',
+            description: 'Please refresh the page to try again.',
+            variant: 'destructive',
+          })
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const unlockedCount = prompts.filter((p) => p.unlocked).length
 
-  const copyPrompt = async (id: string, title: string, body: string) => {
+  const copyPrompt = async (id: string, title: string, body: string): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(body)
       setCopiedId(id)
       toast({ title: 'Prompt copied', description: `"${title}" is on your clipboard.` })
       window.setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1600)
+      return true
     } catch {
       toast({
         title: 'Copy failed',
         description: 'Your browser blocked clipboard access. Select the text and copy manually.',
         variant: 'destructive',
       })
+      return false
     }
   }
 
-  const runInAssistant = (title: string) => {
-    // The AI Assistant is a sibling view in the workspace shell; the shell
-    // passes navigation down. Until that prop lands this is a copy-first flow,
-    // which is the honest behaviour — never claim a hand-off that doesn't occur.
-    toast({
-      title: 'Prompt copied',
-      description: `Paste it into the AI Assistant to run "${title}".`,
-    })
+  const runInAssistant = async (prompt: PromptWithUnlock) => {
+    if (!prompt.body) return
+    const copied = await copyPrompt(prompt.id, prompt.title, prompt.body)
+    if (copied) onRunInAssistant?.()
   }
 
   return (
@@ -80,8 +106,9 @@ export function PromptsView({
           Copy-ready prompts for your clients
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-soft)]">
-          {unlockedCount} of {PROMPT_LIBRARY.length} unlocked on your current plan. Copy one, paste
-          it into the AI Assistant, and fill in the brackets.
+          {loading
+            ? 'Loading the prompts available on your current plan…'
+            : `${unlockedCount} of ${prompts.length} unlocked on your current plan. Copy one, paste it into the AI Assistant, and fill in the brackets.`}
         </p>
       </div>
 
@@ -139,7 +166,7 @@ export function PromptsView({
                       )}
                     </div>
 
-                    {p.unlocked ? (
+                    {p.unlocked && p.body ? (
                       <>
                         <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-xl bg-[var(--paper)] p-3 font-mono text-[11px] leading-5 text-[var(--ink)]">
                           {p.body}
@@ -161,7 +188,7 @@ export function PromptsView({
                           <Button
                             size="sm"
                             className="bg-[var(--teal)] text-[var(--ink)] hover:opacity-90"
-                            onClick={() => runInAssistant(p.title)}
+                            onClick={() => void runInAssistant(p)}
                           >
                             Run in AI Assistant
                           </Button>

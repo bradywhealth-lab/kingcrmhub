@@ -151,6 +151,17 @@ describe('prompt library', () => {
     expect(promptsForPlan('free')).toHaveLength(22)
   })
 
+  it('omits bodies for prompts the plan does not unlock', () => {
+    const freePrompts = promptsForPlan('free')
+
+    expect(freePrompts.filter(p => p.body)).toHaveLength(6)
+    expect(
+      freePrompts
+        .filter(p => !p.unlocked)
+        .every(p => !Object.hasOwn(p, 'body')),
+    ).toBe(true)
+  })
+
   it('ships one pack per tier, each pointing at a real tier', () => {
     expect(PROMPT_PACKS).toHaveLength(3)
     for (const pack of PROMPT_PACKS) {

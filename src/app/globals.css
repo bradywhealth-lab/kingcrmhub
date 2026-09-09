@@ -205,8 +205,8 @@
    BUTTONS - Primary cobalt gradient
    ============================================ */
 .btn-primary {
-  background: linear-gradient(135deg, #18b897, #127c66);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--teal), var(--teal-hover));
+  color: var(--ink);
   font-weight: 600;
   border: none;
   border-radius: 0.75rem;
@@ -374,9 +374,9 @@
 
 .badge-new { background: var(--navy); color: white; }
 .badge-contacted { background: rgba(12, 17, 27, 0.6); color: white; }
-.badge-qualified { background: var(--cobalt); color: white; }
-.badge-proposal { background: #d97706; color: white; } /* amber: 4.53:1 vs white PASS */
-.badge-negotiation { background: #ea580c; color: white; } /* orange: 3.78:1 large-text/badge OK */
+.badge-qualified { background: var(--cobalt); color: var(--ink); }
+.badge-proposal { background: #d97706; color: var(--ink); }
+.badge-negotiation { background: #ea580c; color: var(--ink); }
 .badge-won { background: var(--success); color: white; }
 .badge-lost { background: var(--destructive); color: white; }
 
