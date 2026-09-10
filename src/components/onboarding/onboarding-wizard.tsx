@@ -862,7 +862,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
                   onSkip={() => void advance(true)}
                 />
               )}
-              {step.id === "carrier" && (
+              {step.id === "packages" && (
                 <CarrierStep
                   onNext={() => void advance(false)}
                   onSkip={() => void advance(true)}
