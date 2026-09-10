@@ -330,7 +330,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
     }
     setSaving(true)
     try {
-      const res = await fetch("/api/carriers", {
+      const res = await fetch("/api/packages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

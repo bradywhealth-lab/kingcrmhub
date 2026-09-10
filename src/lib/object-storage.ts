@@ -23,14 +23,16 @@ function buildInlineFallbackFileUrl(contentType: string, buffer: Buffer): string
 
 export async function uploadToObjectStorage(input: {
   organizationId: string
-  carrierId: string
+  carrierId?: string
+  packageId?: string
   originalFileName: string
   contentType: string
   buffer: Buffer
 }): Promise<{ fileUrl: string; storagePath: string }> {
+  const id = input.packageId || input.carrierId || 'unknown'
   const bucket = getRequiredEnv('SUPABASE_STORAGE_BUCKET')
   const safeFileName = input.originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_')
-  const storagePath = `carriers/${input.organizationId}/${input.carrierId}/${Date.now()}-${safeFileName}`
+  const storagePath = `packages/${input.organizationId}/${id}/${Date.now()}-${safeFileName}`
   try {
     const client = getStorageClient()
 
