@@ -1357,7 +1357,7 @@ export function SettingsView() {
             <Zap className="h-4 w-4" />
             Integrations
           </TabsTrigger>
-          <TabsTrigger value="carriers" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="packages" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <FileText className="h-4 w-4" />
             Offers &amp; Docs
           </TabsTrigger>
@@ -1396,7 +1396,7 @@ export function SettingsView() {
           <SettingsIntegrationsPanel />
         </TabsContent>
 
-        <TabsContent value="carriers" className="mt-6 space-y-6">
+        <TabsContent value="packages" className="mt-6 space-y-6">
           <CarrierLibrarySettings />
         </TabsContent>
 
