@@ -32,7 +32,7 @@ describe('security helpers', () => {
   it('allows local same-origin posts in development even when APP_BASE_URL points elsewhere', () => {
     Object.assign(process.env, {
       NODE_ENV: 'development',
-      APP_BASE_URL: 'https://insurafuze-king-crm.vercel.app',
+      APP_BASE_URL: 'https://my-kingcrm.vercel.app',
     })
 
     const request = new NextRequest('http://localhost:3000/api/auth', {
