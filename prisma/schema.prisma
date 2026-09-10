@@ -54,6 +54,10 @@ model Organization {
   scrapeJobs            ScrapeJob[]
   scrapedContacts       ScrapedContact[]
   scrapingPerformance   ScrapingSourcePerformance[]
+  tasks                 Task[]
+  appointments          Appointment[]
+  calendarSyncs         CalendarSync[]
+  bookingLinks          BookingLink[]
 }
 
 model User {
@@ -78,6 +82,7 @@ model User {
   sessions            UserSession[]
   aiProfile           UserAIProfile?
   passwordResetTokens PasswordResetToken[]
+  assignedTasks       Task[]
 }
 
 // ============================================
@@ -156,6 +161,8 @@ model Lead {
   quotes              Quote[]
   messageThreads      MessageThread[]
   scrapedContacts     ScrapedContact[]
+  tasks               Task[]
+  appointments        Appointment[]
 
   @@index([organizationId])
   @@index([status])
@@ -265,6 +272,8 @@ model PipelineItem {
 
   @@index([pipelineId])
   @@index([stageId])
+
+  tasks Task[]
 }
 
 // ============================================
@@ -285,6 +294,7 @@ model Automation {
   executionCount Int             @default(0)
   lastExecutedAt DateTime?
   logs           AutomationLog[]
+  spawnedTasks   Task[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
@@ -1203,4 +1213,125 @@ model PasswordResetToken {
 
   @@index([token])
   @@index([userId])
+}
+
+// ── Tasks & Appointments Hub ──
+
+model Task {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  status      String          @default("todo") // todo, in_progress, done, blocked
+  priority    String          @default("normal") // low, normal, high, urgent
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  // Relations
+  assignedToId    String?
+  assignedTo      User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  pipelineItemId  String?
+  pipelineItem    PipelineItem?   @relation(fields: [pipelineItemId], references: [id], onDelete: SetNull)
+
+  // Auto-spawn provenance
+  source            String?  // manual, auto_spawn
+  autoSpawnRuleId   String?
+  autoSpawnRule     Automation? @relation(fields: [autoSpawnRuleId], references: [id], onDelete: SetNull)
+
+  // Kanban ordering
+  position  Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([assignedToId])
+  @@index([leadId])
+  @@index([pipelineItemId])
+  @@index([dueDate])
+}
+
+model Appointment {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  timezone    String          @default("America/New_York")
+  location    String?         // physical location or video call URL
+
+  // Attendee info
+  leadId        String?
+  lead          Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  attendeeName  String?
+  attendeeEmail String?
+
+  // External calendar sync
+  googleEventId   String?
+  calendarSyncId  String?
+  calendarSync    CalendarSync? @relation(fields: [calendarSyncId], references: [id], onDelete: SetNull)
+
+  status    String   @default("scheduled") // scheduled, cancelled, completed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, startTime])
+  @@index([leadId])
+  @@index([googleEventId])
+}
+
+model CalendarSync {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  provider           String   @default("google") // google
+  googleRefreshToken String?
+  googleCalendarId   String?
+  syncToken          String?  // incremental sync token
+  lastSyncedAt       DateTime?
+  isActive           Boolean  @default(true)
+
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+}
+
+model BookingLink {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  slug  String  @unique
+  title String
+  description String?
+
+  durationMinutes  Int  @default(30)
+  bufferBefore     Int  @default(0)  // minutes
+  bufferAfter      Int  @default(0)  // minutes
+
+  // Availability rules (JSON): days of week, time windows, date overrides
+  availability Json   @default("[]")
+
+  isActive   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([slug])
 }
