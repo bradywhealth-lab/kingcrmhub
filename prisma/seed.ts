@@ -18,7 +18,7 @@ async function main() {
     update: {},
     create: {
       id: 'demo-org-1',
-      name: 'Demo Insurance Agency',
+      name: 'Demo Freelancer Agency',
       slug: 'demo-agency',
       plan: 'pro',
       settings: {
