@@ -1,6 +1,6 @@
 export type KnowledgeCitation = {
-  carrierId: string | null
-  carrierName: string
+  packageId: string | null
+  packageName: string
   documentId: string
   documentName: string
   chunkIndex: number
@@ -8,8 +8,8 @@ export type KnowledgeCitation = {
 }
 
 export type PlaybookCitation = {
-  carrierId: string | null
-  carrierName: string
+  packageId: string | null
+  packageName: string
   documentId: string
   documentName: string
   chunkIndex: number
@@ -20,8 +20,8 @@ export function buildKnowledgeCitations(knowledgeContext: KnowledgeCitation[]): 
   return knowledgeContext
     .filter((citation) => citation.snippet.trim().length >= 50)
     .map((citation) => ({
-      carrierId: citation.carrierId,
-      carrierName: citation.carrierName,
+      packageId: citation.packageId,
+      packageName: citation.packageName,
       documentId: citation.documentId,
       documentName: citation.documentName,
       chunkIndex: citation.chunkIndex,

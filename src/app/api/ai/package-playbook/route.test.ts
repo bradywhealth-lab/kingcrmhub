@@ -7,8 +7,8 @@ describe('buildKnowledgeCitations', () => {
       Parameters<typeof buildKnowledgeCitations>[0][number] & { citationId: number }
     > = [
       {
-        carrierId: 'carrier_1',
-        carrierName: 'Carrier One',
+        packageId: 'package_1',
+        packageName: 'Package One',
         documentId: 'doc_1',
         documentName: 'Underwriting Guide',
         chunkIndex: 3,
@@ -17,8 +17,8 @@ describe('buildKnowledgeCitations', () => {
         citationId: 99,
       },
       {
-        carrierId: 'carrier_2',
-        carrierName: 'Carrier Two',
+        packageId: 'package_2',
+        packageName: 'Package Two',
         documentId: 'doc_2',
         documentName: 'Product Sheet',
         chunkIndex: 1,
@@ -31,8 +31,8 @@ describe('buildKnowledgeCitations', () => {
 
     expect(citations).toHaveLength(1)
     expect(citations[0]).toEqual({
-      carrierId: 'carrier_1',
-      carrierName: 'Carrier One',
+      packageId: 'package_1',
+      packageName: 'Package One',
       documentId: 'doc_1',
       documentName: 'Underwriting Guide',
       chunkIndex: 3,

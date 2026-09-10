@@ -7,7 +7,7 @@ import { enforceRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 import { getDefaultModel } from '@/lib/ai-providers'
 
-const AI_PROVIDERS = ['groq', 'openai', 'anthropic'] as const
+const AI_PROVIDERS = ['openrouter', 'groq', 'openai', 'anthropic'] as const
 type AIProvider = (typeof AI_PROVIDERS)[number]
 
 const aiSettingsSchema = z.object({
@@ -32,6 +32,7 @@ function maskKey(key: string | undefined | null): string | null {
  * Model slugs are internal SDK params, imported from ai-providers.ts.
  */
 const PROVIDER_LABELS: Record<AIProvider, string> = {
+  openrouter: 'OpenRouter (Free)',
   groq: 'Groq',
   openai: 'OpenAI',
   anthropic: 'Anthropic',
@@ -48,6 +49,7 @@ const TIER_LABELS = {
 
 function getPlatformFallbacks() {
   return {
+    openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
     groq: Boolean(process.env.GROQ_API_KEY?.trim()),
     openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
     anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
@@ -55,7 +57,7 @@ function getPlatformFallbacks() {
 }
 
 function getProviderLabel(provider: AIProvider, hasKey: boolean) {
-  if (provider === 'groq') return TIER_LABELS.standard
+  if (provider === 'openrouter' || provider === 'groq') return TIER_LABELS.standard
   if (hasKey) return TIER_LABELS.advanced
   return TIER_LABELS.standard
 }

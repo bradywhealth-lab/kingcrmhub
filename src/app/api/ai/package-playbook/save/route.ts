@@ -15,7 +15,7 @@ const savePlaybookSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const limited = enforceRateLimit(request, { key: 'carrier-playbook-save', limit: 40, windowMs: 60_000 })
+    const limited = enforceRateLimit(request, { key: 'package-playbook-save', limit: 40, windowMs: 60_000 })
     if (limited) return limited
     return withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, savePlaybookSchema)
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       })
       if (!lead) return apiError('Lead not found', 404, 'lead_not_found')
 
-      const recommendedCarrier = String(
-        ((playbook.recommendedCarrier as Record<string, unknown> | undefined)?.name as string) || 'Unknown carrier'
+      const recommendedPackage = String(
+        ((playbook.recommendedPackage as Record<string, unknown> | undefined)?.name as string) || 'Unknown package'
       )
       const suggestedPlanType = String((playbook.suggestedPlanType as string) || 'N/A')
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
           organizationId: context.organizationId,
           leadId,
           type: 'ai_playbook_saved',
-          title: `AI carrier playbook saved (${recommendedCarrier})`,
+          title: `AI package playbook saved (${recommendedPackage})`,
           description: `Suggested plan: ${suggestedPlanType}`,
           metadata: {
             source,
