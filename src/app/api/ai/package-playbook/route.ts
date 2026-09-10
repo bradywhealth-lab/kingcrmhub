@@ -8,19 +8,19 @@ import { zaiChatJson } from '@/lib/zai'
 import { buildKnowledgeCitations, type KnowledgeCitation, type PlaybookCitation } from './citations'
 import { trackAIEvent } from '@/lib/ai-tracking'
 
-const carrierPlaybookSchema = z.object({
+const packagePlaybookSchema = z.object({
   leadId: z.string().min(1),
   extraContext: z.string().max(4000).optional().default(''),
 })
 
 type PlaybookResponse = {
-  recommendedCarrier: {
+  recommendedPackage: {
     id: string | null
     name: string
     rationale: string
     confidence: number
   }
-  backupCarriers: Array<{
+  backupPackages: Array<{
     id: string | null
     name: string
     rationale: string
@@ -56,9 +56,9 @@ function fallbackPlaybook(lead: {
   title: string | null
   source: string | null
   aiNextAction: string | null
-}, carriers: Array<{ id: string; name: string }>, senderName?: string | null): PlaybookResponse {
-  const primary = carriers[0]
-  const backup = carriers.slice(1, 3)
+}, packages: Array<{ id: string; name: string }>, senderName?: string | null): PlaybookResponse {
+  const primary = packages[0]
+  const backup = packages.slice(1, 3)
   const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'this lead'
   // Resolved real identity (user name or org name); null when neither is
   // available — then the email simply omits a personal sign-off.
@@ -66,13 +66,13 @@ function fallbackPlaybook(lead: {
   const scoreBand = lead.aiScore >= 85 ? 'high-intent' : lead.aiScore >= 65 ? 'mid-intent' : 'early-intent'
 
   return {
-    recommendedCarrier: {
+    recommendedPackage: {
       id: primary?.id || null,
       name: primary?.name || 'General Offer Match',
       rationale: `Best available match from current offer library for a ${scoreBand} profile based on lead status, role, and available service docs.`,
       confidence: Math.max(0.55, Math.min(0.9, 0.55 + lead.aiScore / 200)),
     },
-    backupCarriers: backup.map((c) => ({
+    backupPackages: backup.map((c) => ({
       id: c.id,
       name: c.name,
       rationale: 'Keep as fallback if service fit or pricing alignment is stronger during discovery.',
@@ -107,8 +107,8 @@ function fallbackPlaybook(lead: {
 
 type RetrievedChunk = {
   score: number
-  carrierId: string | null
-  carrierName: string
+  packageId: string | null
+  packageName: string
   documentId: string
   documentName: string
   chunkIndex: number
@@ -158,10 +158,10 @@ function retrieveTopChunks(
   chunks: Array<{
     chunkIndex: number
     content: string
-    carrierDocument: {
+    packageDocument: {
       id: string
       name: string
-      carrier: { id: string; name: string }
+      servicePackage: { id: string; name: string }
     }
   }>
 ): RetrievedChunk[] {
@@ -186,10 +186,10 @@ function retrieveTopChunks(
 
       return {
         score,
-        carrierId: chunk.carrierDocument.carrier.id,
-        carrierName: chunk.carrierDocument.carrier.name,
-        documentId: chunk.carrierDocument.id,
-        documentName: chunk.carrierDocument.name,
+        packageId: chunk.packageDocument.servicePackage.id,
+        packageName: chunk.packageDocument.servicePackage.name,
+        documentId: chunk.packageDocument.id,
+        documentName: chunk.packageDocument.name,
         chunkIndex: chunk.chunkIndex,
         content: chunk.content,
       }
@@ -224,10 +224,10 @@ function normalizeCitations(
 
 export async function POST(request: NextRequest) {
   try {
-    const limited = enforceRateLimit(request, { key: 'carrier-playbook', limit: 30, windowMs: 60_000 })
+    const limited = enforceRateLimit(request, { key: 'package-playbook', limit: 30, windowMs: 60_000 })
     if (limited) return limited
     return withRequestOrgContext(request, async (context) => {
-    const parsedBody = await parseJsonBody(request, carrierPlaybookSchema)
+    const parsedBody = await parseJsonBody(request, packagePlaybookSchema)
     if (!parsedBody.success) return parsedBody.response
     const { leadId, extraContext } = parsedBody.data
 
@@ -249,10 +249,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    const carriers = await db.carrier.findMany({
+    const packages = await db.servicePackage.findMany({
       where: { organizationId: context.organizationId },
       include: {
-        documents: {
+        packageDocuments: {
           orderBy: { createdAt: 'desc' },
           take: 30,
         },
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       take: 20,
     })
 
-    if (carriers.length === 0) {
+    if (packages.length === 0) {
       return NextResponse.json({
         error: 'No offers configured yet. Add offer packages and service documents first.',
       }, { status: 400 })
@@ -290,12 +290,12 @@ export async function POST(request: NextRequest) {
       })),
     }
 
-    const compactCarriers = carriers.map((carrier) => ({
-      id: carrier.id,
-      name: carrier.name,
-      website: carrier.website,
-      notes: carrier.notes,
-      documents: carrier.documents.map((doc) => ({
+    const compactPackages = packages.map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      website: pkg.website,
+      notes: pkg.notes,
+      documents: pkg.packageDocuments.map((doc) => ({
         id: doc.id,
         type: doc.type,
         name: doc.name,
@@ -304,21 +304,21 @@ export async function POST(request: NextRequest) {
       })),
     }))
 
-    const candidateChunks = await db.carrierDocumentChunk.findMany({
+    const candidateChunks = await db.packageDocumentChunk.findMany({
       where: {
         organizationId: context.organizationId,
-        carrierDocument: {
-          carrier: {
+        packageDocument: {
+          servicePackage: {
             organizationId: context.organizationId,
           },
         },
       },
       include: {
-        carrierDocument: {
+        packageDocument: {
           select: {
             id: true,
             name: true,
-            carrier: {
+            servicePackage: {
               select: { id: true, name: true },
             },
           },
@@ -348,18 +348,18 @@ export async function POST(request: NextRequest) {
       candidateChunks.map((c) => ({
         chunkIndex: c.chunkIndex,
         content: c.content,
-        carrierDocument: {
-          id: c.carrierDocument.id,
-          name: c.carrierDocument.name,
-          carrier: c.carrierDocument.carrier,
+        packageDocument: {
+          id: c.packageDocument.id,
+          name: c.packageDocument.name,
+          servicePackage: c.packageDocument.servicePackage,
         },
       }))
     )
 
     const knowledgeContext = topChunks.map((chunk, idx) => ({
       citationId: idx + 1,
-      carrierId: chunk.carrierId,
-      carrierName: chunk.carrierName,
+      packageId: chunk.packageId,
+      packageName: chunk.packageName,
       documentId: chunk.documentId,
       documentName: chunk.documentName,
       chunkIndex: chunk.chunkIndex,
@@ -380,7 +380,7 @@ Lead context:
 ${JSON.stringify(compactLead)}
 
 Offer library context:
-${JSON.stringify(compactCarriers)}
+${JSON.stringify(compactPackages)}
 
 Retrieved service document snippets (use these for grounded recommendations):
 ${JSON.stringify(knowledgeContext)}
@@ -390,8 +390,8 @@ ${extraContext || 'N/A'}
 
 Respond as strict JSON only using this schema:
 {
-  "recommendedCarrier": { "id": "string|null", "name": "string", "rationale": "string", "confidence": 0.0 },
-  "backupCarriers": [{ "id": "string|null", "name": "string", "rationale": "string" }],
+  "recommendedPackage": { "id": "string|null", "name": "string", "rationale": "string", "confidence": 0.0 },
+  "backupPackages": [{ "id": "string|null", "name": "string", "rationale": "string" }],
   "suggestedPlanType": "string",
   "qualificationSummary": ["string"],
   "objectionHandling": ["string"],
@@ -403,8 +403,8 @@ Respond as strict JSON only using this schema:
   },
   "nextActions": ["string"],
   "citations": [{
-    "carrierId": "string|null",
-    "carrierName": "string",
+    "packageId": "string|null",
+    "packageName": "string",
     "documentId": "string",
     "documentName": "string",
     "chunkIndex": 0,
@@ -417,8 +417,8 @@ Respond as strict JSON only using this schema:
       const jsonCandidate = content.match(/\{[\s\S]*\}/)?.[0] || ''
       const parsed = safeJsonParse<PlaybookResponse>(jsonCandidate)
 
-      if (parsed && parsed.recommendedCarrier?.name && parsed.followUpScripts?.sms) {
-        parsed.recommendedCarrier.confidence = calibrateConfidence(
+      if (parsed && parsed.recommendedPackage?.name && parsed.followUpScripts?.sms) {
+        parsed.recommendedPackage.confidence = calibrateConfidence(
           lead.aiScore,
           topChunks.length,
           topChunks[0]?.score || 0
@@ -439,7 +439,7 @@ Respond as strict JSON only using this schema:
         return NextResponse.json({ playbook: parsed, source: 'llm' })
       }
     } catch (error) {
-      console.error('Carrier playbook LLM fallback triggered:', error)
+      console.error('Package playbook LLM fallback triggered:', error)
     }
 
     // Best-effort sender identity for the fallback outreach scripts. Runs only
@@ -471,11 +471,11 @@ Respond as strict JSON only using this schema:
         source: lead.source,
         aiNextAction: lead.aiNextAction,
       },
-      carriers.map((c) => ({ id: c.id, name: c.name })),
+      packages.map((c) => ({ id: c.id, name: c.name })),
       senderName
     )
     fallback.citations = normalizeCitations(undefined, knowledgeContext)
-    fallback.recommendedCarrier.confidence = calibrateConfidence(
+    fallback.recommendedPackage.confidence = calibrateConfidence(
       lead.aiScore,
       topChunks.length,
       topChunks[0]?.score || 0
@@ -495,7 +495,7 @@ Respond as strict JSON only using this schema:
     return NextResponse.json({ playbook: fallback, source: 'fallback' })
     })
   } catch (error) {
-    console.error('Carrier playbook error:', error)
-    return NextResponse.json({ error: 'Failed to generate carrier playbook' }, { status: 500 })
+    console.error('Package playbook error:', error)
+    return NextResponse.json({ error: 'Failed to generate package playbook' }, { status: 500 })
   }
 }

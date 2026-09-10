@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       select: {
         _count: {
           select: {
-            carriers: true,
+            servicePackages: true,
             leads: true,
             teamMembers: true,
           },
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       onboardingCompletedAt,
       onboardingStep,
       stats: {
-        carriers: counts?._count.carriers ?? 0,
+        servicePackages: counts?._count.servicePackages ?? 0,
         leads: counts?._count.leads ?? 0,
         teamMembers: counts?._count.teamMembers ?? 0,
       },
