@@ -842,7 +842,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
 
   const openContactLead = () => {
     if (!selectedLead) return
-    setContactMessage(selectedLead.aiNextAction ? `Hi ${selectedLead.firstName || ''}, ${selectedLead.aiNextAction}`.trim() : `Hi ${selectedLead.firstName || ''}, just following up from Insurafuze.`.trim())
+    setContactMessage(selectedLead.aiNextAction ? `Hi ${selectedLead.firstName || ''}, ${selectedLead.aiNextAction}`.trim() : `Hi ${selectedLead.firstName || ''}, just checking in!`.trim())
     setShowContactLeadDialog(true)
   }
 

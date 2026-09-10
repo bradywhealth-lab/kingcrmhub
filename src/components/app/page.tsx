@@ -655,8 +655,8 @@ function DashboardView() {
 
 // Leads View with CSV Upload - fetches real data from API
 function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAddLead: () => void; onUploadCSV: () => void; onScrape: () => void; refreshKey?: number }) {
-  type CarrierPlaybook = {
-    recommendedCarrier: {
+  type PackagePlaybook = {
+    recommendedPackage: {
       id: string | null
       name: string
       rationale: string
@@ -678,8 +678,8 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     }
     nextActions: string[]
     citations: Array<{
-      carrierId: string | null
-      carrierName: string
+      packageId: string | null
+      packageName: string
       documentId: string
       documentName: string
       chunkIndex: number
@@ -710,7 +710,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
   const [error, setError] = useState<string | null>(null)
   const [assistantLoading, setAssistantLoading] = useState(false)
   const [assistantSaving, setAssistantSaving] = useState(false)
-  const [assistantPlaybook, setAssistantPlaybook] = useState<CarrierPlaybook | null>(null)
+  const [assistantPlaybook, setAssistantPlaybook] = useState<PackagePlaybook | null>(null)
   const [assistantSource, setAssistantSource] = useState<'llm' | 'fallback' | null>(null)
 
   useEffect(() => {
@@ -826,7 +826,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     }
   }
 
-  const generateCarrierPlaybook = async (leadId: string) => {
+  const generatePackagePlaybook = async (leadId: string) => {
     try {
       setAssistantLoading(true)
       const res = await fetch('/api/ai/package-playbook', {
@@ -938,7 +938,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
 
   const openContactLead = () => {
     if (!selectedLead) return
-    setContactMessage(selectedLead.aiNextAction ? `Hi ${selectedLead.firstName || ''}, ${selectedLead.aiNextAction}`.trim() : `Hi ${selectedLead.firstName || ''}, just following up from Insurafuze.`.trim())
+    setContactMessage(selectedLead.aiNextAction ? `Hi ${selectedLead.firstName || ''}, ${selectedLead.aiNextAction}`.trim() : `Hi ${selectedLead.firstName || ''}, just checking in!`.trim())
     setShowContactLeadDialog(true)
   }
 
@@ -1228,7 +1228,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   <div className="flex items-center gap-2">
                     <Button
                       className="btn-gold gap-2"
-                      onClick={() => void generateCarrierPlaybook(selectedLead.id)}
+                      onClick={() => void generatePackagePlaybook(selectedLead.id)}
                       disabled={assistantLoading}
                     >
                       {assistantLoading ? (
@@ -1261,14 +1261,14 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   {assistantPlaybook && (
                     <div className="space-y-4">
                       <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-4">
-                        <p className="text-xs text-gray-500">Recommended Carrier</p>
+                        <p className="text-xs text-gray-500">Recommended Package</p>
                         <p className="text-sm font-semibold text-black mt-1">
-                          {assistantPlaybook.recommendedCarrier.name}
+                          {assistantPlaybook.recommendedPackage.name}
                           <span className="text-xs text-gray-500 ml-2">
-                            ({Math.round((assistantPlaybook.recommendedCarrier.confidence || 0) * 100)}% confidence)
+                            ({Math.round((assistantPlaybook.recommendedPackage.confidence || 0) * 100)}% confidence)
                           </span>
                         </p>
-                        <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedCarrier.rationale}</p>
+                        <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedPackage.rationale}</p>
                         <p className="text-sm text-[#2563EB] mt-2">
                           Plan suggestion: {assistantPlaybook.suggestedPlanType}
                         </p>
@@ -1321,7 +1321,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                           {assistantPlaybook.citations.slice(0, 4).map((c, idx) => (
                             <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#E6EDF7] bg-[#fcf8ec] p-2">
                               <p className="text-xs font-medium text-black">
-                                {c.carrierName} - {c.documentName} (chunk {c.chunkIndex})
+                                {c.packageName} - {c.documentName} (chunk {c.chunkIndex})
                               </p>
                               <p className="text-xs text-gray-600 mt-1">{c.snippet}</p>
                             </div>
