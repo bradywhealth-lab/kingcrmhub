@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
+import { deleteFromObjectStorage } from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 export async function GET(
@@ -57,6 +58,9 @@ export async function DELETE(
         return NextResponse.json({ error: 'Document not found' }, { status: 404 })
       }
 
+      if (document.storagePath) {
+        await deleteFromObjectStorage(document.storagePath)
+      }
       await db.packageDocument.delete({ where: { id: docId } })
 
       return NextResponse.json({ success: true })

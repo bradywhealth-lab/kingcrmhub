@@ -829,7 +829,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
   const generateCarrierPlaybook = async (leadId: string) => {
     try {
       setAssistantLoading(true)
-      const res = await fetch('/api/ai/carrier-playbook', {
+      const res = await fetch('/api/ai/package-playbook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadId }),
@@ -859,7 +859,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     if (!assistantPlaybook) return
     try {
       setAssistantSaving(true)
-      const res = await fetch('/api/ai/carrier-playbook/save', {
+      const res = await fetch('/api/ai/package-playbook/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

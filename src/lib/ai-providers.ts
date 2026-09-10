@@ -87,11 +87,13 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
   }
 
   // Free tier: OpenRouter (platform key) -> Groq (platform key) -> OpenAI (platform key) -> no provider
+  // When falling back to a different provider than stored, force default model
   const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
   if (openrouterKey) {
+    const resolvedModel = (provider === 'openrouter' && model) ? model : 'openrouter/free'
     return {
       provider: 'openrouter',
-      model: model || 'openrouter/free',
+      model: resolvedModel,
       apiKey: openrouterKey,
       label: 'OpenRouter Free (auto-routing)',
     }
@@ -99,9 +101,10 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
 
   const groqKey = process.env.GROQ_API_KEY?.trim()
   if (groqKey) {
+    const resolvedModel = (provider === 'groq' && model) ? model : 'llama-3.3-70b-versatile'
     return {
       provider: 'groq',
-      model: 'llama-3.3-70b-versatile',
+      model: resolvedModel,
       apiKey: groqKey,
       label: 'Groq Llama 3.3 (free)',
     }
@@ -110,9 +113,10 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
   // Last resort: check for any platform key
   const openaiKey = process.env.OPENAI_API_KEY?.trim()
   if (openaiKey) {
+    const resolvedModel = (provider === 'openai' && model) ? model : 'gpt-4o'
     return {
       provider: 'openai',
-      model: 'gpt-4o',
+      model: resolvedModel,
       apiKey: openaiKey,
       label: 'OpenAI (platform fallback)',
     }
