@@ -347,8 +347,10 @@ function DashboardView() {
           </CardHeader>
           <CardContent>
             {liveTrend.length === 0 ? (
-              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] text-sm text-gray-500">
-                Performance trends appear after your workspace records activity.
+              <div className="flex h-[280px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] text-sm text-gray-500">
+                <BarChart3 className="h-10 w-10 text-gray-300" />
+                <p className="font-medium text-gray-400">No performance data yet</p>
+                <p className="text-xs text-gray-350">Add leads and track pipeline movements to see trends.</p>
               </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[280px]">
