@@ -37,7 +37,7 @@ describe('/api/social-accounts', () => {
         id: 'acct_1',
         platform: 'linkedin',
         accountId: 'company_1',
-        accountName: 'Insurafuze',
+        accountName: 'My Company',
         tokenExpiresAt: null,
         profileData: { followers: 1200 },
         isActive: true,
@@ -61,7 +61,7 @@ describe('/api/social-accounts', () => {
       id: 'acct_1',
       platform: 'linkedin',
       accountId: 'company_1',
-      accountName: 'Insurafuze',
+      accountName: 'My Company',
       tokenExpiresAt: null,
       profileData: null,
       isActive: true,
@@ -75,7 +75,7 @@ describe('/api/social-accounts', () => {
       body: JSON.stringify({
         platform: 'linkedin',
         accountId: 'company_1',
-        accountName: 'Insurafuze',
+        accountName: 'My Company',
         accessToken: 'token_123',
       }),
       headers: { 'Content-Type': 'application/json' },
@@ -85,7 +85,7 @@ describe('/api/social-accounts', () => {
     const json = await response.json()
 
     expect(response.status).toBe(200)
-    expect(json.account.accountName).toBe('Insurafuze')
+    expect(json.account.accountName).toBe('My Company')
     expect(mockDb.socialAccount.upsert).toHaveBeenCalledOnce()
   })
 
@@ -95,7 +95,7 @@ describe('/api/social-accounts', () => {
       id: 'acct_1',
       platform: 'linkedin',
       accountId: 'company_1',
-      accountName: 'Insurafuze',
+      accountName: 'My Company',
       tokenExpiresAt: null,
       profileData: null,
       isActive: false,

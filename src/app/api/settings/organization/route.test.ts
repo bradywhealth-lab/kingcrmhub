@@ -35,8 +35,8 @@ describe('/api/settings/organization', () => {
   it('loads organization settings', async () => {
     mockDb.organization.findUnique.mockResolvedValueOnce({
       id: 'org_1',
-      name: 'Insurafuze',
-      slug: 'insurafuze',
+      name: 'My Company',
+      slug: 'my-company',
       logo: null,
       plan: 'pro',
       settings: {
@@ -54,7 +54,7 @@ describe('/api/settings/organization', () => {
     const json = await response.json()
 
     expect(response.status).toBe(200)
-    expect(json.organization.slug).toBe('insurafuze')
+    expect(json.organization.slug).toBe('my-company')
     expect(json.organization.twoFactorRequired).toBe(true)
   })
 

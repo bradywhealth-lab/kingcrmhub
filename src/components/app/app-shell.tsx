@@ -11,11 +11,7 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/lib/store"
 
-const mockNotifications = [
-  { id: "1", title: "New lead assigned", body: "Sarah Johnson from TechCorp was assigned to you", time: "2m ago", unread: true },
-  { id: "2", title: "Deal won", body: "James Wilson - Creative Agency closed at $120K", time: "1h ago", unread: true },
-  { id: "3", title: "AI insight ready", body: "3 leads haven't been contacted in 7+ days", time: "3h ago", unread: false },
-]
+const mockNotifications: Array<{ id: string; title: string; body: string; time: string; unread: boolean }> = []
 
 export const APP_NAV_ITEMS = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", short: "Overview" },
@@ -74,7 +70,7 @@ export function AppShell({
                 </div>
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/55">King CRM Hub</p>
-                  <p className="text-lg font-semibold text-white">Operator Console</p>
+                  <p className="text-lg font-semibold text-white">Freelancer Workspace</p>
                 </div>
               </motion.div>
             )}
