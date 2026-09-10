@@ -60,7 +60,7 @@ const STEPS: StepDef[] = [
     color: "var(--teal)",
   },
   {
-    id: "carrier",
+    id: "packages",
     title: "Add your first offer package",
     subtitle: "Add an offer or service package to your library so the AI can match clients to what you sell.",
     icon: FileText,

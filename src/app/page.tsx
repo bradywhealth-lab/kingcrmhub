@@ -559,7 +559,7 @@ function DashboardView() {
 
 // Leads View with CSV Upload - fetches real data from API
 function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAddLead: () => void; onUploadCSV: () => void; onScrape: () => void; refreshKey?: number }) {
-  type CarrierPlaybook = {
+  type PackagePlaybook = {
     recommendedPackage: {
       id: string | null
       name: string
@@ -614,7 +614,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
   const [error, setError] = useState<string | null>(null)
   const [assistantLoading, setAssistantLoading] = useState(false)
   const [assistantSaving, setAssistantSaving] = useState(false)
-  const [assistantPlaybook, setAssistantPlaybook] = useState<CarrierPlaybook | null>(null)
+  const [assistantPlaybook, setAssistantPlaybook] = useState<PackagePlaybook | null>(null)
   const [assistantSource, setAssistantSource] = useState<'llm' | 'fallback' | null>(null)
 
   useEffect(() => {
@@ -730,7 +730,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     }
   }
 
-  const generateCarrierPlaybook = async (leadId: string) => {
+  const generatePackagePlaybook = async (leadId: string) => {
     try {
       setAssistantLoading(true)
       const res = await fetch('/api/ai/package-playbook', {
@@ -1130,7 +1130,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   <div className="flex items-center gap-2">
                     <Button
                       className="btn-gold gap-2"
-                      onClick={() => void generateCarrierPlaybook(selectedLead.id)}
+                      onClick={() => void generatePackagePlaybook(selectedLead.id)}
                       disabled={assistantLoading}
                     >
                       {assistantLoading ? (
