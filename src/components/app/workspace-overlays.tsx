@@ -2,7 +2,6 @@
 
 import { FileSpreadsheet, Globe, RefreshCw, Upload } from "lucide-react"
 import { AddLeadDialog } from "@/components/app/add-lead-dialog"
-import { CreateLinearIssueDialog } from "@/components/app/create-linear-issue-dialog"
 import { CommandPalette } from "@/components/command-palette"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,9 +49,6 @@ export function WorkspaceOverlays({
   scraping,
   onScrapeSubmit,
   scrapeJobs,
-  showLinearIssueDialog,
-  setShowLinearIssueDialog,
-  linearIssuePrefill,
   commandPaletteOpen,
   setCommandPaletteOpen,
   onNavigate,
@@ -73,9 +69,6 @@ export function WorkspaceOverlays({
   scraping: boolean
   onScrapeSubmit: () => void | Promise<void>
   scrapeJobs: ScrapeJob[]
-  showLinearIssueDialog: boolean
-  setShowLinearIssueDialog: (open: boolean) => void
-  linearIssuePrefill: { title?: string; description?: string }
   commandPaletteOpen: boolean
   setCommandPaletteOpen: (open: boolean) => void
   onNavigate: (view: string) => void
@@ -279,13 +272,6 @@ export function WorkspaceOverlays({
           </div>
         </DialogContent>
       </Dialog>
-
-      <CreateLinearIssueDialog
-        open={showLinearIssueDialog}
-        onOpenChange={setShowLinearIssueDialog}
-        prefillTitle={linearIssuePrefill.title}
-        prefillDescription={linearIssuePrefill.description}
-      />
 
       <CommandPalette
         open={commandPaletteOpen}

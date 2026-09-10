@@ -9,10 +9,7 @@ export function useWorkspaceOverlays() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
-  const [showLinearIssueDialog, setShowLinearIssueDialog] = useState(false)
-  const [linearIssuePrefill, setLinearIssuePrefill] = useState<{ title?: string; description?: string }>({})
   const [leadsRefreshKey, setLeadsRefreshKey] = useState(0)
-  const [uploadsRefreshKey, setUploadsRefreshKey] = useState(0)
   const [showScrapeDialog, setShowScrapeDialog] = useState(false)
   const [scraping, setScraping] = useState(false)
   const [scrapeJobs, setScrapeJobs] = useState<Array<{ id: string; status: string; sourceUrl: string; createdAt: string }>>([])
@@ -32,16 +29,6 @@ export function useWorkspaceOverlays() {
   const [uploading, setUploading] = useState(false)
 
   useCommandPalette(() => setCommandPaletteOpen(true))
-
-  useEffect(() => {
-    const linearHandler = (event: Event) => {
-      const detail = (event as CustomEvent).detail as { title?: string; description?: string }
-      setLinearIssuePrefill(detail)
-      setShowLinearIssueDialog(true)
-    }
-    window.addEventListener("create-linear-issue", linearHandler)
-    return () => window.removeEventListener("create-linear-issue", linearHandler)
-  }, [])
 
   useEffect(() => {
     const leadHandler = () => setShowAddLeadDialog(true)
@@ -131,7 +118,6 @@ export function useWorkspaceOverlays() {
       })
       setShowUploadDialog(false)
       setLeadsRefreshKey((current) => current + 1)
-      setUploadsRefreshKey((current) => current + 1)
     } catch (error) {
       console.error("Upload error:", error)
       toast({
@@ -142,11 +128,6 @@ export function useWorkspaceOverlays() {
     } finally {
       setUploading(false)
     }
-  }, [])
-
-  const openLinearIssueDialog = useCallback((prefill: { title?: string; description?: string } = {}) => {
-    setLinearIssuePrefill(prefill)
-    setShowLinearIssueDialog(true)
   }, [])
 
   const handleLeadCreated = useCallback(() => {
@@ -160,12 +141,7 @@ export function useWorkspaceOverlays() {
     setShowAddLeadDialog,
     showUploadDialog,
     setShowUploadDialog,
-    showLinearIssueDialog,
-    setShowLinearIssueDialog,
-    linearIssuePrefill,
-    openLinearIssueDialog,
     leadsRefreshKey,
-    uploadsRefreshKey,
     handleLeadCreated,
     showScrapeDialog,
     setShowScrapeDialog,
