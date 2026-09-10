@@ -34,6 +34,7 @@ type AISettings = {
   providerLabel: string
   availableProviders: ProviderInfo[]
   platformFallbacks?: {
+    openrouter: boolean
     groq: boolean
     openai: boolean
     anthropic: boolean
@@ -44,7 +45,7 @@ export function AISettingsPanel() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<AISettings | null>(null)
-  const [selectedProvider, setSelectedProvider] = useState('groq')
+  const [selectedProvider, setSelectedProvider] = useState('openrouter')
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
 
@@ -196,7 +197,7 @@ export function AISettingsPanel() {
                 <Key className="mr-1 h-3 w-3" />
                 Custom key active
               </Badge>
-            ) : selectedProvider === 'groq' ? (
+            ) : selectedProvider === 'openrouter' ? (
               <Badge className="border-[var(--teal-deep)] bg-[var(--teal-tint)] text-[var(--teal-deep)]" variant="outline">
                 <Zap className="mr-1 h-3 w-3" />
                 Free tier
@@ -237,7 +238,11 @@ export function AISettingsPanel() {
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500">
-              {selectedProvider === 'groq'
+              {selectedProvider === 'openrouter'
+                ? settings?.platformFallbacks?.openrouter
+                  ? 'Free tier active — auto-routes to best available AI model.'
+                  : 'Add your own OpenRouter key at openrouter.ai/keys for free access.'
+                : selectedProvider === 'groq'
                 ? settings?.platformFallbacks?.groq
                   ? 'Groq fallback is available on this deployment.'
                   : 'Groq can run only if this deployment has a platform GROQ_API_KEY configured, unless your org adds its own key.'

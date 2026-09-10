@@ -3,7 +3,7 @@ import OpenAI from 'openai'
 import Groq from 'groq-sdk'
 import { db } from '@/lib/db'
 
-export type AIProvider = 'groq' | 'openai' | 'anthropic'
+export type AIProvider = 'groq' | 'openai' | 'anthropic' | 'openrouter'
 
 type AIConfig = {
   provider: AIProvider
@@ -25,8 +25,9 @@ function normalizeSettings(value: Prisma.JsonValue | null): Record<string, unkno
  * Priority:
  * 1. Org-level BYOK key + chosen provider
  * 2. Platform env key (OPENAI_API_KEY) if provider is openai
- * 3. Platform Groq key (GROQ_API_KEY) as free fallback
- * 4. Hard fallback: Groq free tier
+ * 3. Platform OpenRouter key (OPENROUTER_API_KEY) — free tier with auto-routing
+ * 4. Platform Groq key (GROQ_API_KEY) as fallback
+ * 5. Hard fallback: no provider
  */
 export async function resolveAIConfig(organizationId: string): Promise<AIConfig> {
   const org = await db.organization.findUnique({
@@ -35,7 +36,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
   })
 
   const settings = normalizeSettings(org?.settings ?? null)
-  const provider = (['groq', 'openai', 'anthropic'].includes(settings.aiProvider as string)
+  const provider = (['groq', 'openai', 'anthropic', 'openrouter'].includes(settings.aiProvider as string)
     ? settings.aiProvider
     : null) as AIProvider | null
   const orgKey = typeof settings.aiApiKey === 'string' && settings.aiApiKey.length > 0
@@ -75,7 +76,27 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
     }
   }
 
-  // Free tier: Groq (platform key) → OpenAI (platform key) → no provider
+  // If org chose openrouter but no key, check platform env
+  if (provider === 'openrouter' && process.env.OPENROUTER_API_KEY) {
+    return {
+      provider: 'openrouter',
+      model: model || 'openrouter/free',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      label: 'OpenRouter (platform)',
+    }
+  }
+
+  // Free tier: OpenRouter (platform key) -> Groq (platform key) -> OpenAI (platform key) -> no provider
+  const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
+  if (openrouterKey) {
+    return {
+      provider: 'openrouter',
+      model: model || 'openrouter/free',
+      apiKey: openrouterKey,
+      label: 'OpenRouter Free (auto-routing)',
+    }
+  }
+
   const groqKey = process.env.GROQ_API_KEY?.trim()
   if (groqKey) {
     return {
@@ -111,6 +132,7 @@ export function getDefaultModel(provider: AIProvider): string {
     case 'groq': return 'llama-3.3-70b-versatile'
     case 'openai': return 'gpt-4o'
     case 'anthropic': return 'claude-sonnet-4-20250514'
+    case 'openrouter': return 'openrouter/free'
   }
 }
 
@@ -133,9 +155,11 @@ export async function createChatStream(
   }
 
   if (config.provider === 'anthropic') {
-    // Anthropic uses OpenAI-compatible endpoint via their SDK
-    // For simplicity, use the OpenAI SDK with Anthropic's base URL
     return createAnthropicStream(config, messages, encoder)
+  }
+
+  if (config.provider === 'openrouter') {
+    return createOpenRouterStream(config, messages, encoder)
   }
 
   throw new Error(`Unsupported provider: ${config.provider}`)
@@ -216,7 +240,6 @@ async function createAnthropicStream(
   messages: ChatMessage[],
   encoder: TextEncoder,
 ): Promise<ReadableStream<Uint8Array>> {
-  // Use OpenAI SDK with Anthropic's OpenAI-compatible endpoint
   const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: 'https://api.anthropic.com/v1/',
@@ -226,7 +249,6 @@ async function createAnthropicStream(
     },
   })
 
-  // Anthropic expects system as a separate param, but via messages API it works
   const stream = await client.chat.completions.create({
     model: config.model,
     stream: true,
@@ -248,6 +270,48 @@ async function createAnthropicStream(
         controller.close()
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Anthropic stream error'
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        controller.close()
+      }
+    },
+  })
+}
+
+async function createOpenRouterStream(
+  config: AIConfig,
+  messages: ChatMessage[],
+  encoder: TextEncoder,
+): Promise<ReadableStream<Uint8Array>> {
+  const client = new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': process.env.APP_BASE_URL || 'https://kingcrmhub.net',
+      'X-Title': 'King CRM Hub',
+    },
+  })
+
+  const stream = await client.chat.completions.create({
+    model: config.model,
+    stream: true,
+    messages,
+    max_tokens: 1500,
+    temperature: 0.7,
+  })
+
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content
+          if (delta) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`))
+          }
+        }
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        controller.close()
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'OpenRouter stream error'
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }

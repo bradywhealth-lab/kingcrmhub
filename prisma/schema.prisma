@@ -48,9 +48,9 @@ model Organization {
   teamMembers           TeamMember[]
   auditLogs             AuditLog[]
   predictiveModels      PredictiveModel[]
-  carriers              Carrier[]
-  carrierDocuments      CarrierDocument[]
-  carrierDocumentChunks CarrierDocumentChunk[]
+  servicePackages       ServicePackage[]
+  packageDocuments      PackageDocument[]
+  packageDocumentChunks PackageDocumentChunk[]
   scrapeJobs            ScrapeJob[]
   scrapedContacts       ScrapedContact[]
   scrapingPerformance   ScrapingSourcePerformance[]
@@ -496,7 +496,7 @@ model ScrapedContact {
   @@index([leadId])
 }
 
-model Carrier {
+model ServicePackage {
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -509,20 +509,20 @@ model Carrier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  documents CarrierDocument[]
+  packageDocuments PackageDocument[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
 }
 
-model CarrierDocument {
+model PackageDocument {
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  carrierId      String
-  carrier        Carrier      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  packageId      String
+  servicePackage ServicePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
-  type          String // brochure, underwriting_guidelines, application, other
+  type          String // brochure, guidelines, application, other
   name          String
   description   String?
   fileUrl       String
@@ -535,27 +535,27 @@ model CarrierDocument {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  chunks CarrierDocumentChunk[]
+  chunks PackageDocumentChunk[]
 
   @@index([organizationId])
-  @@index([carrierId])
+  @@index([packageId])
 }
 
-model CarrierDocumentChunk {
-  id                String          @id @default(cuid())
+model PackageDocumentChunk {
+  id                String           @id @default(cuid())
   organizationId    String
-  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  carrierDocumentId String
-  carrierDocument   CarrierDocument @relation(fields: [carrierDocumentId], references: [id], onDelete: Cascade)
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  packageDocumentId String
+  packageDocument   PackageDocument  @relation(fields: [packageDocumentId], references: [id], onDelete: Cascade)
   chunkIndex        Int
   content           String
   contentPreview    String?
   metadata          Json?
-  createdAt         DateTime        @default(now())
+  createdAt         DateTime         @default(now())
 
-  @@unique([carrierDocumentId, chunkIndex])
+  @@unique([packageDocumentId, chunkIndex])
   @@index([organizationId])
-  @@index([carrierDocumentId])
+  @@index([packageDocumentId])
 }
 
 // ============================================
