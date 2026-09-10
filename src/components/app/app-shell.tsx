@@ -70,7 +70,7 @@ export function AppShell({
                 </div>
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/55">King CRM Hub</p>
-                  <p className="text-lg font-semibold text-white">Operator Console</p>
+                  <p className="text-lg font-semibold text-white">Freelancer Workspace</p>
                 </div>
               </motion.div>
             )}

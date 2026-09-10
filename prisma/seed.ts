@@ -201,9 +201,9 @@ async function main() {
   const pipelineItems = [
     { id: 'item-1', title: 'Michael Chen - Startup.io', value: 25000, probability: 20, stageId: 'stage-new', leadId: 'lead-2', pipelineId: pipeline.id, aiWinProbability: 0.35 },
     { id: 'item-2', title: 'Lisa Anderson - Retail Giants', value: 30000, probability: 15, stageId: 'stage-new', leadId: 'lead-5', pipelineId: pipeline.id, aiWinProbability: 0.28 },
-    { id: 'item-3', title: 'Sarah Johnson - TechCorp', value: 50000, probability: 60, stageId: 'stage-qualified', leadId: 'lead-1', pipelineId: pipeline.id, aiWinProbability: 0.72 },
+    { id: 'item-3', title: 'Alex Chen - TechStart', value: 50000, probability: 60, stageId: 'stage-qualified', leadId: 'lead-1', pipelineId: pipeline.id, aiWinProbability: 0.72 },
     { id: 'item-4', title: 'Emily Davis - Enterprise', value: 75000, probability: 70, stageId: 'stage-proposal', leadId: 'lead-3', pipelineId: pipeline.id, aiWinProbability: 0.68 },
-    { id: 'item-5', title: 'James Wilson - Agency', value: 120000, probability: 85, stageId: 'stage-negotiation', leadId: 'lead-4', pipelineId: pipeline.id, aiWinProbability: 0.89 },
+    { id: 'item-5', title: 'Jordan Reyes - Creative Co', value: 120000, probability: 85, stageId: 'stage-negotiation', leadId: 'lead-4', pipelineId: pipeline.id, aiWinProbability: 0.89 },
   ]
 
   for (const item of pipelineItems) {
@@ -258,7 +258,7 @@ async function main() {
       type: 'alert',
       category: 'pipeline',
       title: 'Deal at Risk',
-      description: 'James Wilson deal hasn\'t had activity in 5 days. Consider reaching out.',
+      description: 'Jordan Reyes deal hasn\'t had activity in 5 days. Consider reaching out.',
       data: { dealId: 'item-5' },
       confidence: 0.76,
       actionable: true,
@@ -280,7 +280,7 @@ async function main() {
     {
       id: 'activity-1',
       type: 'email',
-      title: 'Sent proposal to Sarah Johnson',
+      title: 'Sent proposal to Alex Chen',
       description: 'Follow-up email with pricing',
       metadata: { opened: true },
       aiSummary: 'Lead showed interest in premium plan',
@@ -290,7 +290,7 @@ async function main() {
     {
       id: 'activity-2',
       type: 'call',
-      title: 'Discovery call with James Wilson',
+      title: 'Discovery call with Jordan Reyes',
       description: 'Discussed requirements and timeline',
       metadata: { duration: 45 },
       aiSummary: 'Decision maker engaged, ready for proposal',
