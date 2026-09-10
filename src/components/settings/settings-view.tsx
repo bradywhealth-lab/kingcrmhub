@@ -669,8 +669,8 @@ function CarrierLibrarySettings() {
     const res = await fetch('/api/packages')
     const data = await res.json()
     if (!data.error) {
-      setCarriers(data.packages || [])
-      if (!selectedCarrierId && data.packages?.[0]?.id) setSelectedCarrierId(data.packages[0].id)
+      setCarriers(data.servicePackages || [])
+      if (!selectedCarrierId && data.servicePackages?.[0]?.id) setSelectedCarrierId(data.servicePackages[0].id)
     }
   }, [selectedCarrierId])
 

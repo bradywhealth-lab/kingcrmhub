@@ -137,9 +137,9 @@ async function extractPackageText(file: File, buffer: Buffer): Promise<string> {
   const ext = file.name.toLowerCase().split('.').pop() || ''
   if (ext === 'pdf') {
     try {
-      const pdfModule: any = await import('pdf-parse')
-      const pdfParse = (pdfModule.default || pdfModule) as (buf: Buffer) => Promise<{ text: string }>
-      const result = await pdfParse(buffer)
+      const pdfModule = await import('pdf-parse')
+      const parser = new pdfModule.PDFParse(buffer)
+      const result = await parser.parse()
       return result.text || ''
     } catch {
       return ''
