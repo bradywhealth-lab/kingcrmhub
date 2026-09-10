@@ -19,15 +19,13 @@ const mockNotifications = [
 
 export const APP_NAV_ITEMS = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", short: "Overview" },
-  { id: "leads", icon: Users, label: "Leads", short: "Leads" },
+  { id: "leads", icon: Users, label: "Leads", short: "Clients" },
   { id: "pipeline", icon: GitBranch, label: "Pipeline", short: "Deals" },
-  { id: "uploads", icon: Upload, label: "CSV Uploads", short: "Imports" },
-  { id: "linear", icon: SquareKanban, label: "Linear", short: "Issues" },
-  { id: "automation", icon: Zap, label: "AI Automation", short: "Automations" },
-  { id: "assistant", icon: MessageSquare, label: "AI Assistant", short: "Assistant" },
+  { id: "automation", icon: Zap, label: "Automations", short: "Workflows" },
+  { id: "assistant", icon: MessageSquare, label: "AI Assistant", short: "Chat" },
   { id: "prompts", icon: Sparkles, label: "Prompts", short: "Library" },
-  { id: "social", icon: Share2, label: "Social Media", short: "Social" },
-  { id: "settings", icon: Settings, label: "Settings", short: "Settings" },
+  { id: "social", icon: Share2, label: "Social", short: "Media" },
+  { id: "settings", icon: Settings, label: "Settings", short: "Config" },
 ] as const
 
 function getInitials(name: string | null | undefined) {
