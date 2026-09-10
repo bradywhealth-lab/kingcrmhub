@@ -32,3 +32,8 @@ ALTER TABLE "PackageDocument" ADD CONSTRAINT "PackageDocument_packageId_fkey"
 ALTER TABLE "PackageDocumentChunk" DROP CONSTRAINT IF EXISTS "CarrierDocumentChunk_carrierDocumentId_fkey";
 ALTER TABLE "PackageDocumentChunk" ADD CONSTRAINT "PackageDocumentChunk_packageDocumentId_fkey" 
   FOREIGN KEY ("packageDocumentId") REFERENCES "PackageDocument"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Rename organizationId FK constraints
+ALTER TABLE "ServicePackage" DROP CONSTRAINT IF EXISTS "Carrier_organizationId_fkey";
+ALTER TABLE "PackageDocument" DROP CONSTRAINT IF EXISTS "CarrierDocument_organizationId_fkey";
+ALTER TABLE "PackageDocumentChunk" DROP CONSTRAINT IF EXISTS "CarrierDocumentChunk_organizationId_fkey";

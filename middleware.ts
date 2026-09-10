@@ -63,6 +63,12 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // Public compare page — visitors must be able to see competitor comparison
+  if (pathname === '/compare') {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Protected routes - require authentication
   if (!isAuthenticated) {
     const url = request.nextUrl.clone()

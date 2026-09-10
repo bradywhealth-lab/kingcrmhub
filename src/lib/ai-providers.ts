@@ -90,10 +90,9 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
   // When falling back to a different provider than stored, force default model
   const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
   if (openrouterKey) {
-    const resolvedModel = (provider === 'openrouter' && model) ? model : 'openrouter/free'
     return {
       provider: 'openrouter',
-      model: resolvedModel,
+      model: 'openrouter/free',
       apiKey: openrouterKey,
       label: 'OpenRouter Free (auto-routing)',
     }

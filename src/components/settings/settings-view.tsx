@@ -666,11 +666,11 @@ function CarrierLibrarySettings() {
   ]
 
   const loadCarriers = useCallback(async () => {
-    const res = await fetch('/api/carriers')
+    const res = await fetch('/api/packages')
     const data = await res.json()
     if (!data.error) {
-      setCarriers(data.carriers || [])
-      if (!selectedCarrierId && data.carriers?.[0]?.id) setSelectedCarrierId(data.carriers[0].id)
+      setCarriers(data.servicePackages || [])
+      if (!selectedCarrierId && data.servicePackages?.[0]?.id) setSelectedCarrierId(data.servicePackages[0].id)
     }
   }, [selectedCarrierId])
 
@@ -679,7 +679,7 @@ function CarrierLibrarySettings() {
       setDocuments([])
       return
     }
-    const res = await fetch(`/api/carriers/${selectedCarrierId}/documents`)
+    const res = await fetch(`/api/packages/${selectedCarrierId}/documents`)
     const data = await res.json()
     if (!data.error) setDocuments(data.documents || [])
   }, [selectedCarrierId])
@@ -696,7 +696,7 @@ function CarrierLibrarySettings() {
     if (!newCarrierName.trim()) return
     setLoading(true)
     try {
-      const res = await fetch('/api/carriers', {
+      const res = await fetch('/api/packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newCarrierName, website: newCarrierWebsite }),
@@ -723,7 +723,7 @@ function CarrierLibrarySettings() {
       formData.append('type', uploadType)
       formData.append('name', uploadName || uploadFile.name)
       formData.append('version', uploadVersion)
-      const res = await fetch(`/api/carriers/${selectedCarrierId}/documents`, { method: 'POST', body: formData })
+      const res = await fetch(`/api/packages/${selectedCarrierId}/documents`, { method: 'POST', body: formData })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       toast({ title: 'Document uploaded', description: 'Offer document saved.' })

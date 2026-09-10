@@ -200,9 +200,9 @@ function StatusBadge({ status }: { status: string }) {
     new: "bg-[#0c111b] text-white",
     contacted: "bg-gray-600 text-white",
     qualified: "bg-[#18b897] text-black",
-    proposal: "bg-[#D97706] text-white",
-    negotiation: "bg-[#EA580C] text-white",
-    won: "bg-[#127C66] text-white",
+    proposal: "bg-[#127c66] text-white",
+    negotiation: "bg-[#127c66] text-white",
+    won: "bg-[#127c66] text-white",
     lost: "bg-red-600 text-white",
   }
   return (
@@ -560,13 +560,13 @@ function DashboardView() {
 // Leads View with CSV Upload - fetches real data from API
 function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAddLead: () => void; onUploadCSV: () => void; onScrape: () => void; refreshKey?: number }) {
   type CarrierPlaybook = {
-    recommendedCarrier: {
+    recommendedPackage: {
       id: string | null
       name: string
       rationale: string
       confidence: number
     }
-    backupCarriers: Array<{
+    backupPackages: Array<{
       id: string | null
       name: string
       rationale: string
@@ -582,8 +582,8 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     }
     nextActions: string[]
     citations: Array<{
-      carrierId: string | null
-      carrierName: string
+      packageId: string | null
+      packageName: string
       documentId: string
       documentName: string
       chunkIndex: number
@@ -880,7 +880,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="border-[#0C111B] text-[#0c111b] hover:bg-[#f4f0e6] gap-2"
+            className="border-[#127c66] text-[#0c111b] hover:bg-[#f4f0e6] gap-2"
             onClick={onScrape}
           >
             <Globe className="w-4 h-4" />
@@ -1161,25 +1161,25 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-4">
                         <p className="text-xs text-gray-500">Recommended Offer</p>
                         <p className="text-sm font-semibold text-black mt-1">
-                          {assistantPlaybook.recommendedCarrier.name}
+                          {assistantPlaybook.recommendedPackage.name}
                           <span className="text-xs text-gray-500 ml-2">
-                            ({Math.round((assistantPlaybook.recommendedCarrier.confidence || 0) * 100)}% confidence)
+                            ({Math.round((assistantPlaybook.recommendedPackage.confidence || 0) * 100)}% confidence)
                           </span>
                         </p>
-                        <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedCarrier.rationale}</p>
+                        <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedPackage.rationale}</p>
                         <p className="text-sm text-[#127c66] mt-2">
                           Service suggestion: {assistantPlaybook.suggestedPlanType}
                         </p>
                       </div>
 
-                      {assistantPlaybook.backupCarriers?.length > 0 && (
+                      {assistantPlaybook.backupPackages?.length > 0 && (
                         <div>
                           <p className="text-xs text-gray-500 mb-2">Backup Offers</p>
                           <div className="space-y-2">
-                            {assistantPlaybook.backupCarriers.map((carrier, idx) => (
-                              <div key={`${carrier.name}-${idx}`} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
-                                <p className="text-sm font-medium text-black">{carrier.name}</p>
-                                <p className="text-xs text-gray-600 mt-1">{carrier.rationale}</p>
+                            {assistantPlaybook.backupPackages.map((pkg, idx) => (
+                              <div key={`${pkg.name}-${idx}`} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
+                                <p className="text-sm font-medium text-black">{pkg.name}</p>
+                                <p className="text-xs text-gray-600 mt-1">{pkg.rationale}</p>
                               </div>
                             ))}
                           </div>
@@ -1217,9 +1217,9 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3 space-y-2">
                           <p className="text-xs text-gray-500">Grounding Citations</p>
                           {assistantPlaybook.citations.slice(0, 4).map((c, idx) => (
-                            <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#E6EDF7] bg-[#fcf8ec] p-2">
+                            <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#127c66] bg-[#fcf8ec] p-2">
                               <p className="text-xs font-medium text-black">
-                                {c.carrierName} - {c.documentName} (chunk {c.chunkIndex})
+                                {c.packageName} - {c.documentName} (chunk {c.chunkIndex})
                               </p>
                               <p className="text-xs text-gray-600 mt-1">{c.snippet}</p>
                             </div>
@@ -2765,7 +2765,7 @@ function SocialMediaView() {
           >
             <p className="text-sm font-semibold text-black">{pack.label}</p>
             <p className="text-xs text-gray-500 mt-1">{pack.topic}</p>
-            <p className="text-xs text-[#545961] mt-2">CTA: {pack.cta}</p>
+            <p className="text-xs text-[#127c66] mt-2">CTA: {pack.cta}</p>
           </motion.button>
         ))}
       </div>
@@ -2906,7 +2906,7 @@ function SocialMediaView() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize border-[#127c66]/60 text-[#545961]">{item.platform}</Badge>
+                      <Badge variant="outline" className="capitalize border-[#127c66]/60 text-[#127c66]">{item.platform}</Badge>
                       <Badge variant="outline" className={cn(
                         item.status === 'published' && 'border-emerald-500 text-emerald-600',
                         item.status === 'scheduled' && 'border-[#18b897] text-[#127c66]',
