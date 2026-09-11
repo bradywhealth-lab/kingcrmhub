@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Bot, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Plus, Search, Settings, Share2, Sparkles, Users, X, Zap, GitBranch } from "lucide-react"
+import { Bell, Bot, CheckSquare, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Plus, Search, Settings, Share2, Sparkles, Users, X, Zap, GitBranch } from "lucide-react"
 import { useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -17,7 +17,7 @@ export const APP_NAV_ITEMS = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", short: "Overview" },
   { id: "leads", icon: Users, label: "Leads", short: "Clients" },
   { id: "pipeline", icon: GitBranch, label: "Pipeline", short: "Deals" },
-  // { id: "tasks", icon: CheckSquare, label: "Tasks", short: "Hub" }, // TODO: re-enable when Tasks view is wired
+  { id: "tasks", icon: CheckSquare, label: "Tasks", short: "Hub" },
   { id: "automation", icon: Zap, label: "Automations", short: "Workflows" },
   { id: "assistant", icon: MessageSquare, label: "AI Assistant", short: "Chat" },
   { id: "prompts", icon: Sparkles, label: "Prompts", short: "Library" },

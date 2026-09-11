@@ -46,6 +46,7 @@ import { WorkspaceOverlays } from "@/components/app/workspace-overlays"
 import { useWorkspaceOverlays } from "@/components/app/use-workspace-overlays"
 import { useWorkspaceSession } from "@/components/app/use-workspace-session"
 import { SettingsView } from "@/components/settings/settings-view"
+import { TasksView } from "@/components/tasks/tasks-view"
 import { AiAssistantView } from "@/components/ai/ai-assistant-view"
 import { PromptsView } from "@/components/prompts/prompts-view"
 import { OnboardingWizard, IncompleteSetupBanner, useOnboarding } from "@/components/onboarding/onboarding-wizard"
@@ -2612,6 +2613,7 @@ export default function EliteCRM() {
       case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
       case "settings": return <SettingsView />
+      case "tasks": return <TasksView />
       default: return <DashboardView />
     }
   }
