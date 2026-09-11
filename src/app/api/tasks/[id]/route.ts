@@ -48,13 +48,15 @@ export const PATCH = (
     const existing = await db.task.findFirst({ where: { id, organizationId } })
     if (!existing) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
 
-    // Auto-set completedAt when moving to done
+    // Auto-manage completedAt based on status changes
     const completedAt =
-      body.status === 'done' && existing.status !== 'done'
-        ? new Date()
-        : body.completedAt !== undefined
-          ? (body.completedAt ? new Date(body.completedAt) : null)
-          : existing.completedAt
+      body.completedAt !== undefined
+        ? (body.completedAt ? new Date(body.completedAt) : null)
+        : body.status === 'done' && existing.status !== 'done'
+          ? new Date()
+          : body.status && body.status !== 'done' && existing.status === 'done'
+            ? null  // Clear completion when reopening
+            : existing.completedAt
 
     const task = await db.task.update({
       where: { id },

@@ -61,13 +61,20 @@ export const POST = (request: NextRequest) =>
     if (!parsed.success) return parsed.response
     const body = parsed.data
 
+    // Validate interval: end must be after start
+    const start = new Date(body.startTime)
+    const end = new Date(body.endTime)
+    if (end <= start) {
+      return NextResponse.json({ error: 'End time must be after start time' }, { status: 400 })
+    }
+
     const appointment = await db.appointment.create({
       data: {
         organizationId,
         title: body.title,
         description: body.description,
-        startTime: new Date(body.startTime),
-        endTime: new Date(body.endTime),
+        startTime: start,
+        endTime: end,
         timezone: body.timezone ?? 'America/New_York',
         location: body.location,
         leadId: body.leadId,

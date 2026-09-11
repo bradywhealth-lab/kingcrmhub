@@ -20,7 +20,7 @@ export const TASK_FEATURES = {
 
 const TIER_ACCESS: Record<string, PlanTier[]> = {
   [TASK_FEATURES.TASKS_BASIC]: ['free', 'starter', 'pro', 'enterprise'],
-  [TASK_FEATURES.AUTO_SPAWN]: ['pro', 'enterprise'],
+  [TASK_FEATURES.AUTO_SPAWN]: ['starter', 'pro', 'enterprise'],
   [TASK_FEATURES.GCAL_SYNC]: ['pro', 'enterprise'],
   [TASK_FEATURES.BOOKING_LINKS]: ['free', 'starter', 'pro', 'enterprise'],
 }

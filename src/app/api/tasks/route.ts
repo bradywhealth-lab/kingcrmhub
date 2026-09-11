@@ -52,6 +52,20 @@ export const POST = (request: NextRequest) =>
     if (!parsed.success) return parsed.response
     const body = parsed.data
 
+    // Validate relation IDs belong to this org
+    if (body.assignedToId) {
+      const user = await db.user.findFirst({ where: { id: body.assignedToId, organizationId }, select: { id: true } })
+      if (!user) return NextResponse.json({ error: 'Assigned user not found' }, { status: 404 })
+    }
+    if (body.leadId) {
+      const lead = await db.lead.findFirst({ where: { id: body.leadId, organizationId }, select: { id: true } })
+      if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+    if (body.pipelineItemId) {
+      const item = await db.pipelineItem.findFirst({ where: { id: body.pipelineItemId }, include: { pipeline: { select: { organizationId: true } } } })
+      if (!item || item.pipeline.organizationId !== organizationId) return NextResponse.json({ error: 'Pipeline item not found' }, { status: 404 })
+    }
+
     const task = await db.task.create({
       data: {
         organizationId,

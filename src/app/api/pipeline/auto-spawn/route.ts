@@ -7,21 +7,22 @@ import { getTasksForStage, hasFeatureAccess, TASK_FEATURES } from '@/lib/tasks'
 
 const autoSpawnSchema = z.object({
   pipelineItemId: z.string(),
-  stageName: z.string(),
+  stageName: z.string().optional(),
 })
 
 /**
  * POST /api/pipeline/auto-spawn
  *
  * Triggered when a pipeline item changes stage.
- * Auto-creates tasks based on the target stage (e.g., "won" → 3 onboarding tasks).
- * Pro+ tier required — returns 402 if org is on free/starter.
+ * Reads the item's ACTUAL current stage from the DB (never trusts the request body)
+ * and creates tasks based on that stage (e.g., "won" → 3 onboarding tasks).
+ * Pro+ tier required — returns 402 if org is on free.
  */
 export const POST = (request: NextRequest) =>
   withRequestOrgContext(request, async ({ organizationId }) => {
     const parsed = await parseJsonBody(request, autoSpawnSchema)
     if (!parsed.success) return parsed.response
-    const { pipelineItemId, stageName } = parsed.data
+    const { pipelineItemId } = parsed.data
 
     // Tier gate: Pro+ required for auto-spawn
     const org = await db.organization.findUnique({
@@ -38,15 +39,21 @@ export const POST = (request: NextRequest) =>
       )
     }
 
-    // Verify pipeline item belongs to this org
+    // Verify pipeline item belongs to this org AND load its actual stage
     const item = await db.pipelineItem.findFirst({
       where: { id: pipelineItemId },
-      include: { pipeline: { select: { organizationId: true } } },
+      include: {
+        pipeline: { select: { organizationId: true } },
+        stage: { select: { name: true } },
+      },
     })
 
     if (!item || item.pipeline.organizationId !== organizationId) {
       return NextResponse.json({ error: 'Pipeline item not found' }, { status: 404 })
     }
+
+    // Derive stage from the persisted value — never trust request body
+    const stageName = item.stage?.name ?? ''
 
     // Get tasks for this stage
     const taskDefs = getTasksForStage(stageName)
@@ -54,8 +61,8 @@ export const POST = (request: NextRequest) =>
       return NextResponse.json({ tasks: [], message: 'No auto-spawn rules for this stage' })
     }
 
-    // Create tasks in a transaction
-    const tasks = await db.$transaction(
+    // Create tasks via Promise.all (already inside withRequestOrgContext's transaction)
+    const tasks = await Promise.all(
       taskDefs.map((def, index) =>
         db.task.create({
           data: {
