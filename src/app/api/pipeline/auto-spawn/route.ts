@@ -61,12 +61,14 @@ export const POST = (request: NextRequest) =>
       return NextResponse.json({ tasks: [], message: 'No auto-spawn rules for this stage' })
     }
 
-    // Idempotency: skip if auto-spawn tasks already exist for this pipeline item
+    // Idempotency: skip if auto-spawn tasks already exist for this pipeline item + stage
+    // Uses title prefix matching so moving through multiple stages each gets its own task set
+    const stagePrefix = `[${stageName}]`
     const existingCount = await db.task.count({
-      where: { pipelineItemId, source: 'auto_spawn', organizationId },
+      where: { pipelineItemId, source: 'auto_spawn', organizationId, title: { startsWith: stagePrefix } },
     })
     if (existingCount > 0) {
-      return NextResponse.json({ tasks: [], message: 'Auto-spawn tasks already exist for this pipeline item' })
+      return NextResponse.json({ tasks: [], message: 'Auto-spawn tasks already exist for this stage' })
     }
 
     // Create tasks via Promise.all (already inside withRequestOrgContext's transaction)
@@ -75,7 +77,7 @@ export const POST = (request: NextRequest) =>
         db.task.create({
           data: {
             organizationId,
-            title: def.title,
+            title: `${stagePrefix} ${def.title}`,
             description: def.description,
             status: 'todo',
             priority: 'normal',

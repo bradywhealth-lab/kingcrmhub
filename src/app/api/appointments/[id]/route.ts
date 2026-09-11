@@ -48,8 +48,9 @@ export const PATCH = (
     const existing = await db.appointment.findFirst({ where: { id, organizationId } })
     if (!existing) return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
 
-    // Scope leadId to this organization
-    if (body.leadId) {
+    // Scope leadId to this organization (reject empty strings too)
+    if (body.leadId !== undefined && body.leadId !== null) {
+      if (body.leadId === '') return NextResponse.json({ error: 'leadId cannot be empty' }, { status: 400 })
       const lead = await db.lead.findFirst({ where: { id: body.leadId, organizationId }, select: { id: true } })
       if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }

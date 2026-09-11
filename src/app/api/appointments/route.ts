@@ -26,6 +26,11 @@ export const GET = (request: NextRequest) =>
     const where: Record<string, unknown> = { organizationId }
     if (leadId) where.leadId = leadId
     if (from || to) {
+      // Strict ISO 8601 date validation — reject calendar-invalid dates like 2024-02-31
+      const isoDateRe = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/
+      if ((from && !isoDateRe.test(from)) || (to && !isoDateRe.test(to))) {
+        return NextResponse.json({ error: 'Invalid date format for from/to parameter' }, { status: 400 })
+      }
       const gte = from ? new Date(from) : undefined
       const lte = to ? new Date(to) : undefined
       if ((from && isNaN(gte!.getTime())) || (to && isNaN(lte!.getTime()))) {
