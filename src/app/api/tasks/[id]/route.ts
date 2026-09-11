@@ -48,6 +48,12 @@ export const PATCH = (
     const existing = await db.task.findFirst({ where: { id, organizationId } })
     if (!existing) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
 
+    // Scope assignedToId to this organization
+    if (body.assignedToId) {
+      const user = await db.user.findFirst({ where: { id: body.assignedToId, organizationId }, select: { id: true } })
+      if (!user) return NextResponse.json({ error: 'Assigned user not found' }, { status: 404 })
+    }
+
     // Auto-manage completedAt based on status changes
     const completedAt =
       body.completedAt !== undefined

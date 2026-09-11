@@ -48,6 +48,19 @@ export const PATCH = (
     const existing = await db.appointment.findFirst({ where: { id, organizationId } })
     if (!existing) return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
 
+    // Scope leadId to this organization
+    if (body.leadId) {
+      const lead = await db.lead.findFirst({ where: { id: body.leadId, organizationId }, select: { id: true } })
+      if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
+    // Validate resolved interval: end must be after start
+    const resolvedStart = body.startTime ? new Date(body.startTime) : existing.startTime
+    const resolvedEnd = body.endTime ? new Date(body.endTime) : existing.endTime
+    if (resolvedEnd <= resolvedStart) {
+      return NextResponse.json({ error: 'End time must be after start time' }, { status: 400 })
+    }
+
     const appointment = await db.appointment.update({
       where: { id },
       data: {

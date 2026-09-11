@@ -16,19 +16,6 @@ const createAppointmentSchema = z.object({
   attendeeEmail: z.string().email().optional(),
 })
 
-const updateAppointmentSchema = z.object({
-  title: z.string().min(1).max(500).optional(),
-  description: z.string().max(5000).nullable().optional(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
-  timezone: z.string().optional(),
-  location: z.string().max(500).nullable().optional(),
-  leadId: z.string().nullable().optional(),
-  attendeeName: z.string().max(200).nullable().optional(),
-  attendeeEmail: z.string().email().nullable().optional(),
-  status: z.enum(['scheduled', 'cancelled', 'completed']).optional(),
-})
-
 export const GET = (request: NextRequest) =>
   withRequestOrgContext(request, async ({ organizationId }) => {
     const url = new URL(request.url)
@@ -39,9 +26,14 @@ export const GET = (request: NextRequest) =>
     const where: Record<string, unknown> = { organizationId }
     if (leadId) where.leadId = leadId
     if (from || to) {
+      const gte = from ? new Date(from) : undefined
+      const lte = to ? new Date(to) : undefined
+      if ((from && isNaN(gte!.getTime())) || (to && isNaN(lte!.getTime()))) {
+        return NextResponse.json({ error: 'Invalid date format for from/to parameter' }, { status: 400 })
+      }
       where.startTime = {}
-      if (from) (where.startTime as Record<string, unknown>).gte = new Date(from)
-      if (to) (where.startTime as Record<string, unknown>).lte = new Date(to)
+      if (gte) (where.startTime as Record<string, unknown>).gte = gte
+      if (lte) (where.startTime as Record<string, unknown>).lte = lte
     }
 
     const appointments = await db.appointment.findMany({
@@ -66,6 +58,12 @@ export const POST = (request: NextRequest) =>
     const end = new Date(body.endTime)
     if (end <= start) {
       return NextResponse.json({ error: 'End time must be after start time' }, { status: 400 })
+    }
+
+    // Scope leadId to this organization
+    if (body.leadId) {
+      const lead = await db.lead.findFirst({ where: { id: body.leadId, organizationId }, select: { id: true } })
+      if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
     const appointment = await db.appointment.create({

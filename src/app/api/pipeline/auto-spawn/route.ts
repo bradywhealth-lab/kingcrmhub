@@ -16,7 +16,7 @@ const autoSpawnSchema = z.object({
  * Triggered when a pipeline item changes stage.
  * Reads the item's ACTUAL current stage from the DB (never trusts the request body)
  * and creates tasks based on that stage (e.g., "won" → 3 onboarding tasks).
- * Pro+ tier required — returns 402 if org is on free.
+ * Starter+ tier required — returns 402 if org is on free.
  */
 export const POST = (request: NextRequest) =>
   withRequestOrgContext(request, async ({ organizationId }) => {
@@ -34,7 +34,7 @@ export const POST = (request: NextRequest) =>
 
     if (!hasFeatureAccess(org.plan as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
       return NextResponse.json(
-        { error: 'Auto-spawn requires Pro plan or higher', requiredTier: 'pro' },
+        { error: 'Auto-spawn requires Starter plan or higher', requiredTier: 'starter' },
         { status: 402 },
       )
     }
@@ -59,6 +59,14 @@ export const POST = (request: NextRequest) =>
     const taskDefs = getTasksForStage(stageName)
     if (taskDefs.length === 0) {
       return NextResponse.json({ tasks: [], message: 'No auto-spawn rules for this stage' })
+    }
+
+    // Idempotency: skip if auto-spawn tasks already exist for this pipeline item
+    const existingCount = await db.task.count({
+      where: { pipelineItemId, source: 'auto_spawn', organizationId },
+    })
+    if (existingCount > 0) {
+      return NextResponse.json({ tasks: [], message: 'Auto-spawn tasks already exist for this pipeline item' })
     }
 
     // Create tasks via Promise.all (already inside withRequestOrgContext's transaction)

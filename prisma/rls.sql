@@ -7,7 +7,7 @@ DECLARE
         'AIFeedback', 'Organization', 'User', 'Lead', 'CSVUpload', 'Note', 'Tag', 'LeadTag', 'CustomField',
         'Pipeline', 'PipelineStage', 'PipelineItem', 'Automation', 'AutomationLog', 'Sequence', 'SequenceStep',
         'SequenceEnrollment', 'Activity', 'Campaign', 'ContentQueue', 'SocialAccount', 'ScrapeJob', 'ScrapedContact',
-        'Carrier', 'CarrierDocument', 'CarrierDocumentChunk', 'Integration', 'Webhook', 'Template', 'AIModelConfig',
+        'ServicePackage', 'PackageDocument', 'PackageDocumentChunk', 'Integration', 'Webhook', 'Template', 'AIModelConfig',
         'AIInsight', 'TeamMember', 'LeadAssignment', 'TeamActivity', 'LeadScoreHistory', 'PredictiveModel', 'Quote',
         'QuoteLineItem', 'QuoteVersion', 'MessageThread', 'Message', 'AuditLog', 'UserSession',
         'Task', 'Appointment', 'CalendarSync', 'BookingLink'

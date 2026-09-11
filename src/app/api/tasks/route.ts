@@ -31,7 +31,13 @@ export const GET = (request: NextRequest) =>
     if (priority) where.priority = priority
     if (assignedToId) where.assignedToId = assignedToId
     if (leadId) where.leadId = leadId
-    if (dueBefore) where.dueDate = { lte: new Date(dueBefore) }
+    if (dueBefore) {
+      const parsed = new Date(dueBefore)
+      if (isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: 'Invalid date format for dueBefore parameter' }, { status: 400 })
+      }
+      where.dueDate = { lte: parsed }
+    }
 
     const tasks = await db.task.findMany({
       where,
@@ -65,6 +71,10 @@ export const POST = (request: NextRequest) =>
       const item = await db.pipelineItem.findFirst({ where: { id: body.pipelineItemId }, include: { pipeline: { select: { organizationId: true } } } })
       if (!item || item.pipeline.organizationId !== organizationId) return NextResponse.json({ error: 'Pipeline item not found' }, { status: 404 })
     }
+    if (body.autoSpawnRuleId) {
+      const rule = await db.automation.findFirst({ where: { id: body.autoSpawnRuleId, organizationId }, select: { id: true } })
+      if (!rule) return NextResponse.json({ error: 'Automation rule not found' }, { status: 404 })
+    }
 
     const task = await db.task.create({
       data: {
@@ -74,6 +84,7 @@ export const POST = (request: NextRequest) =>
         status: body.status ?? 'todo',
         priority: body.priority ?? 'normal',
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
+        completedAt: body.status === 'done' ? new Date() : undefined,
         assignedToId: body.assignedToId,
         leadId: body.leadId,
         pipelineItemId: body.pipelineItemId,

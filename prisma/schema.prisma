@@ -1333,5 +1333,4 @@ model BookingLink {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
-  @@index([slug])
 }
