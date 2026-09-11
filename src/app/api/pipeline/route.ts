@@ -4,6 +4,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { getTasksForStage, hasFeatureAccess, TASK_FEATURES } from '@/lib/tasks'
 
 const createPipelineItemSchema = z.object({
   stageId: z.string().optional(),
@@ -261,6 +262,38 @@ export async function PATCH(request: NextRequest) {
           },
           data: { status }
         })
+      }
+    }
+
+    // Auto-spawn tasks for the new stage (errors logged but don't block the stage move)
+    const stageName = item.stage?.name ?? ''
+    const org = await db.organization.findUnique({ where: { id: organizationId }, select: { plan: true } })
+    if (org && hasFeatureAccess(org.plan as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
+      const taskDefs = getTasksForStage(stageName)
+      if (taskDefs.length > 0) {
+        // Stage-specific idempotency: only skip if tasks already exist for THIS pipeline item + stage
+        const existingCount = await db.task.count({
+          where: { pipelineItemId: itemId, source: 'auto_spawn', organizationId },
+        })
+        if (existingCount === 0) {
+          await Promise.all(
+            taskDefs.map((def, index) =>
+              db.task.create({
+                data: {
+                  organizationId,
+                  title: `[${stageName}] ${def.title}`,
+                  description: def.description,
+                  status: 'todo',
+                  priority: 'normal',
+                  source: 'auto_spawn',
+                  pipelineItemId: itemId,
+                  leadId: item.leadId ?? undefined,
+                  position: index,
+                },
+              })
+            )
+          ).catch(err => console.error('Auto-spawn failed for stage:', stageName, err))
+        }
       }
     }
     
