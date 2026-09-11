@@ -2,6 +2,20 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { CheckSquare, Calendar, List, Columns, Plus, Clock, AlertTriangle, ChevronRight, User, Building } from 'lucide-react'
+
+/**
+ * Tasks & Appointments Hub — unified day view (frozen spec: PR B).
+ *
+ * DATA FLOW (gate B — booking.ts integration):
+ *   Booking page (/book/[slug]) → POST /api/bookings → Appointment record in DB
+ *   → TasksView fetches from GET /api/appointments (this file)
+ *   → Appointments created through the booking page render here automatically.
+ *
+ *   Server-side tier gates (PR #172, already deployed):
+ *   - Tasks: FREE tier (GET /api/tasks)
+ *   - Auto-spawn: Starter+ only (hasFeatureAccess check in auto-spawn/route.ts:35)
+ *   - Google Calendar sync: Pro+ (Phase 3, per roadmap)
+ */
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
