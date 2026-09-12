@@ -19,6 +19,7 @@ import { CheckSquare, Calendar, List, Columns, Plus, Clock, AlertTriangle, Chevr
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { toast } from '@/hooks/use-toast'
 import { buildApiPath } from '@/lib/api-client'
 
@@ -237,6 +238,11 @@ export function TasksView() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<FilterTab>('today')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [showCreate, setShowCreate] = useState(false)
+  const [createTitle, setCreateTitle] = useState('')
+  const [createPriority, setCreatePriority] = useState<string>('normal')
+  const [createDue, setCreateDue] = useState('')
+  const [createSaving, setCreateSaving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -300,6 +306,35 @@ export function TasksView() {
   // In Kanban mode, also check if board has any tasks (including done)
   const kanbanIsEmpty = viewMode === 'kanban' && kanbanColumns.every((col) => col.tasks.length === 0) && filteredAppointments.length === 0
 
+  const handleCreateTask = async () => {
+    if (!createTitle.trim()) return
+    setCreateSaving(true)
+    try {
+      const res = await fetch(buildApiPath('/api/tasks'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: createTitle.trim(),
+          priority: createPriority,
+          dueDate: createDue || undefined,
+        }),
+      })
+      if (res.status === 401) { window.location.href = buildApiPath('/auth'); return }
+      if (!res.ok) throw new Error('Failed to create task')
+      const { task } = await res.json()
+      setTasks((prev) => [...prev, task])
+      setShowCreate(false)
+      setCreateTitle('')
+      setCreatePriority('normal')
+      setCreateDue('')
+      toast({ title: 'Task created', description: task.title })
+    } catch {
+      toast({ title: 'Could not create task', description: 'Please try again.', variant: 'destructive' })
+    } finally {
+      setCreateSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6 lg:p-8 space-y-6">
@@ -353,6 +388,15 @@ export function TasksView() {
               <Columns className="h-4 w-4" />
             </button>
           </div>
+
+          <Button
+            onClick={() => setShowCreate(true)}
+            size="sm"
+            className="rounded-xl bg-[#18b897] text-white hover:bg-[#15a88a] h-9 px-4 gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Create Task
+          </Button>
         </div>
       </div>
 
@@ -419,6 +463,58 @@ export function TasksView() {
               </div>
             </section>
           )}
+        </div>
+      )}
+
+      {/* Create Task Dialog */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c111b]/40 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[rgba(31,42,54,0.08)]" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold text-[#0c111b]">Create Task</h2>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Title</label>
+                <Input
+                  autoFocus
+                  value={createTitle}
+                  onChange={(e) => setCreateTitle(e.target.value)}
+                  placeholder="What needs to be done?"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateTask() }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Priority</label>
+                <select
+                  value={createPriority}
+                  onChange={(e) => setCreatePriority(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-white px-3 text-sm text-[#0c111b] focus:outline-none focus:ring-2 focus:ring-[#18b897]/30"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Due date</label>
+                <Input
+                  type="date"
+                  value={createDue}
+                  onChange={(e) => setCreateDue(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button variant="ghost" onClick={() => setShowCreate(false)} disabled={createSaving}>Cancel</Button>
+              <Button
+                onClick={handleCreateTask}
+                disabled={!createTitle.trim() || createSaving}
+                className="rounded-xl bg-[#18b897] text-white hover:bg-[#15a88a]"
+              >
+                {createSaving ? 'Creating...' : 'Create Task'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
