@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { CheckSquare, Calendar, List, Columns, Plus, Clock, AlertTriangle, ChevronRight, User, Building } from 'lucide-react'
+import { CheckSquare, Calendar, List, Columns, Plus, Clock, AlertTriangle, Check, User, Building } from 'lucide-react'
 
 /**
  * Tasks & Appointments Hub — unified day view (frozen spec: PR B).
@@ -19,6 +19,7 @@ import { CheckSquare, Calendar, List, Columns, Plus, Clock, AlertTriangle, Chevr
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { toast } from '@/hooks/use-toast'
 import { buildApiPath } from '@/lib/api-client'
 
@@ -149,14 +150,29 @@ function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; com
   )
 }
 
-function TaskCard({ task }: { task: TaskRecord }) {
+function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id: string) => void }) {
+  const isDone = task.status === 'done'
   return (
-    <Card className="group border-[rgba(31,42,54,0.08)] bg-white shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow">
+    <Card
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData('text/plain', task.id); e.dataTransfer.effectAllowed = 'move' }}
+      className={`group border-[rgba(31,42,54,0.08)] bg-white shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow ${isDone ? 'opacity-60' : ''}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] || 'bg-slate-300'}`} />
+          <button
+            onClick={() => onToggleDone(task.id)}
+            aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+              isDone
+                ? 'border-[#18b897] bg-[#18b897] text-white'
+                : 'border-[#0c111b]/20 hover:border-[#18b897]/50'
+            }`}
+          >
+            {isDone && <Check className="h-3 w-3" />}
+          </button>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[#0c111b] leading-snug">{task.title}</p>
+            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-[#0c111b]/40 line-through' : 'text-[#0c111b]'}`}>{task.title}</p>
             {task.description && (
               <p className="mt-1 text-xs text-[#0c111b]/55 line-clamp-2">{task.description}</p>
             )}
@@ -237,6 +253,12 @@ export function TasksView() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<FilterTab>('today')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [showCreate, setShowCreate] = useState(false)
+  const [createTitle, setCreateTitle] = useState('')
+  const [createPriority, setCreatePriority] = useState<string>('normal')
+  const [createDue, setCreateDue] = useState('')
+  const [createSaving, setCreateSaving] = useState(false)
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -300,6 +322,92 @@ export function TasksView() {
   // In Kanban mode, also check if board has any tasks (including done)
   const kanbanIsEmpty = viewMode === 'kanban' && kanbanColumns.every((col) => col.tasks.length === 0) && filteredAppointments.length === 0
 
+  const handleToggleDone = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task) return
+    // Serialize per-task: skip while a PATCH for this task is still in flight
+    if (pendingToggles.has(taskId)) return
+    setPendingToggles((prev) => new Set(prev).add(taskId))
+    const newStatus = task.status === 'done' ? 'todo' : 'done'
+    // Optimistic update
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatus } : t))
+    try {
+      const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) throw new Error('Failed')
+    } catch {
+      // Revert on failure
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: task.status } : t))
+      toast({ title: 'Could not update task', variant: 'destructive' })
+    } finally {
+      setPendingToggles((prev) => {
+        const next = new Set(prev)
+        next.delete(taskId)
+        return next
+      })
+    }
+  }
+
+  const handleCreateTask = async () => {
+    if (!createTitle.trim() || createSaving) return
+    setCreateSaving(true)
+    try {
+      const res = await fetch(buildApiPath('/api/tasks'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: createTitle.trim(),
+          priority: createPriority,
+          dueDate: createDue ? new Date(createDue + 'T00:00:00').toISOString() : undefined,
+        }),
+      })
+      if (res.status === 401) { window.location.href = buildApiPath('/auth'); return }
+      if (!res.ok) throw new Error('Failed to create task')
+      const { task } = await res.json()
+      setTasks((prev) => [...prev, task])
+      setShowCreate(false)
+      setCreateTitle('')
+      setCreatePriority('normal')
+      setCreateDue('')
+      toast({ title: 'Task created', description: task.title })
+    } catch {
+      toast({ title: 'Could not create task', description: 'Please try again.', variant: 'destructive' })
+    } finally {
+      setCreateSaving(false)
+    }
+  }
+
+  const handleMoveTask = async (taskId: string, newStatus: string) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task || task.status === newStatus) return
+    if (pendingToggles.has(taskId)) return
+    setPendingToggles((prev) => new Set(prev).add(taskId))
+    const oldStatus = task.status
+    const newStatusTyped = newStatus as TaskRecord['status']
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatusTyped } : t))
+    try {
+      const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) throw new Error('Failed')
+    } catch {
+      const oldStatusTyped = oldStatus as TaskRecord['status']
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: oldStatusTyped } : t))
+      toast({ title: 'Could not move task', variant: 'destructive' })
+    } finally {
+      setPendingToggles((prev) => {
+        const next = new Set(prev)
+        next.delete(taskId)
+        return next
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6 lg:p-8 space-y-6">
@@ -353,6 +461,15 @@ export function TasksView() {
               <Columns className="h-4 w-4" />
             </button>
           </div>
+
+          <Button
+            onClick={() => setShowCreate(true)}
+            size="sm"
+            className="rounded-xl bg-[#18b897] text-white hover:bg-[#15a88a] h-9 px-4 gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Create Task
+          </Button>
         </div>
       </div>
 
@@ -364,7 +481,11 @@ export function TasksView() {
         <div className="space-y-8">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {kanbanColumns.map((col) => (
-              <div key={col.key} className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4">
+              <div
+              key={col.key}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+              onDrop={(e) => { e.preventDefault(); const taskId = e.dataTransfer.getData('text/plain'); if (taskId) handleMoveTask(taskId, col.key) }}
+              className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4 min-h-[120px]">
                 <div className="mb-3 flex items-center justify-between">
                   <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
                     {col.label}
@@ -375,7 +496,7 @@ export function TasksView() {
                   {col.tasks.length === 0 ? (
                     <p className="py-6 text-center text-xs text-[#0c111b]/25">No tasks</p>
                   ) : (
-                    col.tasks.map((task) => <TaskCard key={task.id} task={task} />)
+                    col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} />)
                   )}
                 </div>
               </div>
@@ -403,7 +524,7 @@ export function TasksView() {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Tasks</h2>
               <div className="space-y-3">
                 {filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} />
                 ))}
               </div>
             </section>
@@ -419,6 +540,68 @@ export function TasksView() {
               </div>
             </section>
           )}
+        </div>
+      )}
+
+      {/* Create Task Dialog */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c111b]/40 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-task-title"
+            onKeyDown={(e) => { if (e.key === 'Escape') setShowCreate(false) }}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[rgba(31,42,54,0.08)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="create-task-title" className="text-lg font-semibold text-[#0c111b]">Create Task</h2>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="task-title" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Title</label>
+                <Input
+                  id="task-title"
+                  autoFocus
+                  value={createTitle}
+                  onChange={(e) => setCreateTitle(e.target.value)}
+                  placeholder="What needs to be done?"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateTask() }}
+                />
+              </div>
+              <div>
+                <label htmlFor="task-priority" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Priority</label>
+                <select
+                  id="task-priority"
+                  value={createPriority}
+                  onChange={(e) => setCreatePriority(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-white px-3 text-sm text-[#0c111b] focus:outline-none focus:ring-2 focus:ring-[#18b897]/30"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="task-due" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Due date</label>
+                <Input
+                  id="task-due"
+                  type="date"
+                  value={createDue}
+                  onChange={(e) => setCreateDue(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button variant="ghost" onClick={() => setShowCreate(false)} disabled={createSaving}>Cancel</Button>
+              <Button
+                onClick={handleCreateTask}
+                disabled={!createTitle.trim() || createSaving}
+                className="rounded-xl bg-[#18b897] text-white hover:bg-[#15a88a]"
+              >
+                {createSaving ? 'Creating...' : 'Create Task'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
