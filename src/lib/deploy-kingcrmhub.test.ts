@@ -193,6 +193,10 @@ describe('KingCRMhub deploy hardening', () => {
 
     expect(script).toContain('prisma migrate deploy')
     expect(script).toContain('MIGRATE_DEPLOY_FAILED')
+    // db-push legacy databases have no _prisma_migrations table — the script
+    // must baseline them via migrate resolve --applied instead of failing (cubic P1).
+    expect(script).toContain('P3005')
+    expect(script).toContain('migrate resolve --applied')
   })
 
   it('completes when mocked build, migration, schema, and HTTP gates pass', () => {

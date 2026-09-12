@@ -146,12 +146,31 @@ echo "=== APPLY ALL PENDING MIGRATIONS (idempotent) ==="
 # prisma migrate deploy applies every pending migration tracked in
 # _prisma_migrations — new migrations no longer need a manual per-file step
 # here (the Tasks Hub migration was missed this way on 2026-09-11).
+#
+# Baseline guard (cubic P1, PR #176): databases created via `prisma db push`
+# (like prod) have no _prisma_migrations table, so migrate deploy fails with
+# P3005 "database schema is not empty". In that case, baseline the DB: mark
+# every existing migration as applied (the db-push schema already matches
+# them) so only FUTURE migrations deploy.
+MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
+  if printf '%s' "$MIG_OUT" | grep -q 'P3005'; then
+    echo "=== BASELINE database without _prisma_migrations (db-push legacy) ==="
+    for dir in "$REPO_DIR"/prisma/migrations/*/; do
+      name="$(basename "$dir")"
+      compose exec -T "$SERVICE" npx prisma migrate resolve --applied "$name" \
+        || { echo "MIGRATE_BASELINE_FAILED $name" >&2; restore_old; exit 1; }
+    done
+    MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" \
+      || { printf '%s\n' "$MIG_OUT" >&2; echo "MIGRATE_DEPLOY_FAILED" >&2; restore_old; exit 1; }
+  else
+    printf '%s\n' "$MIG_OUT" >&2
+    echo "MIGRATE_DEPLOY_FAILED" >&2
+    restore_old
+    exit 1
+  fi
+}
+printf '%s\n' "$MIG_OUT" | tail -3
 # The onboarding SQL stays as belt-and-braces for pre-migrations databases.
-if ! compose exec -T "$SERVICE" npx prisma migrate deploy; then
-  echo "MIGRATE_DEPLOY_FAILED" >&2
-  restore_old
-  exit 1
-fi
 if ! compose exec -T "$SERVICE" npx prisma db execute \
   --file prisma/migrations/20260426_add_onboarding_fields/migration.sql; then
   echo "MIGRATION_FAILED" >&2
