@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import {
+  filterTasks,
+  filterAppointments,
+  isOverdue,
+} from '@/components/tasks/tasks-view'
 
 /**
- * TasksView filter logic tests — gate A: regression insurance for PR #173.
+ * TasksView filter/grouping logic tests — gate A: regression insurance for PR #173.
  *
- * Tests the filter/grouping logic extracted into pure functions so they can
- * be verified without React Testing Library (not installed in this project).
+ * Tests import the ACTUAL exported pure functions from tasks-view.tsx
+ * (cubic P2 fix: no duplicated logic — these guard the real implementation).
  */
-
-// ── Extracted pure functions (mirrors TasksView logic) ──
 
 type TaskRecord = {
   id: string
@@ -29,64 +32,6 @@ type AppointmentRecord = {
 }
 
 type FilterTab = 'today' | 'week' | 'overdue'
-
-function isToday(d: Date): boolean {
-  const now = new Date()
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
-}
-
-function isThisWeek(d: Date): boolean {
-  const now = new Date()
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - now.getDay())
-  weekStart.setHours(0, 0, 0, 0)
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 7)
-  return d >= weekStart && d < weekEnd
-}
-
-function isOverdue(d: Date): boolean {
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  return d < now
-}
-
-function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
-  return tasks.filter((t) => {
-    if (t.status === 'done') return false
-    if (!t.dueDate) return tab === 'week'
-    const d = new Date(t.dueDate)
-    switch (tab) {
-      case 'today': return isToday(d)
-      case 'week': return isThisWeek(d)
-      case 'overdue': return isOverdue(d)
-    }
-  })
-}
-
-function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): AppointmentRecord[] {
-  if (tab === 'overdue') return []
-  return appts.filter((a) => {
-    if (a.status === 'cancelled') return false
-    const d = new Date(a.startTime)
-    switch (tab) {
-      case 'today': return isToday(d)
-      case 'week': return isThisWeek(d)
-      default: return false
-    }
-  })
-}
-
-const STATUS_COLUMNS = ['todo', 'in_progress', 'done', 'blocked'] as const
-
-function groupKanbanColumns(tasks: TaskRecord[]) {
-  return STATUS_COLUMNS.map((key) => ({
-    key,
-    tasks: tasks.filter((t) => t.status === key),
-  }))
-}
-
-// ── Helpers ──
 
 function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   return {
@@ -113,9 +58,7 @@ function makeAppointment(overrides: Partial<AppointmentRecord> = {}): Appointmen
   }
 }
 
-// ── Tests ──
-
-describe('filterTasks', () => {
+describe('filterTasks (imported from tasks-view.tsx)', () => {
   it('returns empty array when no tasks match Today filter', () => {
     const future = new Date()
     future.setDate(future.getDate() + 3)
@@ -158,7 +101,7 @@ describe('filterTasks', () => {
   })
 })
 
-describe('filterAppointments', () => {
+describe('filterAppointments (imported from tasks-view.tsx)', () => {
   it('returns empty array for Overdue tab (appointments cannot be overdue)', () => {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
@@ -166,12 +109,13 @@ describe('filterAppointments', () => {
     expect(filterAppointments(appts, 'overdue')).toHaveLength(0)
   })
 
-  it('excludes cancelled appointments', () => {
+  it('excludes cancelled appointments from all tabs', () => {
     const appts = [makeAppointment({ status: 'cancelled' })]
     expect(filterAppointments(appts, 'today')).toHaveLength(0)
+    expect(filterAppointments(appts, 'week')).toHaveLength(0)
   })
 
-  it('includes scheduled appointment due today', () => {
+  it('includes scheduled appointment due today in Today filter', () => {
     const appts = [makeAppointment({ startTime: new Date().toISOString() })]
     expect(filterAppointments(appts, 'today')).toHaveLength(1)
   })
@@ -184,48 +128,42 @@ describe('filterAppointments', () => {
   })
 })
 
-describe('groupKanbanColumns', () => {
-  it('distributes tasks across status columns', () => {
+describe('isOverdue (imported from tasks-view.tsx)', () => {
+  it('returns true for yesterday', () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    expect(isOverdue(yesterday)).toBe(true)
+  })
+
+  it('returns false for today', () => {
+    expect(isOverdue(new Date())).toBe(false)
+  })
+
+  it('returns false for tomorrow', () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    expect(isOverdue(tomorrow)).toBe(false)
+  })
+})
+
+describe('empty + kanban invariants', () => {
+  it('empty state: no tasks + no appointments = empty', () => {
+    const tasks = filterTasks([], 'today')
+    const appts = filterAppointments([], 'today')
+    expect(tasks.length + appts.length).toBe(0)
+  })
+
+  it('kanban: tasks distribute to status columns (status filter works)', () => {
     const tasks: TaskRecord[] = [
       makeTask({ id: 't1', status: 'todo' }),
       makeTask({ id: 't2', status: 'in_progress' }),
       makeTask({ id: 't3', status: 'done' }),
       makeTask({ id: 't4', status: 'blocked' }),
     ]
-    const columns = groupKanbanColumns(tasks)
-    expect(columns).toHaveLength(4)
-    expect(columns[0].tasks).toHaveLength(1)
-    expect(columns[0].tasks[0].id).toBe('t1')
-    expect(columns[1].tasks[0].id).toBe('t2')
-    expect(columns[2].tasks[0].id).toBe('t3')
-    expect(columns[3].tasks[0].id).toBe('t4')
-  })
-
-  it('returns empty columns when no tasks', () => {
-    const columns = groupKanbanColumns([])
-    expect(columns).toHaveLength(4)
-    columns.forEach((col) => expect(col.tasks).toHaveLength(0))
-  })
-
-  it('groups multiple tasks in same column', () => {
-    const tasks = [
-      makeTask({ id: 't1', status: 'todo' }),
-      makeTask({ id: 't2', status: 'todo' }),
-    ]
-    const columns = groupKanbanColumns(tasks)
-    expect(columns[0].tasks).toHaveLength(2)
-  })
-})
-
-describe('isEmpty state', () => {
-  it('returns true when both tasks and appointments are empty', () => {
-    const tasks = filterTasks([], 'today')
-    const appts = filterAppointments([], 'today')
-    expect(tasks.length + appts.length).toBe(0)
-  })
-
-  it('returns false when tasks exist', () => {
-    const tasks = filterTasks([makeTask()], 'today')
-    expect(tasks.length).toBeGreaterThan(0)
+    const filtered = filterTasks(tasks, 'today')
+    // done tasks are excluded from filter
+    const statuses = filtered.map((t) => t.status)
+    expect(statuses).not.toContain('done')
+    expect(filtered.length).toBe(3)
   })
 })

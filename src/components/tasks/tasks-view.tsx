@@ -82,7 +82,7 @@ function isToday(d: Date): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
 }
 
-function isThisWeek(d: Date): boolean {
+export function isThisWeek(d: Date): boolean {
   const now = new Date()
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - now.getDay())
@@ -92,13 +92,13 @@ function isThisWeek(d: Date): boolean {
   return d >= weekStart && d < weekEnd
 }
 
-function isOverdue(d: Date): boolean {
+export function isOverdue(d: Date): boolean {
   const now = new Date()
   now.setHours(0, 0, 0, 0)
   return d < now
 }
 
-function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
+export function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
   return tasks.filter((t) => {
     if (t.status === 'done') return false
     if (!t.dueDate) return tab === 'week' // undated tasks show in week view
@@ -111,7 +111,7 @@ function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
   })
 }
 
-function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): AppointmentRecord[] {
+export function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): AppointmentRecord[] {
   if (tab === 'overdue') return [] // appointments can't be overdue
   return appts.filter((a) => {
     if (a.status === 'cancelled') return false
