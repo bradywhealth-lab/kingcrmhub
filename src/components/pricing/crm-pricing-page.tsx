@@ -49,7 +49,7 @@ const PLANS = [
       { text: "CSV import", included: true },
       { text: "Basic automation (5 rules)", included: true },
       { text: "Email + chat support", included: true },
-      { text: "AI Assistant", included: false },
+      { text: "AI Assistant", included: true },
       { text: "SMS / Twilio", included: false },
       { text: "Lead scraping", included: false },
       { text: "AI lead prioritization", included: false },
