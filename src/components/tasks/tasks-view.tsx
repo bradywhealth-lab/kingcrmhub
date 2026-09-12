@@ -342,7 +342,7 @@ export function TasksView() {
   }
 
   const handleCreateTask = async () => {
-    if (!createTitle.trim()) return
+    if (!createTitle.trim() || createSaving) return
     setCreateSaving(true)
     try {
       const res = await fetch(buildApiPath('/api/tasks'), {
