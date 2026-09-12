@@ -1,10 +1,10 @@
 // Generates PWA icons from public/logo.svg → public/icons/*.png
 // Run: node scripts/gen-pwa-icons.mjs
 //
-// Maskable safe zone (cubic P2, PR #176): Android launchers may crop the
-// canvas to the inscribed circle, so artwork must stay within the central
-// ~60% of the icon. The 512px icon is rendered at 0.6x — safe for BOTH
-// `purpose: any` and `purpose: maskable` without a second asset.
+// Two 512px assets (cubic P3, PR #176): icon-512.png is the "any" icon and
+// fills the canvas at 0.72x like the 192px icon; icon-512-maskable.png is
+// dedicated to `purpose: maskable`, where Android launchers may crop to the
+// inscribed circle, so its artwork stays within the central ~60% safe zone.
 import { readFileSync, mkdirSync } from 'node:fs'
 import sharp from 'sharp'
 

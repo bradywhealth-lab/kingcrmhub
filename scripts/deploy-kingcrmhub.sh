@@ -158,29 +158,37 @@ MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
     for dir in "$REPO_DIR"/prisma/migrations/*/; do
       name="$(basename "$dir")"
       CHECK_SQL=""
+      # Every probe validates EVERY object its migration creates (cubic P1:
+      # a sentinel-table check can mark a partially-applied migration as
+      # applied, and migrate deploy then skips the missing schema). An
+      # unknown migration dir fails CLOSED so it can never be silently
+      # skipped (cubic P1).
       case "$name" in
         *enable_pgvector*)
-          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN RAISE EXCEPTION 'vector extension missing'; END IF; END \$\$;"
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'UserAIProfile' AND column_name = 'profileEmbedding') OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'UserLearningEvent' AND column_name = 'embedding') THEN RAISE EXCEPTION 'pgvector migration not fully applied'; END IF; END \$\$;"
           ;;
         *add_onboarding_fields*)
-          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name = 'onboardingCompleted') THEN RAISE EXCEPTION 'onboardingCompleted column missing'; END IF; END \$\$;"
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('onboardingCompleted', 'onboardingCompletedAt', 'onboardingStep')) THEN RAISE EXCEPTION 'onboarding columns missing'; END IF; END \$\$;"
           ;;
         *rename_carrier_to_service_package*)
-          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ServicePackage') THEN RAISE EXCEPTION 'ServicePackage table missing'; END IF; END \$\$;"
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ServicePackage') OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PackageDocument') OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PackageDocumentChunk') THEN RAISE EXCEPTION 'ServicePackage tables missing'; END IF; END \$\$;"
           ;;
         *add_tasks_appointments_hub*)
-          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Task') THEN RAISE EXCEPTION 'Task table missing'; END IF; END \$\$;"
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Task', 'Appointment', 'CalendarSync', 'BookingLink')) THEN RAISE EXCEPTION 'Tasks Hub tables missing'; END IF; END \$\$;"
+          ;;
+        *)
+          echo "MIGRATE_BASELINE_UNKNOWN_MIGRATION: $name has no schema probe — refusing to baseline blindly (add a probe before deploying this migration)" >&2
+          restore_old
+          exit 1
           ;;
       esac
 
-      if [[ -n "$CHECK_SQL" ]]; then
-        if echo "$CHECK_SQL" | compose exec -T "$SERVICE" npx prisma db execute --stdin >/dev/null 2>&1; then
-          echo "Baselining $name (already exists in schema)"
-          compose exec -T "$SERVICE" npx prisma migrate resolve --applied "$name" \
-            || { echo "MIGRATE_BASELINE_FAILED $name" >&2; restore_old; exit 1; }
-        else
-          echo "Skipping baseline for $name (not found in schema, will be run by migrate deploy)"
-        fi
+      if echo "$CHECK_SQL" | compose exec -T "$SERVICE" npx prisma db execute --stdin >/dev/null 2>&1; then
+        echo "Baselining $name (all objects verified in schema)"
+        compose exec -T "$SERVICE" npx prisma migrate resolve --applied "$name" \
+          || { echo "MIGRATE_BASELINE_FAILED $name" >&2; restore_old; exit 1; }
+      else
+        echo "Skipping baseline for $name (not found in schema, will be run by migrate deploy)"
       fi
     done
     MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" \

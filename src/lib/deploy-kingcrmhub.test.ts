@@ -361,9 +361,9 @@ describe('KingCRMhub deploy hardening', () => {
     expect(result.status).toBe(1)
     expect(output).toContain('MIGRATE_DEPLOY_FAILED')
     // No DEPLOY_FAILED_ROLLING_BACK banner assertion: that banner comes from
-    // the ERR trap, which bash 5 (CI/Linux) correctly suppresses inside a
-    // `|| { … }` handler (bash 3.2 on macOS fires it anyway). The rollback
-    // itself is observable and asserted below.
+    // the ERR trap, which is suppressed for commands inside a `|| { … }`
+    // handler on CI/Linux. The rollback itself is still observable and is
+    // asserted below via ROLLED_BACK_TO_ORIGINAL.
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
   })
