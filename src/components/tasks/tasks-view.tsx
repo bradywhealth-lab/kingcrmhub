@@ -187,8 +187,6 @@ function TaskCard({ task }: { task: TaskRecord }) {
 }
 
 function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
-  const start = new Date(appt.startTime)
-  const end = new Date(appt.endTime)
   const timeStr = formatAppointmentTime(appt.startTime, appt.endTime, appt.timezone || 'America/New_York')
 
   return (
@@ -358,9 +356,7 @@ export function TasksView() {
         </div>
       </div>
 
-      {isEmpty ? (
-        <EmptyState tab={tab} />
-      ) : viewMode === 'kanban' ? (
+      {viewMode === 'kanban' ? (
         kanbanIsEmpty ? (
           <EmptyState tab={tab} />
         ) : (
@@ -397,7 +393,9 @@ export function TasksView() {
             </section>
           )}
         </div>
-      )) : (
+      )) : isEmpty ? (
+        <EmptyState tab={tab} />
+      ) : (
         /* List view — tasks first, then appointments */
         <div className="space-y-8">
           {filteredTasks.length > 0 && (
