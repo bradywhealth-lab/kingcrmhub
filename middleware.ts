@@ -29,6 +29,15 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // PWA install assets — browsers fetch these without a session during
+  // "Add to Home Screen" (and iOS Safari fetches apple-touch-icon logged-out).
+  // The middleware matcher already skips these paths; this explicit
+  // pass-through keeps them public even if the matcher is ever narrowed.
+  if (pathname === '/manifest.webmanifest' || pathname.startsWith('/icons/')) {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Auth page - redirect authenticated users to dashboard
   if (pathname.startsWith('/auth')) {
     if (isAuthenticated) {
@@ -81,5 +90,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|logo.svg).*)'],
+  // PWA assets (manifest.webmanifest, /icons/*) are excluded so browsers can
+  // fetch them without a session during install — see the pass-through above
+  // and middleware.test.ts. apple-touch-icon lives under /icons/.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|logo.svg|manifest\\.webmanifest|icons).*)'],
 }
