@@ -142,13 +142,23 @@ if ! wait_for_health "$CONTAINER"; then
   exit 1
 fi
 
-echo "=== APPLY ONBOARDING MIGRATION (idempotent) ==="
+echo "=== APPLY ALL PENDING MIGRATIONS (idempotent) ==="
+# prisma migrate deploy applies every pending migration tracked in
+# _prisma_migrations — new migrations no longer need a manual per-file step
+# here (the Tasks Hub migration was missed this way on 2026-09-11).
+# The onboarding SQL stays as belt-and-braces for pre-migrations databases.
+if ! compose exec -T "$SERVICE" npx prisma migrate deploy; then
+  echo "MIGRATE_DEPLOY_FAILED" >&2
+  restore_old
+  exit 1
+fi
 if ! compose exec -T "$SERVICE" npx prisma db execute \
   --file prisma/migrations/20260426_add_onboarding_fields/migration.sql; then
   echo "MIGRATION_FAILED" >&2
   restore_old
   exit 1
 fi
+echo "MIGRATIONS_APPLIED"
 
 echo "=== VERIFY ORG SCHEMA ALIGNMENT ==="
 if ! compose exec -T "$SERVICE" npx prisma db execute --stdin <<'SQL'

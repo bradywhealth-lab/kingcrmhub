@@ -188,6 +188,13 @@ describe('KingCRMhub deploy hardening', () => {
     expect(script).toContain('container_get "$container_name" /api/ready')
   })
 
+  it('runs prisma migrate deploy so new migrations never rely on manual repair', () => {
+    const script = readDeployScript()
+
+    expect(script).toContain('prisma migrate deploy')
+    expect(script).toContain('MIGRATE_DEPLOY_FAILED')
+  })
+
   it('completes when mocked build, migration, schema, and HTTP gates pass', () => {
     const { result } = runMockDeploy()
 
