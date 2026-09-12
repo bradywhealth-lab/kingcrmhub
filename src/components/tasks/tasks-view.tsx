@@ -361,7 +361,7 @@ export function TasksView() {
         body: JSON.stringify({
           title: createTitle.trim(),
           priority: createPriority,
-          dueDate: createDue ? new Date(createDue + 'T00:00:00Z').toISOString() : undefined,
+          dueDate: createDue ? new Date(createDue + 'T00:00:00').toISOString() : undefined,
         }),
       })
       if (res.status === 401) { window.location.href = buildApiPath('/auth'); return }
@@ -383,6 +383,8 @@ export function TasksView() {
   const handleMoveTask = async (taskId: string, newStatus: string) => {
     const task = tasks.find((t) => t.id === taskId)
     if (!task || task.status === newStatus) return
+    if (pendingToggles.has(taskId)) return
+    setPendingToggles((prev) => new Set(prev).add(taskId))
     const oldStatus = task.status
     const newStatusTyped = newStatus as TaskRecord['status']
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatusTyped } : t))
@@ -397,6 +399,12 @@ export function TasksView() {
       const oldStatusTyped = oldStatus as TaskRecord['status']
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: oldStatusTyped } : t))
       toast({ title: 'Could not move task', variant: 'destructive' })
+    } finally {
+      setPendingToggles((prev) => {
+        const next = new Set(prev)
+        next.delete(taskId)
+        return next
+      })
     }
   }
 
