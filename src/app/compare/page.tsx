@@ -25,11 +25,11 @@ const INCLUDED = [
   },
   {
     title: 'Automations',
-    detail: '5 rules on Pro, unlimited on Studio+',
+    detail: '3 rules on Free, 5 on Pro, unlimited on Studio+',
   },
   {
     title: 'AI assistant',
-    detail: 'Follow-up drafts and next moves from your pipeline — Studio ($39/mo) and up',
+    detail: 'Limited on Free, full on Studio ($39/mo) and up',
   },
   {
     title: 'AI lead scraping + prioritization',
