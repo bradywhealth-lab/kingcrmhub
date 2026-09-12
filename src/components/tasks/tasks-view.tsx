@@ -175,7 +175,7 @@ function TaskCard({ task }: { task: TaskRecord }) {
 function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
   const start = new Date(appt.startTime)
   const end = new Date(appt.endTime)
-  const timeStr = `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+  const timeStr = `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: appt.timezone || 'America/New_York' })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: appt.timezone || 'America/New_York' })}`
 
   return (
     <Card className="border-[rgba(31,42,54,0.06)] bg-[#f6f9ff] shadow-none">
@@ -237,6 +237,7 @@ export function TasksView() {
         ])
 
         if (!cancelled) {
+          if (tRes.status === 401 || aRes.status === 401) { window.location.href = '/auth'; return }
           if (tRes.ok) {
             const tData = await tRes.json() as { tasks?: TaskRecord[] }
             setTasks(Array.isArray(tData.tasks) ? tData.tasks : [])
@@ -263,11 +264,25 @@ export function TasksView() {
 
   const kanbanColumns = useMemo(() => {
     if (viewMode !== 'kanban') return []
+    // Kanban shows ALL tasks (including done) so the Done column isn't empty
+    const boardTasks = filterTasks(tasks, tab)
+    // Also include any done tasks matching the tab's date range
+    const doneTasks = tasks.filter((t) => {
+      if (t.status !== 'done') return false
+      if (!t.dueDate) return tab === 'week'
+      const d = new Date(t.dueDate)
+      switch (tab) {
+        case 'today': return isToday(d)
+        case 'week': return isThisWeek(d)
+        case 'overdue': return false // done tasks can't be overdue
+      }
+    })
+    const allBoardTasks = [...boardTasks, ...doneTasks]
     return STATUS_COLUMNS.map((col) => ({
       ...col,
-      tasks: filteredTasks.filter((t) => t.status === col.key),
+      tasks: allBoardTasks.filter((t) => t.status === col.key),
     }))
-  }, [viewMode, filteredTasks])
+  }, [viewMode, tasks, tab])
 
   const isEmpty = filteredTasks.length === 0 && filteredAppointments.length === 0
 
@@ -309,12 +324,16 @@ export function TasksView() {
           <div className="flex items-center rounded-xl border border-[rgba(31,42,54,0.08)] bg-white p-0.5">
             <button
               onClick={() => setViewMode('list')}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
               className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <List className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('kanban')}
+              aria-label="Kanban board view"
+              aria-pressed={viewMode === 'kanban'}
               className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <Columns className="h-4 w-4" />
@@ -326,25 +345,38 @@ export function TasksView() {
       {isEmpty ? (
         <EmptyState tab={tab} />
       ) : viewMode === 'kanban' ? (
-        /* Kanban board */
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {kanbanColumns.map((col) => (
-            <div key={col.key} className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
-                  {col.label}
-                </span>
-                <span className="text-xs text-[#0c111b]/35 tabular-nums">{col.tasks.length}</span>
+        /* Kanban board + appointments */
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {kanbanColumns.map((col) => (
+              <div key={col.key} className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
+                    {col.label}
+                  </span>
+                  <span className="text-xs text-[#0c111b]/35 tabular-nums">{col.tasks.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {col.tasks.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-[#0c111b]/25">No tasks</p>
+                  ) : (
+                    col.tasks.map((task) => <TaskCard key={task.id} task={task} />)
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
+
+          {filteredAppointments.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Appointments</h2>
               <div className="space-y-3">
-                {col.tasks.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[#0c111b]/25">No tasks</p>
-                ) : (
-                  col.tasks.map((task) => <TaskCard key={task.id} task={task} />)
-                )}
+                {filteredAppointments.map((appt) => (
+                  <AppointmentCard key={appt.id} appt={appt} />
+                ))}
               </div>
-            </div>
-          ))}
+            </section>
+          )}
         </div>
       ) : (
         /* List view — tasks first, then appointments */
