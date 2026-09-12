@@ -75,7 +75,7 @@ export default function PublicLandingPage() {
 
         <div className="mt-8 rounded-3xl p-5" style={{ background: PAPER }}>
           <p className="text-sm font-semibold" style={{ color: INK }}>
-            HoneyBook raised prices 89%. We put automations in every plan.
+            Automations in every plan. Flat pricing, no per-seat tax.
           </p>
         </div>
 
