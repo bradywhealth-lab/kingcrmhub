@@ -157,8 +157,31 @@ MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
     echo "=== BASELINE database without _prisma_migrations (db-push legacy) ==="
     for dir in "$REPO_DIR"/prisma/migrations/*/; do
       name="$(basename "$dir")"
-      compose exec -T "$SERVICE" npx prisma migrate resolve --applied "$name" \
-        || { echo "MIGRATE_BASELINE_FAILED $name" >&2; restore_old; exit 1; }
+      CHECK_SQL=""
+      case "$name" in
+        *enable_pgvector*)
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN RAISE EXCEPTION 'vector extension missing'; END IF; END \$\$;"
+          ;;
+        *add_onboarding_fields*)
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name = 'onboardingCompleted') THEN RAISE EXCEPTION 'onboardingCompleted column missing'; END IF; END \$\$;"
+          ;;
+        *rename_carrier_to_service_package*)
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ServicePackage') THEN RAISE EXCEPTION 'ServicePackage table missing'; END IF; END \$\$;"
+          ;;
+        *add_tasks_appointments_hub*)
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Task') THEN RAISE EXCEPTION 'Task table missing'; END IF; END \$\$;"
+          ;;
+      esac
+
+      if [[ -n "$CHECK_SQL" ]]; then
+        if echo "$CHECK_SQL" | compose exec -T "$SERVICE" npx prisma db execute --stdin >/dev/null 2>&1; then
+          echo "Baselining $name (already exists in schema)"
+          compose exec -T "$SERVICE" npx prisma migrate resolve --applied "$name" \
+            || { echo "MIGRATE_BASELINE_FAILED $name" >&2; restore_old; exit 1; }
+        else
+          echo "Skipping baseline for $name (not found in schema, will be run by migrate deploy)"
+        fi
+      fi
     done
     MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" \
       || { printf '%s\n' "$MIG_OUT" >&2; echo "MIGRATE_DEPLOY_FAILED" >&2; restore_old; exit 1; }

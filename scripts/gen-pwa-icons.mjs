@@ -23,9 +23,10 @@ async function makeIcon(size, out, contentRatio) {
 }
 
 mkdirSync('public/icons', { recursive: true })
-// 192: standard "any" icon, fills the canvas. 512: also used as maskable,
-// artwork shrunk to the 60% safe zone.
+// 192: standard "any" icon, fills the canvas. 512: standard "any" icon, fills the canvas.
+// 512-maskable: used specifically as maskable, artwork shrunk to the 60% safe zone.
 await Promise.all([
   makeIcon(192, 'public/icons/icon-192.png', 0.72),
-  makeIcon(512, 'public/icons/icon-512.png', 0.6),
+  makeIcon(512, 'public/icons/icon-512.png', 0.72),
+  makeIcon(512, 'public/icons/icon-512-maskable.png', 0.6),
 ])
