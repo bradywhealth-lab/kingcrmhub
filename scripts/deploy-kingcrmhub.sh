@@ -168,13 +168,13 @@ MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
           CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'UserAIProfile' AND column_name = 'profileEmbedding') OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'UserLearningEvent' AND column_name = 'embedding') THEN RAISE EXCEPTION 'pgvector migration not fully applied'; END IF; END \$\$;"
           ;;
         *add_onboarding_fields*)
-          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('onboardingCompleted', 'onboardingCompletedAt', 'onboardingStep')) THEN RAISE EXCEPTION 'onboarding columns missing'; END IF; END \$\$;"
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('onboardingCompleted', 'onboardingCompletedAt', 'onboardingStep')) < 3 THEN RAISE EXCEPTION 'onboarding columns missing (need all 3)'; END IF; END \$\$;"
           ;;
         *rename_carrier_to_service_package*)
           CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ServicePackage') OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PackageDocument') OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PackageDocumentChunk') THEN RAISE EXCEPTION 'ServicePackage tables missing'; END IF; END \$\$;"
           ;;
         *add_tasks_appointments_hub*)
-          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Task', 'Appointment', 'CalendarSync', 'BookingLink')) THEN RAISE EXCEPTION 'Tasks Hub tables missing'; END IF; END \$\$;"
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Task', 'Appointment', 'CalendarSync', 'BookingLink')) < 4 THEN RAISE EXCEPTION 'Tasks Hub tables missing (need all 4)'; END IF; END \$\$;"
           ;;
         *)
           echo "MIGRATE_BASELINE_UNKNOWN_MIGRATION: $name has no schema probe — refusing to baseline blindly (add a probe before deploying this migration)" >&2
