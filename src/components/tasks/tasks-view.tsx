@@ -153,7 +153,11 @@ function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; com
 function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id: string) => void }) {
   const isDone = task.status === 'done'
   return (
-    <Card className="group border-[rgba(31,42,54,0.08)] bg-white shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow">
+    <Card
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData('text/plain', task.id); e.dataTransfer.effectAllowed = 'move' }}
+      className={`group border-[rgba(31,42,54,0.08)] bg-white shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow ${isDone ? 'opacity-60' : ''}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <button
@@ -366,6 +370,26 @@ export function TasksView() {
     }
   }
 
+  const handleMoveTask = async (taskId: string, newStatus: string) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task || task.status === newStatus) return
+    const oldStatus = task.status
+    const newStatusTyped = newStatus as TaskRecord['status']
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatusTyped } : t))
+    try {
+      const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) throw new Error('Failed')
+    } catch {
+      const oldStatusTyped = oldStatus as TaskRecord['status']
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: oldStatusTyped } : t))
+      toast({ title: 'Could not move task', variant: 'destructive' })
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6 lg:p-8 space-y-6">
@@ -439,7 +463,11 @@ export function TasksView() {
         <div className="space-y-8">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {kanbanColumns.map((col) => (
-              <div key={col.key} className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4">
+              <div
+              key={col.key}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+              onDrop={(e) => { e.preventDefault(); const taskId = e.dataTransfer.getData('text/plain'); if (taskId) handleMoveTask(taskId, col.key) }}
+              className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4 min-h-[120px]">
                 <div className="mb-3 flex items-center justify-between">
                   <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
                     {col.label}
