@@ -258,6 +258,7 @@ export function TasksView() {
   const [createPriority, setCreatePriority] = useState<string>('normal')
   const [createDue, setCreateDue] = useState('')
   const [createSaving, setCreateSaving] = useState(false)
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -324,6 +325,9 @@ export function TasksView() {
   const handleToggleDone = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
     if (!task) return
+    // Serialize per-task: skip while a PATCH for this task is still in flight
+    if (pendingToggles.has(taskId)) return
+    setPendingToggles((prev) => new Set(prev).add(taskId))
     const newStatus = task.status === 'done' ? 'todo' : 'done'
     // Optimistic update
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatus } : t))
@@ -338,6 +342,12 @@ export function TasksView() {
       // Revert on failure
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: task.status } : t))
       toast({ title: 'Could not update task', variant: 'destructive' })
+    } finally {
+      setPendingToggles((prev) => {
+        const next = new Set(prev)
+        next.delete(taskId)
+        return next
+      })
     }
   }
 
@@ -528,12 +538,20 @@ export function TasksView() {
       {/* Create Task Dialog */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c111b]/40 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[rgba(31,42,54,0.08)]" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-[#0c111b]">Create Task</h2>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-task-title"
+            onKeyDown={(e) => { if (e.key === 'Escape') setShowCreate(false) }}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[rgba(31,42,54,0.08)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="create-task-title" className="text-lg font-semibold text-[#0c111b]">Create Task</h2>
             <div className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Title</label>
+                <label htmlFor="task-title" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Title</label>
                 <Input
+                  id="task-title"
                   autoFocus
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
@@ -542,8 +560,9 @@ export function TasksView() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Priority</label>
+                <label htmlFor="task-priority" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Priority</label>
                 <select
+                  id="task-priority"
                   value={createPriority}
                   onChange={(e) => setCreatePriority(e.target.value)}
                   className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-white px-3 text-sm text-[#0c111b] focus:outline-none focus:ring-2 focus:ring-[#18b897]/30"
@@ -555,8 +574,9 @@ export function TasksView() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Due date</label>
+                <label htmlFor="task-due" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Due date</label>
                 <Input
+                  id="task-due"
                   type="date"
                   value={createDue}
                   onChange={(e) => setCreateDue(e.target.value)}
