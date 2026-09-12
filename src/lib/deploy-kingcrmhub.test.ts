@@ -364,6 +364,22 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
   })
 
+  it('applies pending migrations before the legacy per-file db execute step', () => {
+    const { deployLog, result } = runMockDeploy()
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
+    // The deploy log records every compose invocation in execution order:
+    // all pending migrations must be applied (migrate deploy) BEFORE the
+    // belt-and-braces per-file onboarding SQL runs (cubic P3, PR #176).
+    const migrateDeploy = dockerCalls.indexOf('exec -T kingcrmhub npx prisma migrate deploy')
+    const perFileStep = dockerCalls.indexOf('exec -T kingcrmhub npx prisma db execute --file prisma/migrations/20260426_add_onboarding_fields/migration.sql')
+
+    expect(migrateDeploy).toBeGreaterThanOrEqual(0)
+    expect(perFileStep).toBeGreaterThanOrEqual(0)
+    expect(migrateDeploy).toBeLessThan(perFileStep)
+  })
+
   it('uses the same stable public landing marker as the rendered page', () => {
     const landingPage = readFileSync(join(repoRoot, 'src/app/welcome/page.tsx'), 'utf8')
     const script = readDeployScript()
