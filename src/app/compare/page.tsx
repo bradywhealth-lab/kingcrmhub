@@ -3,41 +3,37 @@ import { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'King CRM Hub — Built for Freelancers',
   description:
-    'AI assistant in every plan, flat pricing with no per-seat tax, pipeline boards, client booking, and a built-in prompt library — for freelancers.',
+    'Flat pricing with no per-seat tax. Pipeline boards, client booking, AI assistant on Studio+, and a built-in prompt library — for freelancers.',
 }
 
 const INCLUDED = [
   {
-    title: 'AI assistant',
-    detail: 'Built into every plan, including Free',
-  },
-  {
-    title: 'Bring your own AI key',
-    detail: 'Connect your own AI provider — Pro ($19/mo)',
-  },
-  {
     title: 'Pipeline board',
-    detail: 'Drag-and-drop deal tracking, every plan',
+    detail: 'Basic view on Free, full Kanban pipeline on paid plans',
   },
   {
     title: 'Client booking page',
-    detail: 'Public scheduling links for your clients — Pro and up',
-  },
-  {
-    title: 'CSV import',
-    detail: 'Bring your client spreadsheet in one click',
+    detail: 'Public scheduling links for your clients — every plan',
   },
   {
     title: 'Prompt library',
     detail: 'Starter pack on Free, full library on Studio+',
   },
   {
-    title: 'Automations',
-    detail: '3 rules on Free, 5 on Pro, unlimited on Studio+',
+    title: 'CSV import',
+    detail: 'Bring your client spreadsheet in one click — Pro ($19/mo) and up',
   },
   {
-    title: 'White-label client surfaces',
-    detail: 'Your brand, not ours — Elite ($69/mo)',
+    title: 'Automations',
+    detail: '5 rules on Pro, unlimited on Studio+',
+  },
+  {
+    title: 'AI assistant',
+    detail: 'Follow-up drafts and next moves from your pipeline — Studio ($39/mo) and up',
+  },
+  {
+    title: 'AI lead scraping + prioritization',
+    detail: 'Studio ($39/mo) and up',
   },
   {
     title: 'Unlimited seats',
@@ -49,12 +45,32 @@ const TIERS = [
   { name: 'Free', price: '$0', note: 'Lead capture' },
   { name: 'Pro', price: '$19/mo', note: 'Solo freelancer' },
   { name: 'Studio', price: '$39/mo', note: 'Most popular' },
-  { name: 'Elite', price: '$69/mo', note: 'Team + white-label' },
+  { name: 'Elite', price: '$69/mo', note: 'Team scale' },
+] as const
+
+const WHY = [
+  {
+    title: 'Flat pricing',
+    detail: 'No per-seat tax — unlimited seats flat at Elite ($69/mo)',
+  },
+  {
+    title: 'Freelancer-first',
+    detail: 'Built for independent businesses, not enterprise jargon',
+  },
+  {
+    title: 'Booking on every plan',
+    detail: 'Public client scheduling links start at Free',
+  },
+  {
+    title: 'Honest feature list',
+    detail: 'Everything we list is live or explicitly marked planned',
+  },
 ] as const
 
 const BUILDING_NEXT = [
   'Tasks & Appointments hub — unified day view with Kanban board mode',
-  'Pipeline auto-spawn — winning a deal drafts your contract, kickoff, and invoice tasks',
+  'Pipeline auto-spawn — winning a deal drafts your contract, kickoff, and invoice tasks (Pro+)',
+  'White-label client surfaces (planned — Elite)',
   'Client portal — a public link per client to see project status',
   'Email sequences — drip campaigns for lead nurturing',
   'More integrations — connect to the tools you already use',
@@ -91,8 +107,8 @@ export default function ComparePage() {
             Everything your freelance business runs on
           </h1>
           <p className="text-xl text-[var(--ink,#0C111B)]/70 max-w-2xl mx-auto">
-            AI assistant in every plan. Flat pricing. No per-seat tax. Freelancer-first,
-            from the first lead to the last invoice.
+            Flat pricing. No per-seat tax. Freelancer-first, from the first lead
+            to the last invoice.
           </p>
         </section>
 
@@ -106,13 +122,22 @@ export default function ComparePage() {
                 className="border border-[var(--ink,#0C111B)]/10 rounded-2xl p-6 space-y-2 bg-white/40"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl text-emerald-600">✓</span>
+                  <span className="text-2xl text-emerald-600" aria-hidden="true">
+                    ✓
+                  </span>
                   <h3 className="text-lg font-semibold">{feature.title}</h3>
                 </div>
                 <p className="text-[var(--ink,#0C111B)]/70">{feature.detail}</p>
               </div>
             ))}
           </div>
+          <p className="text-sm text-[var(--ink,#0C111B)]/60">
+            Tier details match our{' '}
+            <a href="/pricing" className="underline font-medium">
+              pricing page
+            </a>
+            .
+          </p>
         </section>
 
         {/* Flat pricing */}
@@ -142,28 +167,13 @@ export default function ComparePage() {
         {/* Why King CRM Hub */}
         <section className="bg-[var(--ink,#0C111B)] text-white rounded-3xl p-8 sm:p-12 space-y-6">
           <h2 className="text-3xl font-bold">Why King CRM Hub</h2>
-          <p className="text-lg leading-relaxed">
-            AI in every plan at flat pricing —{' '}
-            <strong className="text-[var(--teal,#18B897)]">$19/mo</strong> for the full
-            assistant with your own AI key. No seat tax as your team grows.
-          </p>
           <div className="grid sm:grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">AI assistant, all plans</h3>
-              <p className="text-white/70">Drafts follow-ups and next moves from your pipeline</p>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Bring your own AI</h3>
-              <p className="text-white/70">Connect your own AI provider, no vendor lock-in</p>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Flat pricing</h3>
-              <p className="text-white/70">Grow your team without per-seat pricing</p>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Freelancer-first</h3>
-              <p className="text-white/70">Built for independent businesses, not enterprise jargon</p>
-            </div>
+            {WHY.map((item) => (
+              <div key={item.title} className="space-y-1">
+                <h3 className="text-lg font-semibold">{item.title}</h3>
+                <p className="text-white/70">{item.detail}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -173,7 +183,9 @@ export default function ComparePage() {
           <ul className="space-y-3 text-lg">
             {BUILDING_NEXT.map((item) => (
               <li key={item} className="flex items-start gap-3">
-                <span className="text-[var(--teal,#18B897)] font-bold">•</span>
+                <span className="text-[var(--teal,#18B897)] font-bold" aria-hidden="true">
+                  •
+                </span>
                 <span>{item}</span>
               </li>
             ))}
