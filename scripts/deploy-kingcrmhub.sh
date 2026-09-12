@@ -142,13 +142,73 @@ if ! wait_for_health "$CONTAINER"; then
   exit 1
 fi
 
-echo "=== APPLY ONBOARDING MIGRATION (idempotent) ==="
+echo "=== APPLY ALL PENDING MIGRATIONS (idempotent) ==="
+# prisma migrate deploy applies every pending migration tracked in
+# _prisma_migrations — new migrations no longer need a manual per-file step
+# here (the Tasks Hub migration was missed this way on 2026-09-11).
+#
+# Baseline guard (cubic P1, PR #176): databases created via `prisma db push`
+# (like prod) have no _prisma_migrations table, so migrate deploy fails with
+# P3005 "database schema is not empty". In that case, baseline the DB: mark
+# every existing migration as applied (the db-push schema already matches
+# them) so only FUTURE migrations deploy.
+MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
+  if printf '%s' "$MIG_OUT" | grep -q 'P3005'; then
+    echo "=== BASELINE database without _prisma_migrations (db-push legacy) ==="
+    for dir in "$REPO_DIR"/prisma/migrations/*/; do
+      name="$(basename "$dir")"
+      CHECK_SQL=""
+      # Every probe validates EVERY object its migration creates (cubic P1:
+      # a sentinel-table check can mark a partially-applied migration as
+      # applied, and migrate deploy then skips the missing schema). An
+      # unknown migration dir fails CLOSED so it can never be silently
+      # skipped (cubic P1).
+      case "$name" in
+        *enable_pgvector*)
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'UserAIProfile' AND column_name = 'profileEmbedding') OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'UserLearningEvent' AND column_name = 'embedding') THEN RAISE EXCEPTION 'pgvector migration not fully applied'; END IF; END \$\$;"
+          ;;
+        *add_onboarding_fields*)
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('onboardingCompleted', 'onboardingCompletedAt', 'onboardingStep')) < 3 THEN RAISE EXCEPTION 'onboarding columns missing (need all 3)'; END IF; END \$\$;"
+          ;;
+        *rename_carrier_to_service_package*)
+          CHECK_SQL="DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ServicePackage') OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PackageDocument') OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PackageDocumentChunk') THEN RAISE EXCEPTION 'ServicePackage tables missing'; END IF; END \$\$;"
+          ;;
+        *add_tasks_appointments_hub*)
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Task', 'Appointment', 'CalendarSync', 'BookingLink')) < 4 THEN RAISE EXCEPTION 'Tasks Hub tables missing (need all 4)'; END IF; END \$\$;"
+          ;;
+        *)
+          echo "MIGRATE_BASELINE_UNKNOWN_MIGRATION: $name has no schema probe — refusing to baseline blindly (add a probe before deploying this migration)" >&2
+          restore_old
+          exit 1
+          ;;
+      esac
+
+      if echo "$CHECK_SQL" | compose exec -T "$SERVICE" npx prisma db execute --stdin >/dev/null 2>&1; then
+        echo "Baselining $name (all objects verified in schema)"
+        compose exec -T "$SERVICE" npx prisma migrate resolve --applied "$name" \
+          || { echo "MIGRATE_BASELINE_FAILED $name" >&2; restore_old; exit 1; }
+      else
+        echo "Skipping baseline for $name (not found in schema, will be run by migrate deploy)"
+      fi
+    done
+    MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" \
+      || { printf '%s\n' "$MIG_OUT" >&2; echo "MIGRATE_DEPLOY_FAILED" >&2; restore_old; exit 1; }
+  else
+    printf '%s\n' "$MIG_OUT" >&2
+    echo "MIGRATE_DEPLOY_FAILED" >&2
+    restore_old
+    exit 1
+  fi
+}
+printf '%s\n' "$MIG_OUT" | tail -3
+# The onboarding SQL stays as belt-and-braces for pre-migrations databases.
 if ! compose exec -T "$SERVICE" npx prisma db execute \
   --file prisma/migrations/20260426_add_onboarding_fields/migration.sql; then
   echo "MIGRATION_FAILED" >&2
   restore_old
   exit 1
 fi
+echo "MIGRATIONS_APPLIED"
 
 echo "=== VERIFY ORG SCHEMA ALIGNMENT ==="
 if ! compose exec -T "$SERVICE" npx prisma db execute --stdin <<'SQL'

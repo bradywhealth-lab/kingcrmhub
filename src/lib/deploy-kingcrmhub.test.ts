@@ -30,6 +30,8 @@ interface DeployHarnessOptions {
   failLock?: boolean
   failVerify?: boolean
   keepContainerAfterRemove?: boolean
+  failMigrateDeploy?: 'P3005' | 'generic'
+  failMigrateResolve?: boolean
 }
 
 interface DeployHarness {
@@ -45,7 +47,13 @@ interface DeployHarness {
  * locking on the inherited file descriptor so concurrent deploys genuinely
  * contend on the same lock file.
  */
-function createDeployHarness({ failLock = false, failVerify = false, keepContainerAfterRemove = false }: DeployHarnessOptions = {}): DeployHarness {
+function createDeployHarness({
+  failLock = false,
+  failVerify = false,
+  keepContainerAfterRemove = false,
+  failMigrateDeploy,
+  failMigrateResolve = false,
+}: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
 
@@ -56,6 +64,10 @@ function createDeployHarness({ failLock = false, failVerify = false, keepContain
   const lockFile = join(root, 'deploy.lock')
   mkdirSync(binDir)
   mkdirSync(join(repoDir, '.git'), { recursive: true })
+  mkdirSync(join(repoDir, 'prisma/migrations/20260320_enable_pgvector'), { recursive: true })
+  mkdirSync(join(repoDir, 'prisma/migrations/20260426_add_onboarding_fields'), { recursive: true })
+  mkdirSync(join(repoDir, 'prisma/migrations/20260909_rename_carrier_to_service_package'), { recursive: true })
+  mkdirSync(join(repoDir, 'prisma/migrations/20260911_add_tasks_appointments_hub'), { recursive: true })
   writeFileSync(composeFile, 'services: {}\n')
   writeFileSync(deployLog, '')
 
@@ -102,6 +114,24 @@ exit 0
 printf '%s\n' "$*" >> "$DEPLOY_LOG"
 args=" $* "
 if [[ "$args" == *" compose version "* ]]; then exit 0; fi
+if [[ "$args" == *" prisma migrate deploy "* ]]; then
+  if [[ "$FAIL_MIGRATE_DEPLOY" == "P3005" ]]; then
+    if [[ ! -f "$DEPLOY_ROOT/p3005_triggered" ]]; then
+      touch "$DEPLOY_ROOT/p3005_triggered"
+      echo "Prisma Migrate failed: P3005 database schema is not empty" >&2
+      exit 1
+    fi
+  elif [[ "$FAIL_MIGRATE_DEPLOY" == "generic" ]]; then
+    echo "Generic migration failure" >&2
+    exit 1
+  fi
+fi
+if [[ "$args" == *" prisma migrate resolve "* ]]; then
+  if [[ "$FAIL_MIGRATE_RESOLVE" == "1" ]]; then
+    echo "Resolve failed" >&2
+    exit 1
+  fi
+fi
 if [[ "$args" == *" --stdin "* ]]; then
   cat >/dev/null
   if [[ "$FAIL_VERIFY" == "1" ]]; then exit 42; fi
@@ -140,6 +170,8 @@ exit 0
     FAIL_LOCK: failLock ? '1' : '0',
     FAIL_VERIFY: failVerify ? '1' : '0',
     KEEP_CONTAINER_AFTER_REMOVE: keepContainerAfterRemove ? '1' : '0',
+    FAIL_MIGRATE_DEPLOY: failMigrateDeploy || '',
+    FAIL_MIGRATE_RESOLVE: failMigrateResolve ? '1' : '0',
     PATH: `${binDir}:${process.env.PATH ?? ''}`,
     REPO_DIR: repoDir,
   }
@@ -186,6 +218,17 @@ describe('KingCRMhub deploy hardening', () => {
     const script = readDeployScript()
 
     expect(script).toContain('container_get "$container_name" /api/ready')
+  })
+
+  it('runs prisma migrate deploy so new migrations never rely on manual repair', () => {
+    const script = readDeployScript()
+
+    expect(script).toContain('prisma migrate deploy')
+    expect(script).toContain('MIGRATE_DEPLOY_FAILED')
+    // db-push legacy databases have no _prisma_migrations table — the script
+    // must baseline them via migrate resolve --applied instead of failing (cubic P1).
+    expect(script).toContain('P3005')
+    expect(script).toContain('migrate resolve --applied')
   })
 
   it('completes when mocked build, migration, schema, and HTTP gates pass', () => {
@@ -287,6 +330,58 @@ describe('KingCRMhub deploy hardening', () => {
     expect(result.status).toBe(2)
     expect(output).toContain('ROLLBACK_NAME_CONFLICT')
     expect(output).not.toContain('ROLLED_BACK_TO_ORIGINAL')
+  })
+
+  it('baselines and succeeds when migrate deploy returns P3005 and migrations exist in schema', () => {
+    const { result } = runMockDeploy({ failMigrateDeploy: 'P3005' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status, output).toBe(0)
+    expect(output).toContain('BASELINE database without _prisma_migrations')
+    expect(output).toContain('Baselining 20260320_enable_pgvector')
+    expect(output).toContain('Baselining 20260426_add_onboarding_fields')
+    expect(output).toContain('Baselining 20260909_rename_carrier_to_service_package')
+    expect(output).toContain('Baselining 20260911_add_tasks_appointments_hub')
+    expect(output).toContain('DEPLOY_V4_DONE')
+  })
+
+  it('rolls back when migrate deploy returns P3005 and baseline resolve fails', () => {
+    const { result } = runMockDeploy({ failMigrateDeploy: 'P3005', failMigrateResolve: true })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('MIGRATE_BASELINE_FAILED')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+  })
+
+  it('fails deploy entirely when migrate deploy fails with a generic error', () => {
+    const { result } = runMockDeploy({ failMigrateDeploy: 'generic' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('MIGRATE_DEPLOY_FAILED')
+    // No DEPLOY_FAILED_ROLLING_BACK banner assertion: that banner comes from
+    // the ERR trap, which is suppressed for commands inside a `|| { … }`
+    // handler on CI/Linux. The rollback itself is still observable and is
+    // asserted below via ROLLED_BACK_TO_ORIGINAL.
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('applies pending migrations before the legacy per-file db execute step', () => {
+    const { deployLog, result } = runMockDeploy()
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
+    // The deploy log records every compose invocation in execution order:
+    // all pending migrations must be applied (migrate deploy) BEFORE the
+    // belt-and-braces per-file onboarding SQL runs (cubic P3, PR #176).
+    const migrateDeploy = dockerCalls.indexOf('exec -T kingcrmhub npx prisma migrate deploy')
+    const perFileStep = dockerCalls.indexOf('exec -T kingcrmhub npx prisma db execute --file prisma/migrations/20260426_add_onboarding_fields/migration.sql')
+
+    expect(migrateDeploy).toBeGreaterThanOrEqual(0)
+    expect(perFileStep).toBeGreaterThanOrEqual(0)
+    expect(migrateDeploy).toBeLessThan(perFileStep)
   })
 
   it('uses the same stable public landing marker as the rendered page', () => {
