@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   authors: [{ name: "King CRM Hub" }],
   icons: {
     icon: "/favicon.ico",
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "King CRM Hub",
   },
   openGraph: {
     title: "King CRM Hub",
