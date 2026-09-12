@@ -351,7 +351,7 @@ export function TasksView() {
         body: JSON.stringify({
           title: createTitle.trim(),
           priority: createPriority,
-          dueDate: createDue || undefined,
+          dueDate: createDue ? new Date(createDue + 'T00:00:00Z').toISOString() : undefined,
         }),
       })
       if (res.status === 401) { window.location.href = buildApiPath('/auth'); return }
