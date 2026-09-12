@@ -77,6 +77,20 @@ const PRIORITY_DOT: Record<string, string> = {
   urgent: 'bg-red-500',
 }
 
+function formatAppointmentTime(startTime: string, endTime: string, timezone: string): string {
+  let tz = timezone || 'America/New_York'
+  try {
+    const start = new Date(startTime)
+    const end = new Date(endTime)
+    return `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz })}`
+  } catch {
+    // Invalid timezone → fall back to UTC
+    const start = new Date(startTime)
+    const end = new Date(endTime)
+    return `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC`
+  }
+}
+
 function isToday(d: Date): boolean {
   const now = new Date()
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
@@ -175,7 +189,7 @@ function TaskCard({ task }: { task: TaskRecord }) {
 function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
   const start = new Date(appt.startTime)
   const end = new Date(appt.endTime)
-  const timeStr = `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: appt.timezone || 'America/New_York' })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: appt.timezone || 'America/New_York' })}`
+  const timeStr = formatAppointmentTime(appt.startTime, appt.endTime, appt.timezone || 'America/New_York')
 
   return (
     <Card className="border-[rgba(31,42,54,0.06)] bg-[#f6f9ff] shadow-none">
@@ -237,7 +251,7 @@ export function TasksView() {
         ])
 
         if (!cancelled) {
-          if (tRes.status === 401 || aRes.status === 401) { window.location.href = '/auth'; return }
+          if (tRes.status === 401 || aRes.status === 401) { window.location.href = buildApiPath('/auth'); return }
           if (tRes.ok) {
             const tData = await tRes.json() as { tasks?: TaskRecord[] }
             setTasks(Array.isArray(tData.tasks) ? tData.tasks : [])
@@ -285,6 +299,8 @@ export function TasksView() {
   }, [viewMode, tasks, tab])
 
   const isEmpty = filteredTasks.length === 0 && filteredAppointments.length === 0
+  // In Kanban mode, also check if board has any tasks (including done)
+  const kanbanIsEmpty = viewMode === 'kanban' && kanbanColumns.every((col) => col.tasks.length === 0) && filteredAppointments.length === 0
 
   if (loading) {
     return (
@@ -345,6 +361,9 @@ export function TasksView() {
       {isEmpty ? (
         <EmptyState tab={tab} />
       ) : viewMode === 'kanban' ? (
+        kanbanIsEmpty ? (
+          <EmptyState tab={tab} />
+        ) : (
         /* Kanban board + appointments */
         <div className="space-y-8">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -378,7 +397,7 @@ export function TasksView() {
             </section>
           )}
         </div>
-      ) : (
+      )) : (
         /* List view — tasks first, then appointments */
         <div className="space-y-8">
           {filteredTasks.length > 0 && (

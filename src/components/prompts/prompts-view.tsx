@@ -49,7 +49,7 @@ export function PromptsView({
       try {
         // buildApiPath keeps the request under NEXT_PUBLIC_BASE_PATH (cubic P2).
         const response = await fetch(buildApiPath('/api/prompts'), { cache: 'no-store' })
-        if (response.status === 401) { window.location.href = '/auth'; return }
+        if (response.status === 401) { window.location.href = buildApiPath('/auth'); return }
         if (!response.ok) throw new Error('Failed to load prompts')
         const data = await response.json() as { prompts?: PromptWithUnlock[] }
         if (!cancelled) setPrompts(Array.isArray(data.prompts) ? data.prompts : [])
