@@ -59,13 +59,32 @@ describe('middleware matcher excludes PWA assets', () => {
   // Anchored full-path match — Next.js compiles matchers with path-to-regexp
   // and requires the whole pathname to match; without ^/$ an unanchored test
   // would false-positive on the inner slash of /icons/icon-192.png.
-  const pattern = new RegExp(`^${config.matcher[0]}$`)
+  // Guard first: this reconstruction models regex-style matchers. The ONLY
+  // path-to-regexp-only marker is a `:name` parameter token (regex never uses
+  // colon+identifier); `?`/`*`/`{n}` are legal regex too. If a future matcher
+  // uses `:param*` routing syntax, fail HERE with a clear message instead of
+  // silently asserting a different match set than Next.js applies.
+  const matcherSource = config.matcher[0]
+  it('matcher stays regex-compatible so this test block models it faithfully', () => {
+    expect(
+      /:[a-zA-Z]/.test(matcherSource),
+      `matcher uses path-to-regexp :param syntax — rewrite this describe block to compile it the way Next.js does (cubic P3, PR #177)`,
+    ).toBe(false)
+  })
+  const pattern = new RegExp(`^${matcherSource}$`)
 
   it.each([
     '/manifest.webmanifest',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-512-maskable.png',
+    // These have NO in-middleware pass-through — the matcher exclusion is the
+    // ONLY thing keeping them public. Pin them so the same class of bug this
+    // PR fixes cannot silently re-privatize them (cubic P3, PR #177).
+    '/favicon.ico',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/logo.svg',
   ])('matcher does not match %s (middleware skipped, asset served statically)', (path) => {
     expect(pattern.test(path)).toBe(false)
   })
