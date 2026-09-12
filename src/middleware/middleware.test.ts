@@ -8,7 +8,7 @@ vi.mock('next-auth/jwt', () => ({
   getToken: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { middleware } = await import('../../middleware')
+const { middleware, config } = await import('../../middleware')
 
 describe('PWA assets stay public for logged-out visitors', () => {
   it('passes manifest.webmanifest through without an auth redirect', async () => {
@@ -48,5 +48,34 @@ describe('PWA assets stay public for logged-out visitors', () => {
 
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toContain('/auth')
+  })
+})
+
+describe('middleware matcher excludes PWA assets', () => {
+  // The matcher decides whether middleware runs AT ALL — if it ever regresses
+  // to include /manifest.webmanifest or /icons/*, the request skips middleware
+  // (fine) but any future narrowing of the pass-through would silently
+  // re-privatize them. Pin the exclusion itself (cubic P2, PR #177).
+  // Anchored full-path match — Next.js compiles matchers with path-to-regexp
+  // and requires the whole pathname to match; without ^/$ an unanchored test
+  // would false-positive on the inner slash of /icons/icon-192.png.
+  const pattern = new RegExp(`^${config.matcher[0]}$`)
+
+  it.each([
+    '/manifest.webmanifest',
+    '/icons/icon-192.png',
+    '/icons/icon-512.png',
+    '/icons/icon-512-maskable.png',
+  ])('matcher does not match %s (middleware skipped, asset served statically)', (path) => {
+    expect(pattern.test(path)).toBe(false)
+  })
+
+  it.each([
+    '/',
+    '/welcome',
+    '/pricing',
+    '/some-protected-view',
+  ])('matcher still matches %s (middleware protection intact)', (path) => {
+    expect(pattern.test(path)).toBe(true)
   })
 })
