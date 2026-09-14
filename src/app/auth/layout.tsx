@@ -1,13 +1,11 @@
 import type { Metadata } from 'next'
 
 /**
- * Auth pages (login/signup/password/invite) are utility routes with no
- * search value — keep them out of the index but let crawlers follow links
- * back into the public site.
+ * /auth/* is an authenticated-utility surface — never indexable. Title is set
+ * per-route via document.title effects in the client pages (they can't export
+ * metadata), so this layout deliberately carries no title of its own.
  */
 export const metadata: Metadata = {
-  title: 'Sign in',
-  description: 'Sign in or create your King CRM Hub account.',
   robots: { index: false, follow: true },
 }
 

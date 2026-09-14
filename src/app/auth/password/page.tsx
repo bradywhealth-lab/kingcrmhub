@@ -24,6 +24,11 @@ export default function PasswordSetupPage() {
 }
 
 function PasswordSetupPageInner() {
+  // Client component — can't export metadata; set the tab title per route.
+  useEffect(() => {
+    document.title = 'Set password — King CRM Hub'
+  }, [])
+
   const router = useRouter()
   const searchParams = useSearchParams()
   // Preserve the validated callbackUrl forwarded from /auth (cubic P2 round

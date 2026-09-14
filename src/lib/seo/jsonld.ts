@@ -64,10 +64,10 @@ export function softwareApplicationSchema(): JsonLd {
   }
 }
 
-/** Graph combining org + website, rendered once in the root layout. */
+/** Graph combining org + website + software application, rendered once in the root layout. */
 export function rootJsonLdGraph(): JsonLd {
   return {
     '@context': 'https://schema.org',
-    '@graph': [organizationSchema(), webSiteSchema()],
+    '@graph': [organizationSchema(), webSiteSchema(), softwareApplicationSchema()],
   }
 }

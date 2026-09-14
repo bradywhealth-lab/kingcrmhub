@@ -100,6 +100,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|logo.svg|og-home.png|manifest\\.webmanifest|icons).*)',
+    // Escaped dots + directory boundary (icons/) so unrelated paths like
+    // /og-homeXpng or /icons-private can't slip past the middleware.
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo\\.svg|og-home\\.png|manifest\\.webmanifest|icons/).*)',
   ],
 }

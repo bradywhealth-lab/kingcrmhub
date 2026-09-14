@@ -10,7 +10,9 @@ import {
 type Interval = "monthly" | "yearly";
 type PlanId = "free" | "starter" | "pro" | "enterprise";
 
-const PLANS = [
+// Exported so src/lib/seo/seo.test.ts can pin JSON-LD offers to this source
+// of truth (pricing parity gate — cubic P2).
+export const PLANS = [
   {
     id: "free" as PlanId,
     name: "Free",

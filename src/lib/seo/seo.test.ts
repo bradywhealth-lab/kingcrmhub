@@ -31,13 +31,14 @@ describe('sitemap', () => {
 })
 
 describe('jsonld', () => {
-  it('root graph is valid schema.org JSON-LD with org + website', () => {
+  it('root graph is valid schema.org JSON-LD with org + website + software app', () => {
     const graph = rootJsonLdGraph()
     expect(graph['@context']).toBe('https://schema.org')
     const items = graph['@graph'] as Record<string, unknown>[]
-    expect(items).toHaveLength(2)
+    expect(items).toHaveLength(3)
     expect(items[0]!['@type']).toBe('Organization')
     expect(items[1]!['@type']).toBe('WebSite')
+    expect(items[2]!['@type']).toBe('SoftwareApplication')
     // round-trips through JSON without throwing
     expect(() => JSON.stringify(graph)).not.toThrow()
   })
@@ -71,6 +72,18 @@ describe('jsonld', () => {
     const offers = app.offers as { price: string }[]
     APPLICATION_OFFERS.forEach((tier, i) => {
       expect(offers[i]!.price).toBe(tier.price.toFixed(2))
+    })
+  })
+
+  it('APPLICATION_OFFERS mirrors the real pricing PLANS (parity gate)', async () => {
+    // Source of truth: the same PLANS array the /pricing page renders.
+    // If monthly prices change there without updating APPLICATION_OFFERS,
+    // this test fails — the JSON-LD cannot silently go stale.
+    const { PLANS } = await import('@/components/pricing/crm-pricing-page')
+    expect(APPLICATION_OFFERS).toHaveLength(PLANS.length)
+    PLANS.forEach((plan, i) => {
+      expect(APPLICATION_OFFERS[i]!.name).toBe(plan.name)
+      expect(APPLICATION_OFFERS[i]!.price).toBe(plan.monthlyPrice)
     })
   })
 })
