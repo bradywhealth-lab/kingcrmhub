@@ -32,7 +32,11 @@ def load_font(candidates, size):
         if Path(path).exists():
             return ImageFont.truetype(path, size)
     # Last resort: PIL default (bitmap) — still renders, just less pretty.
-    return ImageFont.load_default(size)
+    # Pillow < 10.1 does not accept the size argument.
+    try:
+        return ImageFont.load_default(size)
+    except TypeError:
+        return ImageFont.load_default()
 
 W, H = 1200, 630
 INK = (12, 17, 27)
