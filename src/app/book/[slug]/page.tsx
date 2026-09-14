@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getBookingOrganizationBySlug } from '@/lib/booking'
 import { BookingPage } from './booking-page'
@@ -6,6 +7,20 @@ type BookingRouteProps = {
   params: Promise<{
     slug: string
   }>
+}
+
+/**
+ * Tenant booking pages are dynamic, per-organization surfaces discovered via
+ * direct links — keep them out of the search index (thin/duplicate content).
+ */
+export async function generateMetadata({ params }: BookingRouteProps): Promise<Metadata> {
+  const { slug } = await params
+  const organization = await getBookingOrganizationBySlug(slug)
+  return {
+    title: organization ? `Book with ${organization.name}` : 'Book a call',
+    description: 'Schedule a client conversation with this King CRM Hub workspace.',
+    robots: { index: false, follow: true },
+  }
 }
 
 export default async function PublicBookingRoute({ params }: BookingRouteProps) {
