@@ -55,6 +55,13 @@ function AuthPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
+
+  // Client component — can't export metadata; set the tab title per route
+  // (auth layout intentionally carries no title).
+  useEffect(() => {
+    document.title = 'Sign in — King CRM Hub'
+  }, [])
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)

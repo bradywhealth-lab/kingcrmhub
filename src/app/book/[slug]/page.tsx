@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
+import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import { getBookingOrganizationBySlug } from '@/lib/booking'
 import { BookingPage } from './booking-page'
+
+// React cache() dedupes the org lookup across generateMetadata + page render
+// within a single request (standard Next.js pattern for dynamic metadata).
+const getOrganizationCached = cache(getBookingOrganizationBySlug)
 
 type BookingRouteProps = {
   params: Promise<{
@@ -8,9 +14,23 @@ type BookingRouteProps = {
   }>
 }
 
+/**
+ * Tenant booking pages are dynamic, per-organization surfaces discovered via
+ * direct links — keep them out of the search index (thin/duplicate content).
+ */
+export async function generateMetadata({ params }: BookingRouteProps): Promise<Metadata> {
+  const { slug } = await params
+  const organization = await getOrganizationCached(slug)
+  return {
+    title: organization ? `Book with ${organization.name}` : 'Book a call',
+    description: 'Schedule a client conversation with this King CRM Hub workspace.',
+    robots: { index: false, follow: true },
+  }
+}
+
 export default async function PublicBookingRoute({ params }: BookingRouteProps) {
   const { slug } = await params
-  const organization = await getBookingOrganizationBySlug(slug)
+  const organization = await getOrganizationCached(slug)
 
   if (!organization) {
     notFound()

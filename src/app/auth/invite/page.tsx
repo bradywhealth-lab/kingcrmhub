@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 function InviteAcceptanceContent() {
+  // Client component — can't export metadata; set the tab title per route.
+  useEffect(() => {
+    document.title = 'Accept invite — King CRM Hub'
+  }, [])
+
   const router = useRouter()
   const params = useSearchParams()
   const token = params.get('token') || ''
