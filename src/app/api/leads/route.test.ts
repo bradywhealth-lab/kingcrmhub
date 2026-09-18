@@ -38,7 +38,7 @@ function seedLeads(): FakeLead[] {
       firstName: 'Ada',
       lastName: 'Lovelace',
       email: 'ada@analytical.io',
-      phone: null,
+      phone: '+15550101',
       company: 'Analytical Engines',
       status: 'new',
       createdAt: new Date('2026-09-01T00:00:00Z'),
@@ -75,10 +75,12 @@ function seedLeads(): FakeLead[] {
 
 type ContainsCondition = { contains: string; mode?: string }
 type OrClause = Record<string, ContainsCondition>
+type AndEntry = { OR: OrClause[] }
 type FakeWhere = {
   organizationId?: string
   status?: string
   OR?: OrClause[]
+  AND?: AndEntry[]
 }
 
 function matchesCondition(row: FakeLead, condition: OrClause): boolean {
@@ -98,6 +100,12 @@ function applyWhere(rows: FakeLead[], where: FakeWhere): FakeLead[] {
     if (where.status !== undefined && row.status !== where.status) return false
     if (Array.isArray(where.OR) && where.OR.length > 0) {
       if (!where.OR.some((clause) => matchesCondition(row, clause))) return false
+    }
+    // AND of ORs: every term-group must match at least one field (tokenized q)
+    if (Array.isArray(where.AND) && where.AND.length > 0) {
+      if (!where.AND.every((entry) => entry.OR.some((clause) => matchesCondition(row, clause)))) {
+        return false
+      }
     }
     return true
   })
@@ -201,6 +209,42 @@ describe('GET /api/leads — nameless-lead visibility + q search (t_cf1f4831)', 
 
     expect(json.total).toBe(1)
     expect(json.leads[0].id).toBe('lead-named')
+  })
+
+  it('(b4) q=<firstName> finds exactly that lead', async () => {
+    const response = await getList('http://localhost/api/leads?q=ada')
+    const json = await response.json()
+
+    expect(json.total).toBe(1)
+    expect(json.leads[0].id).toBe('lead-named')
+  })
+
+  it('(b5) q=<phone fragment> finds exactly that lead', async () => {
+    const response = await getList('http://localhost/api/leads?q=5550101')
+    const json = await response.json()
+
+    expect(json.total).toBe(1)
+    expect(json.leads[0].id).toBe('lead-named')
+  })
+
+  it('(b6) q=<full name "Ada Lovelace"> finds the lead (tokenized AND-of-ORs)', async () => {
+    const response = await getList(
+      `http://localhost/api/leads?q=${encodeURIComponent('Ada Lovelace')}`,
+    )
+    const json = await response.json()
+
+    expect(json.total).toBe(1)
+    expect(json.leads[0].id).toBe('lead-named')
+  })
+
+  it('(b7) q=<terms spanning two leads> matches neither (every term must hit the same row)', async () => {
+    const response = await getList(
+      `http://localhost/api/leads?q=${encodeURIComponent('ada zebrazeta')}`,
+    )
+    const json = await response.json()
+
+    expect(json.total).toBe(0)
+    expect(json.leads).toHaveLength(0)
   })
 
   it('(c) q=<non-matching string> returns an empty list even though leads exist', async () => {

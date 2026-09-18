@@ -121,17 +121,22 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
     if (q) {
-      // Free-text search across name + contact fields. OR semantics are
-      // null-safe: leads with no firstName/lastName still match on
+      // Free-text search across name + contact fields. Tokenize so a full-name
+      // query like "Ada Lovelace" matches (each term must hit at least one
+      // field; terms are AND-ed, fields within a term are OR-ed). OR semantics
+      // are null-safe: leads with no firstName/lastName still match on
       // email/company/phone, and a genuinely non-matching query returns
       // no rows instead of the unfiltered list (regression t_cf1f4831).
-      where.OR = [
-        { firstName: { contains: q, mode: 'insensitive' } },
-        { lastName: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { phone: { contains: q, mode: 'insensitive' } },
-        { company: { contains: q, mode: 'insensitive' } },
-      ]
+      const terms = q.split(/\s+/).filter(Boolean)
+      where.AND = terms.map((term) => ({
+        OR: [
+          { firstName: { contains: term, mode: 'insensitive' } },
+          { lastName: { contains: term, mode: 'insensitive' } },
+          { email: { contains: term, mode: 'insensitive' } },
+          { phone: { contains: term, mode: 'insensitive' } },
+          { company: { contains: term, mode: 'insensitive' } },
+        ],
+      }))
     }
     
     const leads = await db.lead.findMany({
