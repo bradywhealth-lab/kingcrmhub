@@ -275,4 +275,26 @@ describe('GET /api/leads — nameless-lead visibility + q search (t_cf1f4831)', 
     expect(json.total).toBe(0)
     expect(json.leads).toHaveLength(0)
   })
+
+  it('(d) q longer than 256 chars is rejected with 400', async () => {
+    const long = 'a'.repeat(257)
+    const response = await getList(`http://localhost/api/leads?q=${long}`)
+
+    expect(response.status).toBe(400)
+    const json = await response.json()
+    expect(json.error).toMatch(/too long/i)
+    expect(mockDb.lead.findMany).not.toHaveBeenCalled()
+  })
+
+  it('(d2) q with more than 16 terms is rejected with 400', async () => {
+    const many = Array.from({ length: 17 }, (_, i) => `t${i}`).join(' ')
+    const response = await getList(
+      `http://localhost/api/leads?q=${encodeURIComponent(many)}`,
+    )
+
+    expect(response.status).toBe(400)
+    const json = await response.json()
+    expect(json.error).toMatch(/too many terms/i)
+    expect(mockDb.lead.findMany).not.toHaveBeenCalled()
+  })
 })

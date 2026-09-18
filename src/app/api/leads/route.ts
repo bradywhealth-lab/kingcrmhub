@@ -121,6 +121,11 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
     if (q) {
+      // Bound the search input first: an oversized q would expand into
+      // thousands of SQL predicates (one OR-group per whitespace term).
+      if (q.length > 256) {
+        return NextResponse.json({ error: 'Search query is too long' }, { status: 400 })
+      }
       // Free-text search across name + contact fields. Tokenize so a full-name
       // query like "Ada Lovelace" matches (each term must hit at least one
       // field; terms are AND-ed, fields within a term are OR-ed). OR semantics
@@ -128,6 +133,9 @@ export async function GET(request: NextRequest) {
       // email/company/phone, and a genuinely non-matching query returns
       // no rows instead of the unfiltered list (regression t_cf1f4831).
       const terms = q.split(/\s+/).filter(Boolean)
+      if (terms.length > 16) {
+        return NextResponse.json({ error: 'Search query has too many terms' }, { status: 400 })
+      }
       where.AND = terms.map((term) => ({
         OR: [
           { firstName: { contains: term, mode: 'insensitive' } },
