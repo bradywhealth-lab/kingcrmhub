@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
     return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
+    const q = searchParams.get('q')?.trim()
     const sortBy = searchParams.get('sortBy') || 'createdAt'
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
@@ -118,6 +119,19 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { organizationId }
     if (status && status !== 'all') {
       where.status = status
+    }
+    if (q) {
+      // Free-text search across name + contact fields. OR semantics are
+      // null-safe: leads with no firstName/lastName still match on
+      // email/company/phone, and a genuinely non-matching query returns
+      // no rows instead of the unfiltered list (regression t_cf1f4831).
+      where.OR = [
+        { firstName: { contains: q, mode: 'insensitive' } },
+        { lastName: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q, mode: 'insensitive' } },
+        { company: { contains: q, mode: 'insensitive' } },
+      ]
     }
     
     const leads = await db.lead.findMany({
