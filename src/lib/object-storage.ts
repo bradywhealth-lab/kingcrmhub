@@ -34,8 +34,8 @@ export class ObjectStorageNotConfiguredError extends Error {
 export class ObjectStorageUnavailableError extends Error {
   readonly causeDetail: string
 
-  constructor(causeDetail: string) {
-    super(`Object storage backend failure: ${causeDetail}`)
+  constructor(causeDetail: string, options?: ErrorOptions) {
+    super(`Object storage backend failure: ${causeDetail}`, options)
     this.name = 'ObjectStorageUnavailableError'
     this.causeDetail = causeDetail
   }
@@ -114,10 +114,14 @@ export async function uploadToObjectStorage(input: {
       // Everything inside this try is a storage-backend call: any failure
       // here is an upstream dependency problem, so normalize to the typed
       // error callers map to 502 (a generic Error would surface as a 500
-      // that reads like an app bug — regression t_2ef8e432).
+      // that reads like an app bug — regression t_2ef8e432). The original
+      // error is threaded through as `cause` so its stack stays in logs.
       throw error instanceof ObjectStorageUnavailableError
         ? error
-        : new ObjectStorageUnavailableError(error instanceof Error ? error.message : String(error))
+        : new ObjectStorageUnavailableError(
+            error instanceof Error ? error.message : String(error),
+            { cause: error },
+          )
     }
     if (input.buffer.length > 1_000_000) {
       throw new Error('Object storage is unavailable and the file is too large for local fallback storage')
@@ -147,8 +151,12 @@ export async function deleteFromObjectStorage(storagePath: string): Promise<void
     // Normalize rejects (network failure, client construction) AND error
     // objects to the typed error so routes map every storage outage to 502
     // (cubic PR #184 P2: an escaping generic Error surfaced as a 500).
+    // The original error rides along as `cause` for operator diagnostics.
     throw error instanceof ObjectStorageUnavailableError
       ? error
-      : new ObjectStorageUnavailableError(error instanceof Error ? error.message : String(error))
+      : new ObjectStorageUnavailableError(
+          error instanceof Error ? error.message : String(error),
+          { cause: error },
+        )
   }
 }

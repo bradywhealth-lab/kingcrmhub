@@ -118,6 +118,19 @@ describe('deleteFromObjectStorage — backend failure classification', () => {
     )
   })
 
+  it('preserves the original rejection as `cause` for operator diagnostics', async () => {
+    // cubic PR #184 round 2 P3: normalization must not discard the original
+    // error — its stack (e.g. inside supabase-js fetch) stays logged.
+    const original = new TypeError('fetch failed')
+    mockRemove.mockRejectedValueOnce(original)
+
+    const error = await deleteFromObjectStorage('packages/org_1/pkg_1/1-file.png').catch(
+      (e: unknown) => e,
+    )
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    expect((error as Error & { cause?: unknown }).cause).toBe(original)
+  })
+
   it('keeps throwing ObjectStorageNotConfiguredError when env vars are missing', async () => {
     delete process.env.SUPABASE_URL
 
