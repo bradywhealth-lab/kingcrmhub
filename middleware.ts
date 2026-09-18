@@ -96,6 +96,15 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // Public legal pages — visitors must be able to read terms/privacy before
+  // signup (the auth page links to them). Exact paths only: no /terms/* subroutes.
+  // Trailing-slash variants are matched too because middleware runs before
+  // Next.js's own 308 trailing-slash normalization (cubic review on #180).
+  if (pathname === '/terms' || pathname === '/terms/' || pathname === '/privacy' || pathname === '/privacy/') {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Protected routes - require authentication
   if (!isAuthenticated) {
     const url = request.nextUrl.clone()

@@ -202,7 +202,19 @@ export async function POST(request: NextRequest) {
     if (limited) return limited
 
     return withRequestOrgContext(request, async (context) => {
-      const formData = await request.formData()
+      // Malformed or empty bodies (no multipart content-type, truncated
+      // upload) make formData() throw. That is a client error — validate it
+      // here so the outer catch-all can't turn it into a 500 (Sentinel
+      // audit defect 3).
+      let formData: FormData
+      try {
+        formData = await request.formData()
+      } catch {
+        return NextResponse.json(
+          { error: 'Request body must be multipart/form-data containing a "file" field' },
+          { status: 400 },
+        )
+      }
       const file = formData.get('file')
       const source = String(formData.get('source') || 'csv_upload').trim() || 'csv_upload'
       const aiAutoScore = String(formData.get('aiAutoScore') || 'true').trim().toLowerCase() !== 'false'
