@@ -457,6 +457,30 @@ function AuthPageInner() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
 
+                  {mode === 'signup' && (
+                    <p className="text-center text-xs leading-5 text-[#0c111b]/55">
+                      By creating a workspace you agree to our{' '}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[var(--teal-deep)] underline-offset-2 hover:underline"
+                      >
+                        Terms of Service
+                      </a>{' '}
+                      and{' '}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[var(--teal-deep)] underline-offset-2 hover:underline"
+                      >
+                        Privacy Policy
+                      </a>
+                      .
+                    </p>
+                  )}
+
                   <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f7f4ec] p-4 text-sm text-[#0c111b]/60">
                     Already have a password-reset link?{' '}
                     <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[var(--teal-deep)] hover:opacity-80">

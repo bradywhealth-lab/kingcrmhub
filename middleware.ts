@@ -96,6 +96,13 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // Public legal pages — visitors must be able to read terms/privacy before
+  // signup (the auth page links to them). Exact paths only: no /terms/* subroutes.
+  if (pathname === '/terms' || pathname === '/privacy') {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Protected routes - require authentication
   if (!isAuthenticated) {
     const url = request.nextUrl.clone()

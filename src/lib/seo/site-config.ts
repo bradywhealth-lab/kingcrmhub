@@ -12,6 +12,8 @@ export const SITE_TAGLINE = 'The client pipeline for one-person businesses'
  *
  * Excluded on purpose:
  * - /auth*        -> noindex (login/signup utility pages)
+ * - /terms        -> noindex while legal copy is still a template
+ * - /privacy      -> noindex while legal copy is still a template
  * - /welcome      -> duplicate of / (canonical points to /)
  * - /book/[slug]  -> dynamic tenant pages, discovered via links not sitemap
  * - /admin/*      -> authenticated app surface

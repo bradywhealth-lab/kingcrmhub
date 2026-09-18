@@ -49,6 +49,19 @@ describe('PWA assets stay public for logged-out visitors', () => {
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toContain('/auth')
   })
+
+  it.each(['/terms', '/privacy'])(
+    'passes %s through for logged-out visitors (legal pages linked from signup)',
+    async (path) => {
+      const request = new NextRequest(`http://localhost:3000${path}`)
+      const response = await middleware(request, undefined as never)
+
+      // A 307 to /auth here is exactly the production bug from Sentinel's
+      // audit (defect 2): visitors could not read legal pages before signup.
+      expect(response.status).toBe(200)
+      expect(response.headers.get('location')).toBeNull()
+    },
+  )
 })
 
 describe('middleware matcher excludes PWA assets', () => {
