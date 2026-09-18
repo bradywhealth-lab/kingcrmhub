@@ -20,7 +20,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    return withRequestOrgContext(request, async (context) => {
+    // `await` keeps rejections inside the try/catch (opaque-500 bug class).
+    return await withRequestOrgContext(request, async (context) => {
       const servicePackage = await db.servicePackage.findFirst({
         where: { id, organizationId: context.organizationId },
         include: {
@@ -107,7 +108,8 @@ export async function DELETE(
     const limited = enforceRateLimit(request, { key: 'packages-delete', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `await` keeps rejections inside the try/catch (opaque-500 bug class).
+    return await withRequestOrgContext(request, async (context) => {
       const existing = await db.servicePackage.findFirst({
         where: { id, organizationId: context.organizationId },
       })

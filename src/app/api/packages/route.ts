@@ -16,7 +16,8 @@ const createPackageSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    // `await` keeps rejections inside the try/catch (opaque-500 bug class).
+    return await withRequestOrgContext(request, async (context) => {
     const servicePackages = await db.servicePackage.findMany({
       where: { organizationId: context.organizationId },
       include: {
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (isUniqueConstraintViolation(error)) {
       console.warn('ServicePackages POST conflict (P2002):', error)
       return NextResponse.json(
-        { error: 'A service package with that name already exists.' },
+        { error: 'A service package with that name or slug already exists.' },
         { status: 409 },
       )
     }

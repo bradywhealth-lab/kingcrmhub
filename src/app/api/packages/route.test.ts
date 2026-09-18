@@ -51,7 +51,7 @@ function uniqueViolationError(): Prisma.PrismaClientKnownRequestError {
   )
 }
 
-const DUPLICATE_MESSAGE = 'A service package with that name already exists.'
+const DUPLICATE_MESSAGE = 'A service package with that name or slug already exists.'
 
 beforeEach(() => {
   vi.clearAllMocks()
