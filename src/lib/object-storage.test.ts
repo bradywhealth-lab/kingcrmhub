@@ -83,6 +83,18 @@ describe('uploadToObjectStorage — backend failure classification (production)'
     expect(mockUpload).not.toHaveBeenCalled()
   })
 
+  it('preserves the original rejection as `cause` on the UPLOAD normalization path too', async () => {
+    // cubic PR #184 round 3 P3: uploadToObjectStorage has the same
+    // normalization as deleteFromObjectStorage — pin cause identity there
+    // as well so neither site can regress to message-only copying.
+    const original = new TypeError('fetch failed')
+    mockUpload.mockRejectedValueOnce(original)
+
+    const error = await uploadToObjectStorage(UPLOAD_INPUT).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    expect((error as Error & { cause?: unknown }).cause).toBe(original)
+  })
+
   it('never leaks the raw backend message to callers of the typed error surface used in client responses', async () => {
     // The typed error carries the backend detail for SERVER logs only; routes
     // must respond with their own safe message. Pin that the detail lives on
