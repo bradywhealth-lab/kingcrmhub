@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import {
-  ObjectStorageNotConfiguredError,
   findMissingObjectStorageEnv,
   uploadToObjectStorage,
 } from '@/lib/object-storage'
+import {
+  STORAGE_UNCONFIGURED_MESSAGE,
+  objectStorageErrorResponse,
+} from '@/lib/object-storage-http'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ id: string }> }
 const CHUNK_SIZE = 900
 const CHUNK_OVERLAP = 150
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-const STORAGE_UNAVAILABLE_MESSAGE =
-  'Document storage is not configured. Document uploads are unavailable until an administrator configures storage.'
 const ALLOWED_UPLOAD_TYPES = new Set([
   'application/pdf',
   'application/msword',
@@ -49,7 +50,20 @@ export async function POST(request: NextRequest, { params }: Params) {
     // caught by this try/catch instead of leaking to the framework as a
     // bare empty-body 500.
     return await withRequestOrgContext(request, async (context) => {
-      const formData = await request.formData()
+      // Malformed or non-multipart bodies make formData() throw. That is a
+      // client error — map it to 400 here so the catch-all can't turn it
+      // into a generic 500 (same class PR #180 closed for /api/upload;
+      // regression t_2ef8e432: prod logged "Failed to parse body as
+      // FormData." and clients saw 500 "Failed to upload package document").
+      let formData: FormData
+      try {
+        formData = await request.formData()
+      } catch {
+        return NextResponse.json(
+          { error: 'Request body must be multipart/form-data containing a "file" field' },
+          { status: 400 }
+        )
+      }
 
       const file = formData.get('file') as File | null
       const name = String(formData.get('name') || '')
@@ -89,7 +103,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           'Package documents POST: object storage not configured, missing env vars:',
           missingStorageEnv.join(', ')
         )
-        return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+        return NextResponse.json({ error: STORAGE_UNCONFIGURED_MESSAGE }, { status: 503 })
       }
 
       const bytes = await file.arrayBuffer()
@@ -149,11 +163,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       })
     })
   } catch (error) {
-    if (error instanceof ObjectStorageNotConfiguredError) {
-      console.error('Package documents POST error:', error)
-      return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
-    }
+    // Typed storage errors map to 503 (unconfigured) / 502 (backend
+    // failure) via the shared helper — backend detail stays server-side.
+    const storageResponse = objectStorageErrorResponse(error)
     console.error('Package documents POST error:', error)
+    if (storageResponse) return storageResponse
     return NextResponse.json({ error: 'Failed to upload package document' }, { status: 500 })
   }
 }

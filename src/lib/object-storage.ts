@@ -22,6 +22,25 @@ export class ObjectStorageNotConfiguredError extends Error {
   }
 }
 
+/**
+ * Thrown when storage IS configured but the backend rejects the operation
+ * (bucket missing, permission denied, no public URL returned, network
+ * failure). Callers should translate this into a 502 with a safe,
+ * actionable message — never a generic 500 that reads like an app bug,
+ * and never echoing `causeDetail` to the client (server logs only).
+ * Regression t_2ef8e432: prod bucket "carrier-documents" did not exist,
+ * Supabase answered "Bucket not found", and clients got an opaque 500.
+ */
+export class ObjectStorageUnavailableError extends Error {
+  readonly causeDetail: string
+
+  constructor(causeDetail: string, options?: ErrorOptions) {
+    super(`Object storage backend failure: ${causeDetail}`, options)
+    this.name = 'ObjectStorageUnavailableError'
+    this.causeDetail = causeDetail
+  }
+}
+
 /** Names of required object-storage env vars that are unset or blank. */
 export function findMissingObjectStorageEnv(): string[] {
   return OBJECT_STORAGE_ENV_VARS.filter((name) => !process.env[name]?.trim())
@@ -78,12 +97,12 @@ export async function uploadToObjectStorage(input: {
     })
 
     if (uploadResult.error) {
-      throw new Error(`Object storage upload failed: ${uploadResult.error.message}`)
+      throw new ObjectStorageUnavailableError(uploadResult.error.message)
     }
 
     const { data } = client.storage.from(bucket).getPublicUrl(storagePath)
     if (!data?.publicUrl) {
-      throw new Error('Object storage upload succeeded but no public URL was returned')
+      throw new ObjectStorageUnavailableError('upload succeeded but no public URL was returned')
     }
 
     return {
@@ -91,7 +110,19 @@ export async function uploadToObjectStorage(input: {
       storagePath,
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'production') throw error
+    if (process.env.NODE_ENV === 'production') {
+      // Everything inside this try is a storage-backend call: any failure
+      // here is an upstream dependency problem, so normalize to the typed
+      // error callers map to 502 (a generic Error would surface as a 500
+      // that reads like an app bug — regression t_2ef8e432). The original
+      // error is threaded through as `cause` so its stack stays in logs.
+      throw error instanceof ObjectStorageUnavailableError
+        ? error
+        : new ObjectStorageUnavailableError(
+            error instanceof Error ? error.message : String(error),
+            { cause: error },
+          )
+    }
     if (input.buffer.length > 1_000_000) {
       throw new Error('Object storage is unavailable and the file is too large for local fallback storage')
     }
@@ -110,9 +141,22 @@ export async function deleteFromObjectStorage(storagePath: string): Promise<void
     throw new ObjectStorageNotConfiguredError(missingEnv)
   }
   const bucket = getRequiredEnv('SUPABASE_STORAGE_BUCKET')
-  const client = getStorageClient()
-  const removeResult = await client.storage.from(bucket).remove([storagePath])
-  if (removeResult.error) {
-    throw new Error(`Object storage delete failed: ${removeResult.error.message}`)
+  try {
+    const client = getStorageClient()
+    const removeResult = await client.storage.from(bucket).remove([storagePath])
+    if (removeResult.error) {
+      throw new ObjectStorageUnavailableError(removeResult.error.message)
+    }
+  } catch (error) {
+    // Normalize rejects (network failure, client construction) AND error
+    // objects to the typed error so routes map every storage outage to 502
+    // (cubic PR #184 P2: an escaping generic Error surfaced as a 500).
+    // The original error rides along as `cause` for operator diagnostics.
+    throw error instanceof ObjectStorageUnavailableError
+      ? error
+      : new ObjectStorageUnavailableError(
+          error instanceof Error ? error.message : String(error),
+          { cause: error },
+        )
   }
 }
