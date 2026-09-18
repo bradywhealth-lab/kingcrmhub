@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
-import { deleteFromObjectStorage } from '@/lib/object-storage'
+import { deleteFromObjectStorage, ObjectStorageNotConfiguredError } from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
+
+const STORAGE_UNAVAILABLE_MESSAGE =
+  'Document storage is not configured. Document management is unavailable until an administrator configures storage.'
 
 export async function GET(
   request: NextRequest,
@@ -66,6 +69,10 @@ export async function DELETE(
       return NextResponse.json({ success: true })
     })
   } catch (error) {
+    if (error instanceof ObjectStorageNotConfiguredError) {
+      console.error('PackageDocument DELETE error:', error)
+      return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
     console.error('PackageDocument DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 })
   }
