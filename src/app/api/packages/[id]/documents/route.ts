@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import {
   ObjectStorageNotConfiguredError,
+  ObjectStorageUnavailableError,
   findMissingObjectStorageEnv,
   uploadToObjectStorage,
 } from '@/lib/object-storage'
@@ -14,6 +15,8 @@ const CHUNK_OVERLAP = 150
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 const STORAGE_UNAVAILABLE_MESSAGE =
   'Document storage is not configured. Document uploads are unavailable until an administrator configures storage.'
+const STORAGE_BACKEND_FAILURE_MESSAGE =
+  'Document storage is temporarily unavailable. Please try again later or contact support.'
 const ALLOWED_UPLOAD_TYPES = new Set([
   'application/pdf',
   'application/msword',
@@ -49,7 +52,20 @@ export async function POST(request: NextRequest, { params }: Params) {
     // caught by this try/catch instead of leaking to the framework as a
     // bare empty-body 500.
     return await withRequestOrgContext(request, async (context) => {
-      const formData = await request.formData()
+      // Malformed or non-multipart bodies make formData() throw. That is a
+      // client error — map it to 400 here so the catch-all can't turn it
+      // into a generic 500 (same class PR #180 closed for /api/upload;
+      // regression t_2ef8e432: prod logged "Failed to parse body as
+      // FormData." and clients saw 500 "Failed to upload package document").
+      let formData: FormData
+      try {
+        formData = await request.formData()
+      } catch {
+        return NextResponse.json(
+          { error: 'Request body must be multipart/form-data containing a "file" field' },
+          { status: 400 }
+        )
+      }
 
       const file = formData.get('file') as File | null
       const name = String(formData.get('name') || '')
@@ -152,6 +168,14 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (error instanceof ObjectStorageNotConfiguredError) {
       console.error('Package documents POST error:', error)
       return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+    if (error instanceof ObjectStorageUnavailableError) {
+      // Storage backend rejected the operation (bucket missing, permission
+      // denied, network). Upstream-dependency failure → 502 with a safe
+      // message; the backend detail stays in server logs only (never echo
+      // it to the client — it can leak infrastructure specifics).
+      console.error('Package documents POST error:', error)
+      return NextResponse.json({ error: STORAGE_BACKEND_FAILURE_MESSAGE }, { status: 502 })
     }
     console.error('Package documents POST error:', error)
     return NextResponse.json({ error: 'Failed to upload package document' }, { status: 500 })

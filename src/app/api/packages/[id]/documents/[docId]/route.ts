@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
-import { deleteFromObjectStorage, ObjectStorageNotConfiguredError } from '@/lib/object-storage'
+import {
+  deleteFromObjectStorage,
+  ObjectStorageNotConfiguredError,
+  ObjectStorageUnavailableError,
+} from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 const STORAGE_UNAVAILABLE_MESSAGE =
   'Document storage is not configured. Document management is unavailable until an administrator configures storage.'
+const STORAGE_BACKEND_FAILURE_MESSAGE =
+  'Document storage is temporarily unavailable. Please try again later or contact support.'
 
 export async function GET(
   request: NextRequest,
@@ -74,6 +80,12 @@ export async function DELETE(
     if (error instanceof ObjectStorageNotConfiguredError) {
       console.error('PackageDocument DELETE error:', error)
       return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+    if (error instanceof ObjectStorageUnavailableError) {
+      // Same classification as the POST route: backend rejection (bucket
+      // missing, permission denied) is a 502, not an app-bug 500.
+      console.error('PackageDocument DELETE error:', error)
+      return NextResponse.json({ error: STORAGE_BACKEND_FAILURE_MESSAGE }, { status: 502 })
     }
     console.error('PackageDocument DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 })
