@@ -3,8 +3,26 @@ import { getToken } from 'next-auth/jwt'
 import { applySecurityHeaders } from '@/lib/security'
 import { getAuthSecret } from '@/lib/auth-env'
 
+// Static public assets that must never hit the auth redirect: SEO/OG images,
+// PWA icons, and metadata files. Anchored, full-path entries.
+const PUBLIC_STATIC_ASSETS = new Set([
+  '/favicon.ico',
+  '/robots.txt',
+  '/sitemap.xml',
+  '/logo.svg',
+  '/og-home.png',
+  '/manifest.webmanifest',
+])
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Static SEO/PWA assets pass through even if the matcher is ever narrowed
+  // (mirrors the matcher exclusion below; keep the two lists in sync).
+  if (PUBLIC_STATIC_ASSETS.has(pathname) || pathname.startsWith('/icons/')) {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
 
   // Let API routes pass through — they handle their own auth
   if (pathname.startsWith('/api/')) {
@@ -90,8 +108,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // PWA assets (manifest.webmanifest, /icons/*) are excluded so browsers can
-  // fetch them without a session during install — see the pass-through above
-  // and middleware.test.ts. apple-touch-icon lives under /icons/.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|logo.svg|manifest\\.webmanifest|icons).*)'],
+  matcher: [
+    // Escaped dots + directory boundary (icons/) so unrelated paths like
+    // /og-homeXpng or /icons-private can't slip past the middleware.
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo\\.svg|og-home\\.png|manifest\\.webmanifest|icons/).*)',
+  ],
 }

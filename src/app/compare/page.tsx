@@ -1,9 +1,11 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'King CRM Hub — Built for Freelancers',
+  // Root layout template appends "— King CRM Hub"; don't repeat the brand here.
+  title: 'Built for Freelancers',
   description:
     'Flat pricing with no per-seat tax. Pipeline boards, client booking, AI assistant on Studio+, and a built-in prompt library — for freelancers.',
+  alternates: { canonical: '/compare' },
 }
 
 const INCLUDED = [

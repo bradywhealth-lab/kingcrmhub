@@ -138,8 +138,9 @@ async function extractPackageText(file: File, buffer: Buffer): Promise<string> {
   if (ext === 'pdf') {
     try {
       const pdfModule = await import('pdf-parse')
-      const parser = new pdfModule.PDFParse(buffer)
-      const result = await parser.parse()
+      const parser = new pdfModule.PDFParse({ data: buffer })
+      const result = await parser.getText()
+      await parser.destroy()
       return result.text || ''
     } catch {
       return ''
@@ -147,7 +148,15 @@ async function extractPackageText(file: File, buffer: Buffer): Promise<string> {
   }
   if (ext === 'docx') {
     try {
-      const mammoth = await import('mammoth')
+      // Optional runtime dependency: keep dynamic to avoid bundler hard-fail
+      // when mammoth is intentionally absent in lean deploy targets.
+      const dynamicImport = new Function(
+        'm',
+        'return import(m)'
+      ) as (moduleName: string) => Promise<{
+        extractRawText: (input: { buffer: Buffer }) => Promise<{ value?: string }>
+      }>
+      const mammoth = await dynamicImport('mammoth')
       const result = await mammoth.extractRawText({ buffer })
       return result.value || ''
     } catch {
