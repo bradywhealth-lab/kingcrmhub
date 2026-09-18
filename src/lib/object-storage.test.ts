@@ -57,12 +57,12 @@ describe('uploadToObjectStorage — backend failure classification (production)'
     // route could not distinguish a storage-backend failure from an app bug.
     mockUpload.mockResolvedValueOnce({ data: null, error: { message: 'Bucket not found' } })
 
-    await expect(uploadToObjectStorage(UPLOAD_INPUT)).rejects.toBeInstanceOf(
-      ObjectStorageUnavailableError,
-    )
-    await expect(uploadToObjectStorage(UPLOAD_INPUT)).rejects.not.toBeInstanceOf(
-      ObjectStorageNotConfiguredError,
-    )
+    // Single invocation: capture the rejection once and assert both
+    // properties on it (cubic PR #184: a second call would consume an
+    // exhausted once-mock and exercise a different path).
+    const error = await uploadToObjectStorage(UPLOAD_INPUT).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    expect(error).not.toBeInstanceOf(ObjectStorageNotConfiguredError)
   })
 
   it('throws ObjectStorageUnavailableError when upload succeeds but no public URL is returned', async () => {
@@ -102,6 +102,16 @@ describe('uploadToObjectStorage — backend failure classification (production)'
 describe('deleteFromObjectStorage — backend failure classification', () => {
   it('throws ObjectStorageUnavailableError when the backend rejects the delete', async () => {
     mockRemove.mockResolvedValueOnce({ data: null, error: { message: 'Bucket not found' } })
+
+    await expect(deleteFromObjectStorage('packages/org_1/pkg_1/1-file.png')).rejects.toBeInstanceOf(
+      ObjectStorageUnavailableError,
+    )
+  })
+
+  it('throws ObjectStorageUnavailableError when remove() REJECTS (network failure)', async () => {
+    // cubic PR #184 P2: a rejecting remove() previously let a generic
+    // exception escape → DELETE route answered 500 for a storage outage.
+    mockRemove.mockRejectedValueOnce(new TypeError('fetch failed'))
 
     await expect(deleteFromObjectStorage('packages/org_1/pkg_1/1-file.png')).rejects.toBeInstanceOf(
       ObjectStorageUnavailableError,

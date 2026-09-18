@@ -2,21 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import {
-  ObjectStorageNotConfiguredError,
-  ObjectStorageUnavailableError,
   findMissingObjectStorageEnv,
   uploadToObjectStorage,
 } from '@/lib/object-storage'
+import {
+  STORAGE_UNCONFIGURED_MESSAGE,
+  objectStorageErrorResponse,
+} from '@/lib/object-storage-http'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ id: string }> }
 const CHUNK_SIZE = 900
 const CHUNK_OVERLAP = 150
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-const STORAGE_UNAVAILABLE_MESSAGE =
-  'Document storage is not configured. Document uploads are unavailable until an administrator configures storage.'
-const STORAGE_BACKEND_FAILURE_MESSAGE =
-  'Document storage is temporarily unavailable. Please try again later or contact support.'
 const ALLOWED_UPLOAD_TYPES = new Set([
   'application/pdf',
   'application/msword',
@@ -105,7 +103,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           'Package documents POST: object storage not configured, missing env vars:',
           missingStorageEnv.join(', ')
         )
-        return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+        return NextResponse.json({ error: STORAGE_UNCONFIGURED_MESSAGE }, { status: 503 })
       }
 
       const bytes = await file.arrayBuffer()
@@ -165,19 +163,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       })
     })
   } catch (error) {
-    if (error instanceof ObjectStorageNotConfiguredError) {
-      console.error('Package documents POST error:', error)
-      return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
-    }
-    if (error instanceof ObjectStorageUnavailableError) {
-      // Storage backend rejected the operation (bucket missing, permission
-      // denied, network). Upstream-dependency failure → 502 with a safe
-      // message; the backend detail stays in server logs only (never echo
-      // it to the client — it can leak infrastructure specifics).
-      console.error('Package documents POST error:', error)
-      return NextResponse.json({ error: STORAGE_BACKEND_FAILURE_MESSAGE }, { status: 502 })
-    }
+    // Typed storage errors map to 503 (unconfigured) / 502 (backend
+    // failure) via the shared helper — backend detail stays server-side.
+    const storageResponse = objectStorageErrorResponse(error)
     console.error('Package documents POST error:', error)
+    if (storageResponse) return storageResponse
     return NextResponse.json({ error: 'Failed to upload package document' }, { status: 500 })
   }
 }

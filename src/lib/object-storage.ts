@@ -137,9 +137,18 @@ export async function deleteFromObjectStorage(storagePath: string): Promise<void
     throw new ObjectStorageNotConfiguredError(missingEnv)
   }
   const bucket = getRequiredEnv('SUPABASE_STORAGE_BUCKET')
-  const client = getStorageClient()
-  const removeResult = await client.storage.from(bucket).remove([storagePath])
-  if (removeResult.error) {
-    throw new ObjectStorageUnavailableError(removeResult.error.message)
+  try {
+    const client = getStorageClient()
+    const removeResult = await client.storage.from(bucket).remove([storagePath])
+    if (removeResult.error) {
+      throw new ObjectStorageUnavailableError(removeResult.error.message)
+    }
+  } catch (error) {
+    // Normalize rejects (network failure, client construction) AND error
+    // objects to the typed error so routes map every storage outage to 502
+    // (cubic PR #184 P2: an escaping generic Error surfaced as a 500).
+    throw error instanceof ObjectStorageUnavailableError
+      ? error
+      : new ObjectStorageUnavailableError(error instanceof Error ? error.message : String(error))
   }
 }

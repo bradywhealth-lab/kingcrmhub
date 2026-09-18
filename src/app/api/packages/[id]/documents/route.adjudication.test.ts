@@ -74,12 +74,14 @@ const PARAMS = { params: Promise.resolve({ id: 'pkg_1' }) }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Storage configured (production shape) so the 503 pre-flight does not
-  // short-circuit — the tests below exercise the post-preflight paths.
+  // Storage configured so the route's 503 pre-flight does not short-circuit
+  // — these tests exercise the post-preflight status mapping. (NODE_ENV is
+  // deliberately not stubbed: the production normalization branch lives in
+  // uploadToObjectStorage, which is mocked here and covered by
+  // object-storage.test.ts instead.)
   process.env.SUPABASE_URL = 'https://example.supabase.co'
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key'
   process.env.SUPABASE_STORAGE_BUCKET = 'carrier-documents'
-  vi.stubEnv('NODE_ENV', 'production')
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -87,7 +89,6 @@ afterEach(() => {
   delete process.env.SUPABASE_URL
   delete process.env.SUPABASE_SERVICE_ROLE_KEY
   delete process.env.SUPABASE_STORAGE_BUCKET
-  vi.unstubAllEnvs()
   vi.restoreAllMocks()
 })
 
