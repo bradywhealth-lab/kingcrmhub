@@ -4,6 +4,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { isUniqueConstraintViolation } from '@/lib/prisma-errors'
 
 const createPackageSchema = z.object({
   name: z.string().min(1).max(200),
@@ -35,7 +36,10 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'packages-create', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    // `await` is required: without it a rejection inside the handler (e.g.
+    // Prisma P2002) escapes this try/catch and Next.js returns an opaque
+    // empty-body 500 instead of the discriminated 409 below.
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createPackageSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -71,6 +75,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ servicePackage })
     })
   } catch (error) {
+    // Unique index is [organizationId, slug] and slug is derived from name, so
+    // a duplicate name inside the same org raises P2002. Return a clear 409
+    // (matching the duplicate-lead pattern); genuine failures stay 500.
+    if (isUniqueConstraintViolation(error)) {
+      console.warn('ServicePackages POST conflict (P2002):', error)
+      return NextResponse.json(
+        { error: 'A service package with that name already exists.' },
+        { status: 409 },
+      )
+    }
     console.error('ServicePackages POST error:', error)
     return NextResponse.json({ error: 'Failed to create service package' }, { status: 500 })
   }
