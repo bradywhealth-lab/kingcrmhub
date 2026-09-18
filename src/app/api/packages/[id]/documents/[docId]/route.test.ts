@@ -58,6 +58,9 @@ describe('DELETE /api/packages/[id]/documents/[docId] — storage unconfigured d
     expect(response.status).toBe(503)
     const json = (await response.json()) as { error?: string }
     expect(json.error).toContain(STORAGE_MESSAGE_FRAGMENT)
+    // Pin the cause: the 503 must come from the storage call, not a preflight
+    // short-circuit — assert the delete was attempted with the doc's path.
+    expect(mockDeleteFromObjectStorage).toHaveBeenCalledWith('packages/org_1/pkg_1/123-file.pdf')
     // The DB row must NOT be deleted when the storage cleanup could not run.
     expect(mockDb.packageDocument.delete).not.toHaveBeenCalled()
   })
