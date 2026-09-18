@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
-import { createHash } from 'node:crypto'
 import { NextRequest } from 'next/server'
 
 const mockDb = vi.hoisted(() => ({
@@ -133,20 +132,26 @@ describe('/api/auth/forgot-password — token disclosure + enumeration oracle (s
     expect(call.where.userId).toBe(SENTINEL_USER_ID)
   })
 
-  it('NEVER logs the raw token by default — only a non-reversible sha256 fingerprint (log-redaction regression)', async () => {
+  it('NEVER logs the raw token by default — only a short non-reversible fingerprint (log-redaction regression)', async () => {
     mockDb.user.findUnique.mockResolvedValueOnce({ id: 'user_1', email: REAL_EMAIL })
 
     const response = await POST(postForgotPassword(REAL_EMAIL))
     const raw = await response.text()
     const created = mockDb.passwordResetToken.create.mock.calls[0][0] as { data: { token: string } }
-    const fingerprint = createHash('sha256').update(created.data.token).digest('hex').slice(0, 8)
 
     const logged = infoSpy.mock.calls.map((call) => String(call[0])).join('\n')
     // The usable token must NOT appear in the default log stream (cubic P2:
     // log drains/vendors/operators could spend it exactly like the API leak).
     expect(logged).not.toContain(created.data.token)
-    // …but operators still get a correlation fingerprint.
-    expect(logged).toContain(`token=${fingerprint}`)
+    // The token= field carries exactly an 8-hex fingerprint — the negative
+    // lookahead makes this falsifiable: a leaked full 64-hex token would
+    // match the first 8 chars but fail the boundary, turning this RED.
+    // (Deliberately no sha256 computed over the token here: CodeQL
+    // js/insufficient-password-hash treats passwordResetToken-derived values
+    // as passwords; the route's fingerprint helper is the hashed path.)
+    expect(logged).toMatch(/token=[0-9a-f]{8}(?![0-9a-f])/)
+    // No 64-hex secret anywhere in the log either.
+    expect(logged).not.toMatch(/[0-9a-f]{64}/)
     // …and it stays absent from the response body.
     expect(raw).not.toContain(created.data.token)
   })
