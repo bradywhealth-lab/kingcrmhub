@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
+import { createHash } from 'node:crypto'
 import { NextRequest } from 'next/server'
 
 const mockDb = vi.hoisted(() => ({
@@ -24,6 +25,8 @@ import { POST } from './route'
 const REAL_EMAIL = 'real-user@example.com'
 const FAKE_EMAIL = 'nobody-9f3k2@example.invalid'
 const HEX64 = /^[0-9a-f]{64}$/
+// Must match the sentinel id in route.ts (timing-equalization no-op write).
+const SENTINEL_USER_ID = '__timing_equalization_sentinel__'
 
 function postForgotPassword(email: string): NextRequest {
   return new NextRequest('http://localhost/api/auth/forgot-password', {
@@ -34,14 +37,21 @@ function postForgotPassword(email: string): NextRequest {
 }
 
 describe('/api/auth/forgot-password — token disclosure + enumeration oracle (security regression, t_fb6ead6c)', () => {
+  let infoSpy: MockInstance
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.passwordResetToken.updateMany.mockResolvedValue({ count: 0 })
     mockDb.passwordResetToken.create.mockResolvedValue({ id: 'prt_1' })
+    // Stub console.info for EVERY test (cubic P3, PR #182): without this the
+    // real-email tests print the route's server-side log line — the live
+    // 1h-valid reset token (or its fingerprint) — into CI stdout.
+    infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    delete process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN
   })
 
   it('NEVER returns a "token" field for a REAL account email (no raw token disclosure)', async () => {
@@ -100,30 +110,67 @@ describe('/api/auth/forgot-password — token disclosure + enumeration oracle (s
     }
     expect(created.data.userId).toBe('user_1')
     expect(HEX64.test(created.data.token)).toBe(true)
-    expect(created.data.expiresAt.getTime()).toBeGreaterThan(Date.now())
+    // Falsifiable expiry-window assertion (cubic P3, PR #182): the previous
+    // `> Date.now()` check could never fail. Pin the documented 1h window.
+    const expiry = created.data.expiresAt.getTime()
+    expect(expiry).toBeGreaterThan(Date.now() + 55 * 60 * 1000)
+    expect(expiry).toBeLessThan(Date.now() + 65 * 60 * 1000)
   })
 
-  it('creates no reset token for unknown emails (no side effects beyond the lookup)', async () => {
+  it('creates no usable reset token for unknown emails (only the harmless sentinel timing write)', async () => {
     mockDb.user.findUnique.mockResolvedValueOnce(null)
 
     await POST(postForgotPassword(FAKE_EMAIL))
 
+    // No token row is ever created for an unknown email — nothing spendable.
     expect(mockDb.passwordResetToken.create).not.toHaveBeenCalled()
-    expect(mockDb.passwordResetToken.updateMany).not.toHaveBeenCalled()
+    // The only write is the timing-equalization sentinel updateMany (cubic P2
+    // fix): scoped to a userId that matches no row, so it touches no real data.
+    expect(mockDb.passwordResetToken.updateMany).toHaveBeenCalledOnce()
+    const call = mockDb.passwordResetToken.updateMany.mock.calls[0][0] as {
+      where: { userId: string }
+    }
+    expect(call.where.userId).toBe(SENTINEL_USER_ID)
   })
 
-  it('logs the token server-side only — never in the HTTP response (interim out-of-band channel)', async () => {
-    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+  it('NEVER logs the raw token by default — only a non-reversible sha256 fingerprint (log-redaction regression)', async () => {
     mockDb.user.findUnique.mockResolvedValueOnce({ id: 'user_1', email: REAL_EMAIL })
 
     const response = await POST(postForgotPassword(REAL_EMAIL))
     const raw = await response.text()
     const created = mockDb.passwordResetToken.create.mock.calls[0][0] as { data: { token: string } }
+    const fingerprint = createHash('sha256').update(created.data.token).digest('hex').slice(0, 8)
 
-    // Token is present in the server-side log (operator-relayable)…
+    const logged = infoSpy.mock.calls.map((call) => String(call[0])).join('\n')
+    // The usable token must NOT appear in the default log stream (cubic P2:
+    // log drains/vendors/operators could spend it exactly like the API leak).
+    expect(logged).not.toContain(created.data.token)
+    // …but operators still get a correlation fingerprint.
+    expect(logged).toContain(`token=${fingerprint}`)
+    // …and it stays absent from the response body.
+    expect(raw).not.toContain(created.data.token)
+  })
+
+  it('logs the full token ONLY under the explicit FORGOT_PASSWORD_LOG_FULL_TOKEN=1 opt-in', async () => {
+    process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN = '1'
+    mockDb.user.findUnique.mockResolvedValueOnce({ id: 'user_1', email: REAL_EMAIL })
+
+    await POST(postForgotPassword(REAL_EMAIL))
+    const created = mockDb.passwordResetToken.create.mock.calls[0][0] as { data: { token: string } }
+
     const logged = infoSpy.mock.calls.map((call) => String(call[0])).join('\n')
     expect(logged).toContain(created.data.token)
-    // …and absent from the response body.
-    expect(raw).not.toContain(created.data.token)
+  })
+
+  it('pads the unknown-email path to the response-time floor (timing-oracle equalization)', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce(null)
+
+    const startedAt = Date.now()
+    await POST(postForgotPassword(FAKE_EMAIL))
+    const elapsed = Date.now() - startedAt
+
+    // Falsifiable: without the pad the mocked path returns in single-digit ms.
+    // The floor (250ms) must be hit so real vs unknown latency is equalized.
+    expect(elapsed).toBeGreaterThanOrEqual(250)
   })
 })

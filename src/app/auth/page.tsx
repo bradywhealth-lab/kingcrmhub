@@ -216,6 +216,11 @@ function AuthPageInner() {
       setForgotRequested(true)
       setSuccess('If that email is registered, a password-reset token is on its way. Follow the instructions sent out-of-band, then continue to password reset.')
     } catch (err) {
+      // Clear the confirmation state on failure (cubic P2, PR #182): a failed
+      // retry after an earlier success must not leave the stale success
+      // message + "Continue to reset" panel showing next to the new error.
+      setForgotRequested(false)
+      setSuccess(null)
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
       setLoading(false)

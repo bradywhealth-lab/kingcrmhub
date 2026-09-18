@@ -33,16 +33,26 @@ export async function POST(request: NextRequest) {
       include: { user: { select: { id: true } } },
     })
 
+    // SECURITY FIX (t_fb6ead6c finding 6 — Atlas): token-state oracle closed.
+    // Previously returned 3 distinct messages (unknown / already-used /
+    // expired), telling an attacker whether a guessed token ever existed and
+    // whether it was spent. All failure branches now return ONE generic
+    // message; the specific reason goes to the server log only (never the
+    // token value itself).
+    const GENERIC_TOKEN_ERROR = 'This reset link is invalid or has expired.'
     if (!resetToken) {
-      return NextResponse.json({ error: 'Invalid or expired reset token.' }, { status: 400 })
+      console.info('[reset-password] rejected: token not found')
+      return NextResponse.json({ error: GENERIC_TOKEN_ERROR }, { status: 400 })
     }
 
     if (resetToken.usedAt) {
-      return NextResponse.json({ error: 'This reset token has already been used.' }, { status: 400 })
+      console.info(`[reset-password] rejected: token already used for userId=${resetToken.userId}`)
+      return NextResponse.json({ error: GENERIC_TOKEN_ERROR }, { status: 400 })
     }
 
     if (resetToken.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'This reset token has expired. Please request a new one.' }, { status: 400 })
+      console.info(`[reset-password] rejected: token expired for userId=${resetToken.userId}`)
+      return NextResponse.json({ error: GENERIC_TOKEN_ERROR }, { status: 400 })
     }
 
     const passwordHash = hashPassword(password)
