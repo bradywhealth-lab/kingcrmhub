@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 const SECTIONS = [
   {
     heading: '1. What we collect',
-    body: 'We collect the information you provide when you create an account (name, email, organization) and the client data you enter into the workspace (leads, pipeline records, tasks, and documents you upload).',
+    body: 'We collect the information you provide when you create an account (name, email, organization), the client data you enter into the workspace (leads, pipeline records, tasks, and documents you upload), technical session data needed to keep you signed in and secure (session identifiers, login state, request metadata), and — when you use AI features — the prompts sent and responses received, which may be stored with your workspace to power history and reporting.',
   },
   {
     heading: '2. How we use your data',
@@ -25,7 +25,7 @@ const SECTIONS = [
   },
   {
     heading: '3. AI features',
-    body: 'When you use AI-assisted features, relevant workspace content may be sent to the AI provider configured for your organization to generate responses. You control which provider is used in Settings, and you can use your own API key (BYOK).',
+    body: 'When you use AI-assisted features, relevant workspace content may be sent to the provider selected in Settings or to a platform fallback provider when the selected provider is unavailable. Your organization can configure a provider and use its own API key (BYOK).',
   },
   {
     heading: '4. Data isolation',

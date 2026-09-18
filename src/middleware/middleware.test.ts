@@ -50,7 +50,7 @@ describe('PWA assets stay public for logged-out visitors', () => {
     expect(response.headers.get('location')).toContain('/auth')
   })
 
-  it.each(['/terms', '/privacy'])(
+  it.each(['/terms', '/privacy', '/terms/', '/privacy/'])(
     'passes %s through for logged-out visitors (legal pages linked from signup)',
     async (path) => {
       const request = new NextRequest(`http://localhost:3000${path}`)

@@ -29,7 +29,7 @@ const SECTIONS = [
   },
   {
     heading: '4. Plans and billing',
-    body: 'Plan features and limits are listed on the pricing page. Paid plans are billed monthly or annually as displayed at checkout. You may cancel at any time; cancellation stops future billing.',
+    body: 'Plan features and limits are listed on the pricing page. Online checkout is not active yet; paid plans are not currently billed. When paid billing launches, the prices, billing cycle, and cancellation terms will be shown at checkout before any charge is made.',
   },
   {
     heading: '5. Your data',
