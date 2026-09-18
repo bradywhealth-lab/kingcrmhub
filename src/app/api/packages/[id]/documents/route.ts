@@ -45,7 +45,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     const limited = enforceRateLimit(request, { key: 'package-doc-upload', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `return await` (not bare `return`) so a rejected handler promise is
+    // caught by this try/catch instead of leaking to the framework as a
+    // bare empty-body 500.
+    return await withRequestOrgContext(request, async (context) => {
       const formData = await request.formData()
 
       const file = formData.get('file') as File | null

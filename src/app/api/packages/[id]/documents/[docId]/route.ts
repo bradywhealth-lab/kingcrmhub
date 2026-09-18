@@ -48,7 +48,9 @@ export async function DELETE(
     const limited = enforceRateLimit(request, { key: 'package-documents-delete', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `return await` so a rejected handler promise (e.g. storage errors)
+    // reaches the catch below instead of leaking as a bare empty-body 500.
+    return await withRequestOrgContext(request, async (context) => {
       const document = await db.packageDocument.findFirst({
         where: {
           id: docId,
