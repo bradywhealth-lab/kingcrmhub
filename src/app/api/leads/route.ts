@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
     return withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
+    const q = searchParams.get('q')?.trim()
     const sortBy = searchParams.get('sortBy') || 'createdAt'
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
@@ -118,6 +119,32 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { organizationId }
     if (status && status !== 'all') {
       where.status = status
+    }
+    if (q) {
+      // Bound the search input first: an oversized q would expand into
+      // thousands of SQL predicates (one OR-group per whitespace term).
+      if (q.length > 256) {
+        return NextResponse.json({ error: 'Search query is too long' }, { status: 400 })
+      }
+      // Free-text search across name + contact fields. Tokenize so a full-name
+      // query like "Ada Lovelace" matches (each term must hit at least one
+      // field; terms are AND-ed, fields within a term are OR-ed). OR semantics
+      // are null-safe: leads with no firstName/lastName still match on
+      // email/company/phone, and a genuinely non-matching query returns
+      // no rows instead of the unfiltered list (regression t_cf1f4831).
+      const terms = q.split(/\s+/).filter(Boolean)
+      if (terms.length > 16) {
+        return NextResponse.json({ error: 'Search query has too many terms' }, { status: 400 })
+      }
+      where.AND = terms.map((term) => ({
+        OR: [
+          { firstName: { contains: term, mode: 'insensitive' } },
+          { lastName: { contains: term, mode: 'insensitive' } },
+          { email: { contains: term, mode: 'insensitive' } },
+          { phone: { contains: term, mode: 'insensitive' } },
+          { company: { contains: term, mode: 'insensitive' } },
+        ],
+      }))
     }
     
     const leads = await db.lead.findMany({
