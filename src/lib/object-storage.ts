@@ -1,5 +1,37 @@
 import { createClient } from '@supabase/supabase-js'
 
+/** Env vars that must all be present for object storage to work. */
+const OBJECT_STORAGE_ENV_VARS = [
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_STORAGE_BUCKET',
+] as const
+
+/**
+ * Thrown when Supabase storage is not configured (missing env vars).
+ * Callers should translate this into a 503 with an actionable message —
+ * never an unhandled 500 — mirroring the missing-AI-key degradation pattern.
+ */
+export class ObjectStorageNotConfiguredError extends Error {
+  readonly missingEnvVars: string[]
+
+  constructor(missingEnvVars: string[]) {
+    super(`Document storage is not configured (missing env vars: ${missingEnvVars.join(', ')})`)
+    this.name = 'ObjectStorageNotConfiguredError'
+    this.missingEnvVars = missingEnvVars
+  }
+}
+
+/** Names of required object-storage env vars that are unset or blank. */
+export function findMissingObjectStorageEnv(): string[] {
+  return OBJECT_STORAGE_ENV_VARS.filter((name) => !process.env[name]?.trim())
+}
+
+/** True when every required object-storage env var is present. */
+export function isObjectStorageConfigured(): boolean {
+  return findMissingObjectStorageEnv().length === 0
+}
+
 function getRequiredEnv(name: string): string {
   const value = process.env[name]?.trim()
   if (!value) {
@@ -29,6 +61,10 @@ export async function uploadToObjectStorage(input: {
   contentType: string
   buffer: Buffer
 }): Promise<{ fileUrl: string; storagePath: string }> {
+  const missingEnv = findMissingObjectStorageEnv()
+  if (missingEnv.length > 0) {
+    throw new ObjectStorageNotConfiguredError(missingEnv)
+  }
   const id = input.packageId || input.carrierId || 'unknown'
   const bucket = getRequiredEnv('SUPABASE_STORAGE_BUCKET')
   const safeFileName = input.originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -69,6 +105,10 @@ export async function uploadToObjectStorage(input: {
 
 export async function deleteFromObjectStorage(storagePath: string): Promise<void> {
   if (storagePath.startsWith('inline:')) return
+  const missingEnv = findMissingObjectStorageEnv()
+  if (missingEnv.length > 0) {
+    throw new ObjectStorageNotConfiguredError(missingEnv)
+  }
   const bucket = getRequiredEnv('SUPABASE_STORAGE_BUCKET')
   const client = getStorageClient()
   const removeResult = await client.storage.from(bucket).remove([storagePath])

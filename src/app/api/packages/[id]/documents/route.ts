@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
-import { uploadToObjectStorage } from '@/lib/object-storage'
+import {
+  ObjectStorageNotConfiguredError,
+  findMissingObjectStorageEnv,
+  uploadToObjectStorage,
+} from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ id: string }> }
 const CHUNK_SIZE = 900
 const CHUNK_OVERLAP = 150
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+const STORAGE_UNAVAILABLE_MESSAGE =
+  'Document storage is not configured. Document uploads are unavailable until an administrator configures storage.'
 const ALLOWED_UPLOAD_TYPES = new Set([
   'application/pdf',
   'application/msword',
@@ -39,7 +45,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     const limited = enforceRateLimit(request, { key: 'package-doc-upload', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `return await` (not bare `return`) so a rejected handler promise is
+    // caught by this try/catch instead of leaking to the framework as a
+    // bare empty-body 500.
+    return await withRequestOrgContext(request, async (context) => {
       const formData = await request.formData()
 
       const file = formData.get('file') as File | null
@@ -69,6 +78,18 @@ export async function POST(request: NextRequest, { params }: Params) {
 
       if (!servicePackage) {
         return NextResponse.json({ error: 'Service package not found' }, { status: 404 })
+      }
+
+      // Graceful degradation: mirror the missing-AI-key 503 pattern — an
+      // unconfigured storage backend is a service-availability problem, not
+      // an unhandled server error.
+      const missingStorageEnv = findMissingObjectStorageEnv()
+      if (missingStorageEnv.length > 0) {
+        console.error(
+          'Package documents POST: object storage not configured, missing env vars:',
+          missingStorageEnv.join(', ')
+        )
+        return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
       }
 
       const bytes = await file.arrayBuffer()
@@ -128,6 +149,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       })
     })
   } catch (error) {
+    if (error instanceof ObjectStorageNotConfiguredError) {
+      console.error('Package documents POST error:', error)
+      return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
     console.error('Package documents POST error:', error)
     return NextResponse.json({ error: 'Failed to upload package document' }, { status: 500 })
   }

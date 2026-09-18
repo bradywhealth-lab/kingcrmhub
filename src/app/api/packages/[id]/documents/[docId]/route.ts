@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
-import { deleteFromObjectStorage } from '@/lib/object-storage'
+import { deleteFromObjectStorage, ObjectStorageNotConfiguredError } from '@/lib/object-storage'
 import { enforceRateLimit } from '@/lib/rate-limit'
+
+const STORAGE_UNAVAILABLE_MESSAGE =
+  'Document storage is not configured. Document management is unavailable until an administrator configures storage.'
 
 export async function GET(
   request: NextRequest,
@@ -45,7 +48,9 @@ export async function DELETE(
     const limited = enforceRateLimit(request, { key: 'package-documents-delete', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `return await` so a rejected handler promise (e.g. storage errors)
+    // reaches the catch below instead of leaking as a bare empty-body 500.
+    return await withRequestOrgContext(request, async (context) => {
       const document = await db.packageDocument.findFirst({
         where: {
           id: docId,
@@ -66,6 +71,10 @@ export async function DELETE(
       return NextResponse.json({ success: true })
     })
   } catch (error) {
+    if (error instanceof ObjectStorageNotConfiguredError) {
+      console.error('PackageDocument DELETE error:', error)
+      return NextResponse.json({ error: STORAGE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
     console.error('PackageDocument DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 })
   }
