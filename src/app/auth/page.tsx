@@ -1,9 +1,9 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSession, signIn } from 'next-auth/react'
-import { ArrowRight, CheckCircle2, ChevronLeft, Copy, LockKeyhole, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronLeft, LockKeyhole, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -74,7 +74,14 @@ function AuthPageInner() {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('')
   const [organizationName, setOrganizationName] = useState('')
   const [forgotEmail, setForgotEmail] = useState('')
-  const [resetTokenDisplay, setResetTokenDisplay] = useState<string | null>(null)
+  const [forgotRequested, setForgotRequested] = useState(false)
+  // Concurrency guard for forgot-password (cubic P2, PR #182 round 2): the
+  // Enter-key handler bypasses the button's disabled state, so two requests
+  // can overlap; a late failure from the OLDER request must not clobber the
+  // NEWER request's success state. Identity = monotonic request id; a ref
+  // (not state) so the check is synchronous.
+  const forgotRequestIdRef = useRef(0)
+  const forgotInFlightRef = useRef(false)
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -130,7 +137,7 @@ function AuthPageInner() {
   const switchMode = (next: Mode) => {
     setError(null)
     setSuccess(null)
-    if (next !== 'reset') setResetTokenDisplay(null)
+    setForgotRequested(false)
     setMode(next)
   }
 
@@ -199,10 +206,14 @@ function AuthPageInner() {
       setError('Email is required.')
       return
     }
+    // Prevent overlapping submissions (Enter-key bypasses the button's
+    // disabled state) — cubic P2 round 2.
+    if (forgotInFlightRef.current) return
 
+    const requestId = ++forgotRequestIdRef.current
+    forgotInFlightRef.current = true
     setLoading(true)
     setError(null)
-    setResetTokenDisplay(null)
     try {
       const res = await fetch('/api/auth/forgot-password', {
         method: 'POST',
@@ -211,16 +222,27 @@ function AuthPageInner() {
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Request failed')
-      if (data.token) {
-        setResetTokenDisplay(data.token)
-        setSuccess('Reset token created. Copy it now, then continue to password reset.')
-      } else {
-        setSuccess('If that email exists, a reset token is now available through your admin flow.')
-      }
+      // Apply only if this is still the latest request — a late response from
+      // an older one must not overwrite newer state.
+      if (requestId !== forgotRequestIdRef.current) return
+      // SECURITY FIX (t_fb6ead6c): the API no longer returns a reset token —
+      // tokens are delivered out-of-band only. Show one generic confirmation
+      // for both real and unknown emails (no enumeration oracle in the UI).
+      setForgotRequested(true)
+      setSuccess('If that email is registered, a password-reset token is on its way. Follow the instructions sent out-of-band, then continue to password reset.')
     } catch (err) {
+      if (requestId !== forgotRequestIdRef.current) return
+      // Clear the confirmation state on failure (cubic P2, PR #182): a failed
+      // retry after an earlier success must not leave the stale success
+      // message + "Continue to reset" panel showing next to the new error.
+      setForgotRequested(false)
+      setSuccess(null)
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
-      setLoading(false)
+      if (requestId === forgotRequestIdRef.current) {
+        forgotInFlightRef.current = false
+        setLoading(false)
+      }
     }
   }
 
@@ -262,12 +284,6 @@ function AuthPageInner() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const copyResetToken = async () => {
-    if (!resetTokenDisplay) return
-    await navigator.clipboard.writeText(resetTokenDisplay)
-    setSuccess('Reset token copied to clipboard.')
   }
 
   return (
@@ -478,22 +494,13 @@ function AuthPageInner() {
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
-                {resetTokenDisplay ? (
-                  <div className="rounded-[24px] border border-[var(--teal)]/25 bg-[var(--paper)] p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--teal-deep)]">Reset token</p>
-                    <div className="mt-3 flex items-center gap-2 rounded-2xl border border-[var(--teal)]/20 bg-white p-3">
-                      <code className="min-w-0 flex-1 break-all text-xs text-[#0c111b]">{resetTokenDisplay}</code>
-                      <Button variant="outline" className="rounded-xl border-[rgba(31,42,54,0.08)]" onClick={() => void copyResetToken()}>
-                        <Copy className="mr-2 h-4 w-4" /> Copy
-                      </Button>
-                    </div>
-                    <Button className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => { setResetToken(resetTokenDisplay); switchMode('reset') }}>
-                      Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
+                {forgotRequested ? (
+                  <Button className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => switchMode('reset')}>
+                    Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 ) : (
                   <Button onClick={() => void handleForgotPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
-                    {loading ? 'Generating token…' : 'Generate reset token'}
+                    {loading ? 'Sending request…' : 'Request password reset'}
                   </Button>
                 )}
               </div>
