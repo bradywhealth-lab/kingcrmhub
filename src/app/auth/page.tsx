@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSession, signIn } from 'next-auth/react'
 import { ArrowRight, CheckCircle2, ChevronLeft, LockKeyhole, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
@@ -75,6 +75,13 @@ function AuthPageInner() {
   const [organizationName, setOrganizationName] = useState('')
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotRequested, setForgotRequested] = useState(false)
+  // Concurrency guard for forgot-password (cubic P2, PR #182 round 2): the
+  // Enter-key handler bypasses the button's disabled state, so two requests
+  // can overlap; a late failure from the OLDER request must not clobber the
+  // NEWER request's success state. Identity = monotonic request id; a ref
+  // (not state) so the check is synchronous.
+  const forgotRequestIdRef = useRef(0)
+  const forgotInFlightRef = useRef(false)
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -199,7 +206,12 @@ function AuthPageInner() {
       setError('Email is required.')
       return
     }
+    // Prevent overlapping submissions (Enter-key bypasses the button's
+    // disabled state) — cubic P2 round 2.
+    if (forgotInFlightRef.current) return
 
+    const requestId = ++forgotRequestIdRef.current
+    forgotInFlightRef.current = true
     setLoading(true)
     setError(null)
     try {
@@ -210,12 +222,16 @@ function AuthPageInner() {
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Request failed')
+      // Apply only if this is still the latest request — a late response from
+      // an older one must not overwrite newer state.
+      if (requestId !== forgotRequestIdRef.current) return
       // SECURITY FIX (t_fb6ead6c): the API no longer returns a reset token —
       // tokens are delivered out-of-band only. Show one generic confirmation
       // for both real and unknown emails (no enumeration oracle in the UI).
       setForgotRequested(true)
       setSuccess('If that email is registered, a password-reset token is on its way. Follow the instructions sent out-of-band, then continue to password reset.')
     } catch (err) {
+      if (requestId !== forgotRequestIdRef.current) return
       // Clear the confirmation state on failure (cubic P2, PR #182): a failed
       // retry after an earlier success must not leave the stale success
       // message + "Continue to reset" panel showing next to the new error.
@@ -223,7 +239,10 @@ function AuthPageInner() {
       setSuccess(null)
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
-      setLoading(false)
+      if (requestId === forgotRequestIdRef.current) {
+        forgotInFlightRef.current = false
+        setLoading(false)
+      }
     }
   }
 

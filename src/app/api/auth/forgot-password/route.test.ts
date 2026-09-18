@@ -37,6 +37,10 @@ function postForgotPassword(email: string): NextRequest {
 
 describe('/api/auth/forgot-password — token disclosure + enumeration oracle (security regression, t_fb6ead6c)', () => {
   let infoSpy: MockInstance
+  // Caller-env hygiene (cubic P3, PR #182 round 2): capture the ambient value
+  // once and RESTORE it — never delete — so a CI/dev process legitimately
+  // started with FORGOT_PASSWORD_LOG_FULL_TOKEN=1 gets its env back.
+  const ORIGINAL_LOG_FLAG = process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -46,11 +50,19 @@ describe('/api/auth/forgot-password — token disclosure + enumeration oracle (s
     // real-email tests print the route's server-side log line — the live
     // 1h-valid reset token (or its fingerprint) — into CI stdout.
     infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+    // Default-redaction tests must not depend on the ambient env: clear the
+    // flag explicitly so they assert the production default no matter how the
+    // test process was started.
+    delete process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
-    delete process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN
+    if (ORIGINAL_LOG_FLAG === undefined) {
+      delete process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN
+    } else {
+      process.env.FORGOT_PASSWORD_LOG_FULL_TOKEN = ORIGINAL_LOG_FLAG
+    }
   })
 
   it('NEVER returns a "token" field for a REAL account email (no raw token disclosure)', async () => {

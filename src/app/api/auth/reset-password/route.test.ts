@@ -28,6 +28,7 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 import { POST } from './route'
+import { hashPassword } from '@/lib/auth'
 
 // The single generic message every failure branch must return (t_fb6ead6c
 // finding 6 — Atlas): token-state differences must never reach the client.
@@ -112,6 +113,7 @@ describe('/api/auth/reset-password — token-state oracle closed (security regre
 
   it('still resets the password and invalidates sessions for a valid unused token (flow not broken)', async () => {
     const hour = 60 * 60 * 1000
+    const SUBMITTED_PASSWORD = 'new-password-123'
     mockDb.passwordResetToken.findUnique.mockResolvedValueOnce({
       id: 'prt_3',
       userId: 'user_3',
@@ -128,20 +130,40 @@ describe('/api/auth/reset-password — token-state oracle closed (security regre
       await fn(tx)
     })
 
-    const response = await POST(postResetPassword('d'.repeat(64)))
+    const before = Date.now()
+    const response = await POST(postResetPassword('d'.repeat(64), SUBMITTED_PASSWORD))
     const body = await response.text()
 
     expect(response.status).toBe(200)
     expect(body).toBe('{"success":true}')
     expect(mockDb.$transaction).toHaveBeenCalledOnce()
+
+    // cubic P2 (PR #182 round 2): assert the DATA payloads, not just `where`,
+    // so a regression that skips persisting the hash / marking the token used /
+    // deactivating sessions would actually fail here.
+    // 1. The submitted password is what gets hashed (mock returns 'hashed-password').
+    expect(hashPassword).toHaveBeenCalledWith(SUBMITTED_PASSWORD)
+    // 2. New password hash is actually persisted to the user row.
     expect(tx.user.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'user_3' } }),
+      expect.objectContaining({
+        where: { id: 'user_3' },
+        data: { passwordHash: 'hashed-password' },
+      }),
     )
-    expect(tx.passwordResetToken.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'prt_3' } }),
-    )
+    // 3. The token is marked used (single-use enforcement), with a real timestamp.
+    const markUsedArg = tx.passwordResetToken.update.mock.calls[0][0] as {
+      where: { id: string }
+      data: { usedAt: Date }
+    }
+    expect(markUsedArg.where).toEqual({ id: 'prt_3' })
+    expect(markUsedArg.data.usedAt).toBeInstanceOf(Date)
+    expect(markUsedArg.data.usedAt.getTime()).toBeGreaterThanOrEqual(before)
+    // 4. Active sessions are deactivated (session invalidation on reset).
     expect(tx.userSession.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: 'user_3', isActive: true } }),
+      expect.objectContaining({
+        where: { userId: 'user_3', isActive: true },
+        data: { isActive: false },
+      }),
     )
   })
 })
