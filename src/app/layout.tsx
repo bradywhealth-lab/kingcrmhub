@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { initSentry } from "@/lib/observability/sentry";
-import { Analytics } from "@vercel/analytics/next";
 import { rootJsonLdGraph } from "@/lib/seo/jsonld";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo/site-config";
 
@@ -63,7 +62,6 @@ export default function RootLayout({
         />
         {children}
         <Toaster />
-        <Analytics />
       </body>
     </html>
   );
