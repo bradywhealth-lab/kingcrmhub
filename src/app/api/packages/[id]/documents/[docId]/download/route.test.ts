@@ -214,6 +214,34 @@ describe('GET /api/packages/[id]/documents/[docId]/download — auth-gated bytes
     expect(mockDownloadFromObjectStorage).not.toHaveBeenCalled()
   })
 
+  it('percent-encodes supplementary Unicode in filenames without splitting surrogate pairs', async () => {
+    // Emoji are outside the BMP: encodeRFC5987 must iterate code points so
+    // the surrogate pair is encoded as one entity — splitting it would throw
+    // URIError and 500 the download.
+    mockDb.packageDocument.findFirst.mockResolvedValue({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      organizationId: 'org_1',
+      fileUrl: 'legacy',
+      storagePath: 'packages/org_1/pkg_1/1-emoji.pdf',
+      fileType: 'application/pdf',
+      name: '计划 📄.pdf',
+    })
+    mockDownloadFromObjectStorage.mockResolvedValueOnce(Buffer.from('pdf-bytes'))
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/packages/pkg_1/documents/doc_1/download'),
+      PARAMS,
+    )
+
+    expect(response.status).toBe(200)
+    const disposition = response.headers.get('content-disposition') || ''
+    expect(disposition).toContain("filename*=UTF-8''")
+    expect(disposition).toContain(encodeURIComponent('计划 📄.pdf'))
+    // The raw emoji must never appear unencoded in the header.
+    expect(disposition).not.toContain('📄')
+  })
+
   it('falls back to application/octet-stream when the stored media type is invalid', async () => {
     mockDb.packageDocument.findFirst.mockResolvedValue({
       id: 'doc_1',

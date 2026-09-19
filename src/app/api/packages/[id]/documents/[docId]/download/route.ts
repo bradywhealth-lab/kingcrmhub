@@ -114,8 +114,10 @@ function contentDisposition(fileName: string): string {
 
 /** Percent-encodes everything outside RFC 5987's attr-char set. */
 function encodeRFC5987(value: string): string {
-  return value
-    .split('')
+  // Array.from iterates code points, not UTF-16 units: an emoji surrogate
+  // pair stays one character, so encodeURIComponent never sees a lone
+  // surrogate (which would throw URIError and 500 the download).
+  return Array.from(value)
     .map((char) =>
       /^[!#$&+.^_`|A-Za-z0-9-]$/.test(char) ? char : encodeURIComponent(char),
     )
