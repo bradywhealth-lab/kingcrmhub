@@ -112,15 +112,27 @@ function contentDisposition(fileName: string): string {
   return `attachment; filename="${ascii || 'document'}"; filename*=UTF-8''${encodeRFC5987(fileName)}`
 }
 
-/** Percent-encodes everything outside RFC 5987's attr-char set. */
+/** RFC 5987 attr-char: ALPHA / DIGIT / "!" / "#" / "$" / "&" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~". */
+const RFC5987_ATTR_CHAR = /^[!#$&+.^_`|~A-Za-z0-9-]$/
+
+/**
+ * Percent-encodes everything outside RFC 5987's attr-char set.
+ */
 function encodeRFC5987(value: string): string {
   // Array.from iterates code points, not UTF-16 units: an emoji surrogate
-  // pair stays one character, so encodeURIComponent never sees a lone
+  // pair stays one character, so percent-encoding never sees a lone
   // surrogate (which would throw URIError and 500 the download).
   return Array.from(value)
-    .map((char) =>
-      /^[!#$&+.^_`|A-Za-z0-9-]$/.test(char) ? char : encodeURIComponent(char),
-    )
+    .map((char) => {
+      if (RFC5987_ATTR_CHAR.test(char)) return char
+      // encodeURIComponent leaves RFC 3986 unreserved characters (`'` and
+      // `*` included) unescaped, but RFC 5987 attr-char forbids them raw in
+      // filename* — escape them explicitly so strict clients never fall back
+      // to the lossy ASCII name.
+      return encodeURIComponent(char).replace(/[!'()*]/g, (reserved) =>
+        `%${reserved.charCodeAt(0).toString(16).toUpperCase()}`,
+      )
+    })
     .join('')
 }
 

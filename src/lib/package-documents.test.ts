@@ -58,22 +58,48 @@ describe('package-document serializers — no public URL leakage (M173)', () => 
   })
 
   it('serializes a list row with a gated URL, never storage internals', () => {
-    const out = serializePackageDocument(legacyListItem())
+    const input = legacyListItem()
+    const out = serializePackageDocument(input)
 
-    expect(out.fileUrl).toBe('/api/packages/pkg_1/documents/doc_1/download')
+    // Full-shape pin (cubic P3): a regression that silently drops a
+    // preserved field must go RED, not just absence-checked.
+    expect(out).toEqual({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      type: 'brochure',
+      name: 'plan.pdf',
+      description: 'desc',
+      fileType: 'application/pdf',
+      fileSize: 1024,
+      version: 'v1',
+      createdAt: input.createdAt,
+      fileUrl: '/api/packages/pkg_1/documents/doc_1/download',
+    })
     expect(out.fileUrl.startsWith('http')).toBe(false)
-    expect(Object.hasOwn(out, 'storagePath')).toBe(false)
-    expect(Object.hasOwn(out, 'extractedText')).toBe(false)
     expect(JSON.stringify(out)).not.toContain('supabase.co')
   })
 
   it('serializes a detail row with chunks and a gated URL', () => {
-    const out = serializePackageDocumentDetail(legacyDetail())
+    const input = legacyDetail()
+    const out = serializePackageDocumentDetail(input)
 
-    expect(out.fileUrl).toBe('/api/packages/pkg_1/documents/doc_1/download')
-    expect(out.chunks).toHaveLength(1)
-    expect(Object.hasOwn(out, 'storagePath')).toBe(false)
-    expect(Object.hasOwn(out, 'fileUrl')).toBe(true)
+    // Full-shape pin: every preserved field must be asserted verbatim so
+    // dropping name/description/fileType/fileSize/version/createdAt/
+    // updatedAt goes RED in this detail case too.
+    expect(out).toEqual({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      type: 'other',
+      name: 'notes.txt',
+      description: null,
+      fileType: 'text/plain',
+      fileSize: 42,
+      version: null,
+      createdAt: input.createdAt,
+      updatedAt: input.updatedAt,
+      chunks: input.chunks,
+      fileUrl: '/api/packages/pkg_1/documents/doc_1/download',
+    })
     expect(JSON.stringify(out)).not.toContain('supabase.co')
     expect(JSON.stringify(out)).not.toContain('secret')
   })
@@ -99,14 +125,24 @@ describe('package-document serializers — no public URL leakage (M173)', () => 
 
     const out = serializePackageDocumentRow(row)
 
-    expect(out.fileUrl).toBe('/api/packages/pkg_2/documents/doc_2/download')
-    expect(Object.hasOwn(out, 'storagePath')).toBe(false)
-    expect(Object.hasOwn(out, 'extractedText')).toBe(false)
-    expect(Object.hasOwn(out, 'organizationId')).toBe(false)
-    expect(Object.hasOwn(out, 'indexedAt')).toBe(false)
-    expect(out.fileSize).toBe(2048)
-    expect(out.createdAt).toEqual(row.createdAt)
-    expect(out.updatedAt).toEqual(row.updatedAt)
+    // Full-shape pin: the serializer is an explicit allowlist, so this
+    // assertion documents the entire public contract — every preserved
+    // field verbatim, every server field (storagePath, extractedText,
+    // organizationId, indexedAt) absent. A fix that merely strips
+    // storagePath but forgets a preserved field goes RED here.
+    expect(out).toEqual({
+      id: 'doc_2',
+      packageId: 'pkg_2',
+      type: 'brochure',
+      name: 'scope.pdf',
+      description: 'desc',
+      fileType: 'application/pdf',
+      fileSize: 2048,
+      version: null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      fileUrl: '/api/packages/pkg_2/documents/doc_2/download',
+    })
     expect(JSON.stringify(out)).not.toContain('supabase.co')
     expect(JSON.stringify(out)).not.toContain('/storage/v1/object/public')
     expect(JSON.stringify(out)).not.toContain('sensitive extracted text')

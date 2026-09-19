@@ -242,6 +242,45 @@ describe('GET /api/packages/[id]/documents/[docId]/download — auth-gated bytes
     expect(disposition).not.toContain('📄')
   })
 
+  it('percent-encodes RFC 5987 reserved characters in the filename* value', async () => {
+    // RFC 5987 attr-char excludes `'` `(` `)` `*` (and the `%` already used
+    // for encoding): those must appear percent-encoded in filename*, or
+    // strict clients fall back to the lossy ASCII filename.
+    const name = "scope '2026' (final)*.pdf"
+    mockDb.packageDocument.findFirst.mockResolvedValue({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      organizationId: 'org_1',
+      fileUrl: 'legacy',
+      storagePath: 'packages/org_1/pkg_1/1-reserved.pdf',
+      fileType: 'application/pdf',
+      name,
+    })
+    mockDownloadFromObjectStorage.mockResolvedValueOnce(Buffer.from('pdf-bytes'))
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/packages/pkg_1/documents/doc_1/download'),
+      PARAMS,
+    )
+
+    expect(response.status).toBe(200)
+    const disposition = response.headers.get('content-disposition') || ''
+    // The filename* value must be fully RFC 5987-encoded: every reserved
+    // character percent-encoded in that segment, per the standard.
+    // scope '2026' (final)*.pdf -> scope%20%272026%27%20%28final%29%2A.pdf
+    expect(disposition).toContain("filename*=UTF-8''scope%20%272026%27%20%28final%29%2A.pdf")
+    // The marker's own `UTF-8''` delimiter is standard; the NAME portion
+    // after it must contain no raw reserved character.
+    const nameSegment = disposition.split("UTF-8''")[1] || ''
+    expect(nameSegment).not.toContain("'")
+    expect(nameSegment).not.toContain('(')
+    expect(nameSegment).not.toContain(')')
+    expect(nameSegment).not.toContain('*')
+    // The ASCII quoted-string fallback keeps a readable approximation for
+    // old clients and may legally retain reserved characters.
+    expect(disposition).toContain('attachment')
+  })
+
   it('falls back to application/octet-stream when the stored media type is invalid', async () => {
     mockDb.packageDocument.findFirst.mockResolvedValue({
       id: 'doc_1',
