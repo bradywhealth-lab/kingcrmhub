@@ -190,7 +190,11 @@ async function extractPackageText(file: File, buffer: Buffer): Promise<string> {
       const result = await parser.getText()
       await parser.destroy()
       return result.text || ''
-    } catch {
+    } catch (error) {
+      // M159: never swallow extraction failures silently — a valid PDF that
+      // parses to '' (bundler/worker issues, corrupt streams) is a real
+      // defect hiding behind upload's 200 fake-good status.
+      console.error('Package documents POST: PDF text extraction failed:', error)
       return ''
     }
   }
