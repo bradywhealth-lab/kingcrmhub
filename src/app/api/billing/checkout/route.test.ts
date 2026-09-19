@@ -207,6 +207,7 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     const rawAll = mockExecuteRaw.mock.calls[0].flat().join('')
     expect(rawAll).toContain('cus_new')
     expect(rawAll).toContain('"updatedAt" = NOW()')
+    expect(rawAll).toContain('stripeCustomers')
     expect(mockUpdateOrg).not.toHaveBeenCalled()
   })
 
@@ -259,39 +260,6 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     expect(customersCreate).not.toHaveBeenCalled()
     expect(sessionsCreate.mock.calls[0]![0]).toMatchObject({ customer: 'cus_existing' })
     expect(mockUpdateOrg).not.toHaveBeenCalled()
-  })
-
-  it('persists a new per-mode customer via atomic jsonb merge with an explicit updatedAt (raw-SQL path)', async () => {
-    vi.stubEnv('NODE_ENV', 'test')
-    mockActive.mockReturnValue(true)
-    mockMode.mockReturnValue('test')
-    const { client, customersCreate, sessionsCreate } = buildStripeClient()
-    mockStripe.mockReturnValue(client)
-    // The org has no customer yet, so the route creates one and persists it
-    // via $executeRaw (the Postgres atomic path) — which bypasses Prisma's
-    // @updatedAt handling and must set updatedAt = NOW() explicitly.
-    mockExecuteRaw.mockResolvedValue({})
-    mockFindOrg.mockResolvedValue({
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripeSubscriptionStatus: null,
-      settings: null,
-    })
-
-    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
-    expect(response.status).toBe(200)
-    expect(customersCreate).toHaveBeenCalledTimes(1)
-    // The raw-SQL path (not the read-modify-write fallback) ran...
-    expect(mockExecuteRaw).toHaveBeenCalled()
-    expect(mockUpdateOrg).not.toHaveBeenCalled()
-    // ...and it carried the updatedAt touch so a bypassed @updatedAt can never
-    // leave Organization.updatedAt stale (cubic round 4 P2). Prisma's
-    // $executeRaw splits template parts from interpolated values — flatten
-    // and join the whole call so both the SQL skeleton and values assert.
-    const rawAll = mockExecuteRaw.mock.calls[0].flat().join('')
-    expect(rawAll).toContain('"updatedAt" = NOW()')
-    expect(rawAll).toContain('stripeCustomers')
-    expect(sessionsCreate).toHaveBeenCalledTimes(1)
   })
 
   it('rethrows a raw-SQL settings-persistence failure in production instead of silently falling back', async () => {
