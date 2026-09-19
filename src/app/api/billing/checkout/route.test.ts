@@ -21,6 +21,7 @@ vi.mock('@/lib/db', () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    $executeRaw: vi.fn(),
   },
   withOrgRlsTransaction: vi.fn(async (_orgId: string, cb: () => Promise<unknown>) => cb()),
 }))
@@ -36,6 +37,7 @@ const mockActive = stripeActive as unknown as ReturnType<typeof vi.fn>
 const mockMode = stripeMode as unknown as ReturnType<typeof vi.fn>
 const mockFindOrg = db.organization.findUnique as unknown as ReturnType<typeof vi.fn>
 const mockUpdateOrg = db.organization.update as unknown as ReturnType<typeof vi.fn>
+const mockExecuteRaw = db.$executeRaw as unknown as ReturnType<typeof vi.fn>
 
 function post(body: unknown) {
   return new Request('http://localhost/api/billing/checkout', {
@@ -79,6 +81,7 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
   afterEach(() => {
     if (previousBaseUrl === undefined) delete process.env.APP_BASE_URL
     else process.env.APP_BASE_URL = previousBaseUrl
+    vi.unstubAllEnvs()
   })
 
   it('rejects unauthenticated callers with 401', async () => {
@@ -149,6 +152,7 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     mockMode.mockReturnValue('test')
     const { client, customersCreate, sessionsCreate } = buildStripeClient()
     mockStripe.mockReturnValue(client)
+    mockExecuteRaw.mockResolvedValue({})
     mockFindOrg.mockResolvedValue({
       stripeCustomerId: 'cus_legacy',
       stripeSubscriptionId: null,
@@ -160,14 +164,14 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     expect(response.status).toBe(200)
     expect(customersCreate).not.toHaveBeenCalled()
     expect(sessionsCreate.mock.calls[0]![0]).toMatchObject({ customer: 'cus_legacy' })
-    expect(mockUpdateOrg).toHaveBeenCalledWith({
-      where: { id: 'org_1' },
-      data: expect.objectContaining({
-        settings: expect.objectContaining({
-          stripeCustomers: { test: 'cus_legacy' },
-        }),
-      }),
-    })
+    // The legacy customer is folded into the per-mode map via the atomic
+    // jsonb merge ($executeRaw), not a fresh customer create.
+    expect(mockExecuteRaw).toHaveBeenCalled()
+    // Prisma's $executeRaw receives template parts + interpolated values as
+    // separate args — flatten and join the whole call to inspect both.
+    const rawAll = mockExecuteRaw.mock.calls[0].flat().join('')
+    expect(rawAll).toContain('cus_legacy')
+    expect(mockUpdateOrg).not.toHaveBeenCalled()
   })
 
   it('returns a checkout URL when test mode and price are configured, pinned to the env-price contract', async () => {
@@ -175,6 +179,7 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     mockMode.mockReturnValue('test')
     const { client, customersCreate, sessionsCreate } = buildStripeClient()
     mockStripe.mockReturnValue(client)
+    mockExecuteRaw.mockResolvedValue({})
 
     const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
     const json = await response.json()
@@ -196,7 +201,35 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     expect(customersCreate).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'a@b.co', metadata: { organizationId: 'org_1' } }),
     )
-    // The new customer is persisted + namespaced per Stripe mode (test/live separation).
+    // The new customer is persisted + namespaced per Stripe mode via the
+    // atomic jsonb merge (test/live separation), with the @updatedAt touch.
+    expect(mockExecuteRaw).toHaveBeenCalled()
+    const rawAll = mockExecuteRaw.mock.calls[0].flat().join('')
+    expect(rawAll).toContain('cus_new')
+    expect(rawAll).toContain('"updatedAt" = NOW()')
+    expect(mockUpdateOrg).not.toHaveBeenCalled()
+  })
+
+  it('falls back to read-modify-write on SQLite dev (non-production) when the raw SQL fails', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
+    // SQLite has no jsonb — the raw SQL throws, and non-production may use the
+    // repo's read-modify-write convention so local dev still works.
+    mockExecuteRaw.mockRejectedValue(new Error('no such function: jsonb_build_object'))
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      settings: null,
+    })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    expect(response.status).toBe(200)
+    expect(customersCreate).toHaveBeenCalledTimes(1)
+    expect(mockExecuteRaw).toHaveBeenCalled()
     expect(mockUpdateOrg).toHaveBeenCalledWith({
       where: { id: 'org_1' },
       data: expect.objectContaining({
@@ -206,6 +239,7 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
         }),
       }),
     })
+    expect(sessionsCreate).toHaveBeenCalledTimes(1)
   })
 
   it('reuses an existing per-mode customer instead of creating a second one', async () => {
@@ -225,5 +259,63 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     expect(customersCreate).not.toHaveBeenCalled()
     expect(sessionsCreate.mock.calls[0]![0]).toMatchObject({ customer: 'cus_existing' })
     expect(mockUpdateOrg).not.toHaveBeenCalled()
+  })
+
+  it('persists a new per-mode customer via atomic jsonb merge with an explicit updatedAt (raw-SQL path)', async () => {
+    vi.stubEnv('NODE_ENV', 'test')
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
+    // The org has no customer yet, so the route creates one and persists it
+    // via $executeRaw (the Postgres atomic path) — which bypasses Prisma's
+    // @updatedAt handling and must set updatedAt = NOW() explicitly.
+    mockExecuteRaw.mockResolvedValue({})
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      settings: null,
+    })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    expect(response.status).toBe(200)
+    expect(customersCreate).toHaveBeenCalledTimes(1)
+    // The raw-SQL path (not the read-modify-write fallback) ran...
+    expect(mockExecuteRaw).toHaveBeenCalled()
+    expect(mockUpdateOrg).not.toHaveBeenCalled()
+    // ...and it carried the updatedAt touch so a bypassed @updatedAt can never
+    // leave Organization.updatedAt stale (cubic round 4 P2). Prisma's
+    // $executeRaw splits template parts from interpolated values — flatten
+    // and join the whole call so both the SQL skeleton and values assert.
+    const rawAll = mockExecuteRaw.mock.calls[0].flat().join('')
+    expect(rawAll).toContain('"updatedAt" = NOW()')
+    expect(rawAll).toContain('stripeCustomers')
+    expect(sessionsCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it('rethrows a raw-SQL settings-persistence failure in production instead of silently falling back', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
+    mockExecuteRaw.mockRejectedValue(new Error('connection dropped'))
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      settings: null,
+    })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    // The route's outer catch maps the rethrown error to a 500; the racy
+    // read-modify-write fallback must NOT run (it would clobber concurrent
+    // settings and its transaction is already aborted after the raw-SQL error).
+    expect(response.status).toBe(500)
+    expect(customersCreate).toHaveBeenCalledTimes(1)
+    expect(mockExecuteRaw).toHaveBeenCalled()
+    expect(mockUpdateOrg).not.toHaveBeenCalled()
+    expect(sessionsCreate).not.toHaveBeenCalled()
   })
 })

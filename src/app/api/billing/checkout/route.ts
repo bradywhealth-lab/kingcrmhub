@@ -169,13 +169,24 @@ export async function POST(request: Request) {
                        COALESCE(("settings" -> 'stripeCustomers'), '{}'::jsonb)
                          || ${JSON.stringify({ [stripeModeName]: customerId })}::jsonb
                      ),
-                "stripeCustomerId" = ${customerId}
+                "stripeCustomerId" = ${customerId},
+                -- $executeRaw bypasses Prisma's @updatedAt handling, so the
+                -- timestamp must be set explicitly on this SQL-only path.
+                "updatedAt" = NOW()
             WHERE "id" = ${organizationId}
           `
-        } catch {
-          // Local SQLite dev backend has no jsonb functions — fall back to the
-          // repo's read-modify-write settings convention (same shape as
-          // src/app/api/settings/ai/route.ts).
+        } catch (error) {
+          // jsonb functions exist only on Postgres. SQLite (local dev, NODE_ENV
+          // !== 'production' with no DATABASE_URL) must fall back to the repo's
+          // read-modify-write settings convention; any other failure must
+          // surface loudly instead of silently degrading to the racy path that
+          // can clobber concurrent settings writes — and in Postgres the raw-SQL
+          // failure has already aborted this transaction, so the fallback
+          // update would throw 'current transaction is aborted' anyway.
+          if (process.env.NODE_ENV === 'production') {
+            console.error('Billing settings persistence failed', error)
+            throw error
+          }
           await db.organization.update({
             where: { id: organizationId },
             data: {
