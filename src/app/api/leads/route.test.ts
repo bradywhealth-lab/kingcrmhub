@@ -117,6 +117,9 @@ const mockDb = vi.hoisted(() => ({
   lead: {
     findMany: vi.fn(),
     count: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
   },
 }))
 
@@ -137,10 +140,20 @@ vi.mock('@/lib/rate-limit', () => ({
   enforceRateLimit: vi.fn(() => null),
 }))
 
-import { GET } from './route'
+import { GET, POST } from './route'
 
 function getList(url: string) {
   return GET(new NextRequest(url)) as Promise<Response>
+}
+
+function postLead(body: unknown) {
+  return POST(
+    new NextRequest('http://localhost/api/leads', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+    }),
+  ) as Promise<Response>
 }
 
 describe('GET /api/leads — nameless-lead visibility + q search (t_cf1f4831)', () => {
@@ -296,5 +309,96 @@ describe('GET /api/leads — nameless-lead visibility + q search (t_cf1f4831)', 
     const json = await response.json()
     expect(json.error).toMatch(/too many terms/i)
     expect(mockDb.lead.findMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/leads — empty submit rejected 400 with NO insert (t_d2cbe600)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockDb.lead.create.mockImplementation(async () => ({
+      id: 'lead-created',
+      createdAt: new Date(),
+    }))
+    mockDb.lead.update.mockImplementation(async ({ where }: { where: { id: string } }) => ({
+      id: where.id,
+      aiScore: 60,
+    }))
+  })
+
+  it('(a) empty JSON {} is rejected with 400 and no row is created', async () => {
+    const response = await postLead({})
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.error).toBe('Invalid request body')
+    expect(json.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringMatching(/at least one/i) }),
+      ]),
+    )
+    expect(mockDb.lead.create).not.toHaveBeenCalled()
+    expect(mockDb.lead.findFirst).not.toHaveBeenCalled()
+  })
+
+  it('(b) all-null fields are rejected with 400 and no row is created', async () => {
+    const response = await postLead({
+      firstName: null,
+      lastName: null,
+      email: null,
+      phone: null,
+      company: null,
+      title: null,
+    })
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(mockDb.lead.create).not.toHaveBeenCalled()
+    expect(mockDb.lead.findFirst).not.toHaveBeenCalled()
+  })
+
+  it('(c) whitespace-only strings are rejected with 400 and no row is created', async () => {
+    const response = await postLead({ firstName: '  ', email: '\u00a0\u00a0' })
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(mockDb.lead.create).not.toHaveBeenCalled()
+  })
+
+  it('(d) a lead with only an email is still accepted (M013 nameless-lead path)', async () => {
+    const response = await postLead({ email: 'only-email@example.com' })
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mockDb.lead.create).toHaveBeenCalledTimes(1)
+    expect(mockDb.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: 'only-email@example.com',
+          firstName: undefined,
+          lastName: undefined,
+        }),
+      }),
+    )
+    expect(json.id).toBe('lead-created')
+  })
+
+  it('(e) a lead with only a first name is accepted', async () => {
+    const response = await postLead({ firstName: 'Ada' })
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mockDb.lead.create).toHaveBeenCalledTimes(1)
+    expect(json.id).toBe('lead-created')
+  })
+
+  it('(f) handler DB rejection returns a JSON 500, never an opaque empty body', async () => {
+    mockDb.lead.create.mockRejectedValueOnce(new Error('boom'))
+    const response = await postLead({ email: 'fail@example.com' })
+    const text = await response.text()
+    const json = JSON.parse(text)
+
+    expect(response.status).toBe(500)
+    expect(json.error).toBe('Failed to create lead')
+    expect(text.length).toBeGreaterThan(0)
   })
 })
