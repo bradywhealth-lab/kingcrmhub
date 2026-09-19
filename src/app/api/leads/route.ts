@@ -12,25 +12,42 @@ const nullableString = (maxLen: number) =>
     z.string().max(maxLen).optional(),
   )
 
-const createLeadSchema = z.object({
-  firstName: nullableString(120),
-  lastName: nullableString(120),
-  email: z.preprocess(
-    (val) => (val === null || val === '' ? undefined : val),
-    z.string().email().optional(),
-  ),
-  phone: nullableString(40),
-  company: nullableString(160),
-  title: nullableString(160),
-  website: nullableString(300),
-  linkedin: nullableString(300),
-  source: nullableString(80),
-  estimatedValue: z.preprocess(
-    (val) => (val === null || val === '' ? undefined : val),
-    z.coerce.number().nonnegative().optional(),
-  ),
-  customFields: z.record(z.string(), z.unknown()).nullable().optional(),
-})
+const createLeadSchema = z
+  .object({
+    firstName: nullableString(120),
+    lastName: nullableString(120),
+    email: z.preprocess(
+      (val) => (val === null || val === '' ? undefined : val),
+      z.string().email().optional(),
+    ),
+    phone: nullableString(40),
+    company: nullableString(160),
+    title: nullableString(160),
+    website: nullableString(300),
+    linkedin: nullableString(300),
+    source: nullableString(80),
+    estimatedValue: z.preprocess(
+      (val) => (val === null || val === '' ? undefined : val),
+      z.coerce.number().nonnegative().optional(),
+    ),
+    customFields: z.record(z.string(), z.unknown()).nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Reject an "empty" lead: the Add-lead modal can submit with every field
+    // blank (Enter on the form), which previously persisted an all-null row.
+    // At least one identity field must be present and non-blank. Email-only
+    // leads (M013 CSV/quick-add path) and name-only leads must still pass.
+    const hasFirstName = typeof data.firstName === 'string' && data.firstName.trim().length > 0
+    const hasLastName = typeof data.lastName === 'string' && data.lastName.trim().length > 0
+    const hasEmail = typeof data.email === 'string' && data.email.trim().length > 0
+    if (!hasFirstName && !hasLastName && !hasEmail) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'At least one of firstName, lastName, or email is required',
+        path: ['firstName'],
+      })
+    }
+  })
 
 /**
  * Extracts profession from company/title for industry targeting.
@@ -106,7 +123,9 @@ function extractProfession(company: string | null, title: string | null): string
 // GET /api/leads - Get all leads for organization
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    // `await` keeps handler rejections inside this try/catch; without it the
+    // catch below is dead code and Next.js emits an opaque empty-body 500.
+    return await withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const q = searchParams.get('q')?.trim()
@@ -188,7 +207,10 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'leads-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    // `await` is required: without it a rejection inside the handler escapes
+    // this try/catch and the POST surfaces as an opaque empty-body 500 after
+    // the lead row was already inserted (t_d2cbe600, pitfall 41 class).
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createLeadSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
