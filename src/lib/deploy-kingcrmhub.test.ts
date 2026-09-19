@@ -2,7 +2,16 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// File-scoped timeout: the rollback-tag test spawns the full deploy script
+// TWICE (two spawnSync of deploy-kingcrmhub.sh), which is wall-clock heavy
+// under parallel load and on slow/AVX-less boxes. The vitest 5s default is a
+// real flake source — this file timed out at 5037-5566ms (Sentinel, 2026-09-19;
+// reproduced isolated on 2026-09-19) while passing when given headroom.
+// 15s mirrors real runtime with margin. Scope is file-only: every other test
+// keeps the 5s default so genuine regressions still surface quickly.
+vi.setConfig({ testTimeout: 15000 })
 
 const repoRoot = join(import.meta.dirname, '..', '..')
 const deployScriptPath = join(repoRoot, 'scripts', 'deploy-kingcrmhub.sh')
