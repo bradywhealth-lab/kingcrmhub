@@ -38,6 +38,9 @@ export function stripeMode(): StripeMode {
 export function stripe(): Stripe | null {
   if (!SECRET_KEY) return null
   const mode = stripeMode()
+  // A nonempty key that is neither sk_test_ nor sk_live_ is malformed config:
+  // treat it as billing-off so it can never bypass the gate.
+  if (mode === 'off') return null
   if (mode === 'live' && LIVE_MODE_ACTIVATION !== '1') return null
   return new Stripe(SECRET_KEY, { apiVersion: '2026-08-26.dahlia' })
 }

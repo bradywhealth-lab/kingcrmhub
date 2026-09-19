@@ -50,7 +50,10 @@ describe('canonical billing catalog (reconciled vocabulary)', () => {
     expect(monthlyPriceCents('starter')).toBe(1900)
     expect(monthlyPriceCents('pro')).toBe(3900)
     expect(monthlyPriceCents('enterprise')).toBe(5900)
-    expect(() => monthlyPriceCents('free' as 'starter')).not.toThrow()
+    expect(monthlyPriceCents('free')).toBe(0)
+    // Unknown plan ids must throw — this is the actual rejection path.
+    // Anything not in the frozen catalog is a programming error, not a price.
+    expect(() => monthlyPriceCents('bogus' as never)).toThrow(/Cannot price unknown plan/)
   })
 
   it('resolves configured Stripe prices to stored plan IDs (single vocabulary)', () => {
@@ -59,6 +62,16 @@ describe('canonical billing catalog (reconciled vocabulary)', () => {
     try {
       for (const key of STRIPE_PRICE_ENV_KEYS) delete process.env[key]
       expect(planIdForStripePrice('price_live_abc')).toBeNull()
+
+      // The single-vocabulary mapping under test must resolve positively:
+      // env price -> stored plan id (Pro->starter, Studio->pro, Elite->enterprise).
+      process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_test'
+      process.env.STRIPE_PRICE_STUDIO_MONTHLY = 'price_studio_test'
+      process.env.STRIPE_PRICE_ELITE_MONTHLY = 'price_elite_test'
+      expect(planIdForStripePrice('price_pro_test')).toBe('starter')
+      expect(planIdForStripePrice('price_studio_test')).toBe('pro')
+      expect(planIdForStripePrice('price_elite_test')).toBe('enterprise')
+      expect(planIdForStripePrice('price_unmapped')).toBeNull()
     } finally {
       for (const key of STRIPE_PRICE_ENV_KEYS) {
         if (previous[key] === undefined) delete process.env[key]

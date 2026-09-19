@@ -53,7 +53,6 @@ export async function POST(request: Request) {
         const organizationId = String(session.metadata?.organizationId ?? '')
         const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
         const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
-        const planId = typeof session.metadata?.planId === 'string' ? session.metadata.planId : null
 
         if (!organizationId || !subscriptionId || !customerId) {
           console.error('Stripe webhook: checkout.session.completed missing org/subscription/customer', {
@@ -65,15 +64,22 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Incomplete checkout session' }, { status: 200 })
         }
 
+        // Link-only: the customer/subscription association is recorded, but the
+        // paid plan is NOT applied here. A checkout may complete while the
+        // initial payment is incomplete/pending; entitlement must only be
+        // granted by a verified trialing/active customer.subscription.* event.
+        // planUpdatedAt is intentionally NOT advanced: Stripe typically emits
+        // the subscription event BEFORE session completion, so stamping the
+        // session timestamp here would make the out-of-order guard in
+        // syncSubscriptionToOrg reject the follow-on subscription event and the
+        // paid plan would never be granted.
         await withOrgRlsTransaction(organizationId, () =>
           db.organization.update({
             where: { id: organizationId },
             data: {
               stripeCustomerId: customerId,
               stripeSubscriptionId: subscriptionId,
-              stripeSubscriptionStatus: 'active',
-              plan: planId ?? undefined,
-              planUpdatedAt: new Date(),
+              stripeSubscriptionStatus: 'incomplete',
             },
           }),
         )
@@ -105,6 +111,7 @@ export async function POST(request: Request) {
             stripeSubscriptionId: id,
             stripeSubscriptionStatus: event.type === 'customer.subscription.deleted' ? 'canceled' : subscription.status,
             planId: event.type === 'customer.subscription.deleted' ? null : planIdFromSubscription(subscription),
+            eventCreatedAtSec: event.created,
           }),
         )
         break

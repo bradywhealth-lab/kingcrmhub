@@ -11,16 +11,17 @@ vi.mock('@/lib/next-auth', () => ({
 vi.mock('@/lib/billing/stripe', () => ({
   stripeMode: vi.fn(),
   stripeModeLabel: vi.fn(),
-  isLivePendingActivation: vi.fn(() => false),
+  isLivePendingActivation: vi.fn(),
 }))
 
 import { getServerSession } from 'next-auth'
-import { stripeMode, stripeModeLabel } from '@/lib/billing/stripe'
+import { stripeMode, stripeModeLabel, isLivePendingActivation } from '@/lib/billing/stripe'
 import { GET } from './route'
 
 const mockSession = getServerSession as unknown as ReturnType<typeof vi.fn>
 const mockMode = stripeMode as unknown as ReturnType<typeof vi.fn>
 const mockLabel = stripeModeLabel as unknown as ReturnType<typeof vi.fn>
+const mockLivePending = isLivePendingActivation as unknown as ReturnType<typeof vi.fn>
 
 describe('/api/billing/status — honest mode label', () => {
   beforeEach(() => {
@@ -31,6 +32,7 @@ describe('/api/billing/status — honest mode label', () => {
   it('reports off when no Stripe key is configured', async () => {
     mockMode.mockReturnValue('off')
     mockLabel.mockReturnValue('off')
+    mockLivePending.mockReturnValue(false)
     const res = await GET()
     const json = await res.json()
     expect(json.mode).toBe('off')
@@ -41,18 +43,24 @@ describe('/api/billing/status — honest mode label', () => {
   it('reports test mode as active (test billing is real against test cards)', async () => {
     mockMode.mockReturnValue('test')
     mockLabel.mockReturnValue('test')
+    mockLivePending.mockReturnValue(false)
     const res = await GET()
     const json = await res.json()
     expect(json.mode).toBe('test')
     expect(json.active).toBe('test')
+    expect(json.livePendingActivation).toBe(false)
   })
 
   it('reports live-pending-activation when live keys exist without the go flag', async () => {
     mockMode.mockReturnValue('live')
     mockLabel.mockReturnValue('live-pending-activation')
+    mockLivePending.mockReturnValue(true)
     const res = await GET()
     const json = await res.json()
     expect(json.mode).toBe('live')
     expect(json.active).toBe('live-pending-activation')
+    // Regression guard for the live-inert path: the pricing page must keep
+    // showing the honest "not active" label until Brady flips the flag.
+    expect(json.livePendingActivation).toBe(true)
   })
 })

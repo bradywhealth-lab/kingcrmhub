@@ -225,7 +225,11 @@ BEGIN
     VALUES
       ('onboardingCompleted', 'boolean', 'NO', 'false'),
       ('onboardingCompletedAt', 'timestamp without time zone', 'YES', NULL),
-      ('onboardingStep', 'integer', 'NO', '0')
+      ('onboardingStep', 'integer', 'NO', '0'),
+      ('stripeCustomerId', 'text', 'YES', NULL),
+      ('stripeSubscriptionId', 'text', 'YES', NULL),
+      ('stripeSubscriptionStatus', 'text', 'YES', NULL),
+      ('planUpdatedAt', 'timestamp without time zone', 'YES', NULL)
   ) AS expected(column_name, data_type, is_nullable, column_default)
   LEFT JOIN information_schema.columns AS actual
     ON actual.table_schema = 'public'

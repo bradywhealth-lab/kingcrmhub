@@ -26,13 +26,14 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import { getServerSession } from 'next-auth'
-import { stripe, stripeActive } from '@/lib/billing/stripe'
+import { stripe, stripeActive, stripeMode } from '@/lib/billing/stripe'
 import { db } from '@/lib/db'
 import { POST } from './route'
 
 const mockSession = getServerSession as unknown as ReturnType<typeof vi.fn>
 const mockStripe = stripe as unknown as ReturnType<typeof vi.fn>
 const mockActive = stripeActive as unknown as ReturnType<typeof vi.fn>
+const mockMode = stripeMode as unknown as ReturnType<typeof vi.fn>
 const mockFindOrg = db.organization.findUnique as unknown as ReturnType<typeof vi.fn>
 const mockUpdateOrg = db.organization.update as unknown as ReturnType<typeof vi.fn>
 
@@ -42,6 +43,16 @@ function post(body: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   })
+}
+
+function buildStripeClient() {
+  const customersCreate = vi.fn().mockResolvedValue({ id: 'cus_new' })
+  const sessionsCreate = vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/c/pay/abc' })
+  const client = {
+    customers: { create: customersCreate },
+    checkout: { sessions: { create: sessionsCreate } },
+  }
+  return { client, customersCreate, sessionsCreate }
 }
 
 describe('/api/billing/checkout — honest gate + real checkout when configured', () => {
@@ -55,7 +66,13 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     })
     mockStripe.mockReturnValue(null)
     mockActive.mockReturnValue(false)
-    mockFindOrg.mockResolvedValue({ stripeCustomerId: null })
+    mockMode.mockReturnValue('off')
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      settings: null,
+    })
     mockUpdateOrg.mockResolvedValue({})
   })
 
@@ -88,23 +105,75 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     expect((await POST(post({ planId: 'free', interval: 'monthly' }))).status).toBe(400)
   })
 
-  it('returns a checkout URL when test mode and price are configured', async () => {
+  it('returns 409 when the org already has a live subscription', async () => {
     mockActive.mockReturnValue(true)
-    mockStripe.mockReturnValue({
-      customers: {
-        create: vi.fn().mockResolvedValue({ id: 'cus_new' }),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/c/pay/abc' }),
-        },
-      },
+    mockMode.mockReturnValue('test')
+    mockStripe.mockReturnValue(buildStripeClient().client)
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: 'cus_existing',
+      stripeSubscriptionId: 'sub_existing',
+      stripeSubscriptionStatus: 'active',
+      settings: { stripeCustomers: { test: 'cus_existing' } },
     })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    expect(response.status).toBe(409)
+  })
+
+  it('returns a checkout URL when test mode and price are configured, pinned to the env-price contract', async () => {
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
 
     const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
     const json = await response.json()
     expect(response.status).toBe(200)
     expect(json.status).toBe('checkout')
     expect(json.url).toContain('checkout.stripe.com')
+
+    // Contract pinning (cubic P2 — the route must use the env-owned price,
+    // pass org/plan metadata, and persist the customer it created).
+    expect(sessionsCreate).toHaveBeenCalledTimes(1)
+    const sessionArgs = sessionsCreate.mock.calls[0]![0] as Record<string, unknown>
+    expect(sessionArgs.mode).toBe('subscription')
+    expect(sessionArgs.line_items).toEqual([{ price: 'price_pro_test', quantity: 1 }])
+    expect(sessionArgs.metadata).toMatchObject({ organizationId: 'org_1', planId: 'pro' })
+    const subData = sessionArgs.subscription_data as Record<string, unknown>
+    expect(subData.metadata).toMatchObject({ organizationId: 'org_1', planId: 'pro' })
+
+    expect(customersCreate).toHaveBeenCalledTimes(1)
+    expect(customersCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'a@b.co', metadata: { organizationId: 'org_1' } }),
+    )
+    // The new customer is persisted + namespaced per Stripe mode (test/live separation).
+    expect(mockUpdateOrg).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: expect.objectContaining({
+        stripeCustomerId: 'cus_new',
+        settings: expect.objectContaining({
+          stripeCustomers: { test: 'cus_new' },
+        }),
+      }),
+    })
+  })
+
+  it('reuses an existing per-mode customer instead of creating a second one', async () => {
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: 'cus_existing',
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      settings: { stripeCustomers: { test: 'cus_existing' } },
+    })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    expect(response.status).toBe(200)
+    expect(customersCreate).not.toHaveBeenCalled()
+    expect(sessionsCreate.mock.calls[0]![0]).toMatchObject({ customer: 'cus_existing' })
+    expect(mockUpdateOrg).not.toHaveBeenCalled()
   })
 })

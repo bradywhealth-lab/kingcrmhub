@@ -3,12 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const constructEvent = vi.fn()
 
 vi.mock('@/lib/billing/stripe', () => ({
-  stripe: vi.fn(() => ({
-    webhooks: {
-      constructEvent: (body: string, sig: string, secret: string) => constructEvent(body, sig, secret),
-    },
-  })),
-  stripeWebhookSecret: vi.fn(() => 'whsec_test'),
+  stripe: vi.fn(),
+  stripeWebhookSecret: vi.fn(),
   stripeMode: vi.fn(() => 'test'),
 }))
 
@@ -16,15 +12,21 @@ vi.mock('@/lib/db', () => ({
   db: {
     organization: {
       update: vi.fn(),
+      findUnique: vi.fn(),
     },
   },
   withOrgRlsTransaction: vi.fn(async (_orgId: string, cb: () => Promise<unknown>) => cb()),
 }))
 
 import { POST } from './route'
+import { stripe, stripeWebhookSecret, stripeMode } from '@/lib/billing/stripe'
 import { db } from '@/lib/db'
 
+const mockStripeClient = stripe as unknown as ReturnType<typeof vi.fn>
+const mockSecret = stripeWebhookSecret as unknown as ReturnType<typeof vi.fn>
+const mockMode = stripeMode as unknown as ReturnType<typeof vi.fn>
 const mockUpdate = db.organization.update as unknown as ReturnType<typeof vi.fn>
+const mockFind = db.organization.findUnique as unknown as ReturnType<typeof vi.fn>
 
 // Signature verification failure path controlled via a shared flag.
 let signatureThrows = false
@@ -41,11 +43,41 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     signatureThrows = false
+    mockMode.mockReturnValue('test')
+    mockSecret.mockReturnValue('whsec_test')
+    // The subscription sync reads the org's current subscription state to
+    // guard stale/out-of-order events — default to a matching current state.
+    mockFind.mockResolvedValue({
+      stripeSubscriptionId: 'sub_1',
+      stripeSubscriptionStatus: 'active',
+      planUpdatedAt: new Date(1699999999 * 1000),
+    })
+    mockStripeClient.mockReturnValue({
+      webhooks: {
+        constructEvent: (body: string, sig: string, secret: string) => constructEvent(body, sig, secret),
+      },
+    })
     constructEvent.mockImplementation((body: string) => {
       const parsed = JSON.parse(body)
       if (signatureThrows) throw new Error('bad signature')
       return parsed
     })
+  })
+
+  it('acknowledges with 200 and performs no DB writes when billing is off (default state)', async () => {
+    mockStripeClient.mockReturnValue(null)
+    mockSecret.mockReturnValue(null)
+    const res = await POST(webhookRequest({ id: 'evt_off', type: 'customer.subscription.updated' }))
+    expect(res.status).toBe(200)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('acknowledges with 200 and performs no DB writes when live keys lack activation', async () => {
+    mockStripeClient.mockReturnValue(null)
+    mockMode.mockReturnValue('live')
+    const res = await POST(webhookRequest({ id: 'evt_live', type: 'customer.subscription.updated' }))
+    expect(res.status).toBe(200)
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects requests without a stripe-signature header', async () => {
@@ -62,11 +94,12 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     expect(res.status).toBe(400)
   })
 
-  it('sets org plan on checkout.session.completed', async () => {
+  it('links customer + subscription on checkout.session.completed but does NOT grant the plan', async () => {
     mockUpdate.mockResolvedValue({})
     const event = {
       id: 'evt_1',
       type: 'checkout.session.completed',
+      created: 1700000000,
       data: {
         object: {
           id: 'cs_1',
@@ -83,13 +116,16 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
       data: expect.objectContaining({
         stripeCustomerId: 'cus_1',
         stripeSubscriptionId: 'sub_1',
-        stripeSubscriptionStatus: 'active',
-        plan: 'pro',
+        stripeSubscriptionStatus: 'incomplete',
       }),
     })
+    // The paid plan must NOT be set from a checkout session — entitlement is
+    // granted only by a verified trialing/active subscription event.
+    const call = mockUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+    expect(call.data.plan).toBeUndefined()
   })
 
-  it('syncs plan change on customer.subscription.updated', async () => {
+  it('sets org plan on customer.subscription.updated when the status is active', async () => {
     mockUpdate.mockResolvedValue({ plan: 'enterprise', status: 'active' })
     const previous = process.env.STRIPE_PRICE_ELITE_MONTHLY
     process.env.STRIPE_PRICE_ELITE_MONTHLY = 'price_elite_test'
@@ -97,6 +133,7 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
       const event = {
         id: 'evt_2',
         type: 'customer.subscription.updated',
+        created: 1700000001,
         data: {
           object: {
             id: 'sub_1',
@@ -118,7 +155,8 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
         }),
       })
     } finally {
-      process.env.STRIPE_PRICE_ELITE_MONTHLY = previous
+      if (previous === undefined) delete process.env.STRIPE_PRICE_ELITE_MONTHLY
+      else process.env.STRIPE_PRICE_ELITE_MONTHLY = previous
     }
   })
 
@@ -127,6 +165,7 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     const event = {
       id: 'evt_3',
       type: 'customer.subscription.deleted',
+      created: 1700000002,
       data: {
         object: {
           id: 'sub_1',

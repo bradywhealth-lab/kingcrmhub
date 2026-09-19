@@ -87,43 +87,64 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
+    // Redirect target must come from a validated, allowlisted application URL —
+    // never an arbitrary Origin header the caller controls.
+    const appBaseUrl = process.env.APP_BASE_URL?.trim().replace(/\/+$/, '')
+    if (!appBaseUrl) {
+      return NextResponse.json(
+        { error: 'Billing is not configured (missing APP_BASE_URL)' },
+        { status: 500 },
+      )
+    }
+
     // Note: withOrgRlsTransaction must be awaited — an unawaited rejection
     // escapes this try/catch as an opaque empty-body 500 (see repo pitfall:
     // `return withRequestOrgContext` / transaction helpers).
     return await withOrgRlsTransaction(organizationId, async () => {
       const existing = await db.organization.findUnique({
         where: { id: organizationId },
-        select: { stripeCustomerId: true },
+        select: { stripeCustomerId: true, stripeSubscriptionId: true, stripeSubscriptionStatus: true, settings: true },
       })
       if (!existing) {
         return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
       }
 
-      const email = user.email ?? undefined
-      let customerId: string | null = existing.stripeCustomerId
-      if (!customerId) {
-        if (email) {
-          const customer = await client.customers.create({
-            email,
-            metadata: { organizationId },
-          })
-          customerId = customer.id
-          await db.organization.update({
-            where: { id: organizationId },
-            data: { stripeCustomerId: customer.id },
-          })
-        }
-      }
-
-      const origin = request.headers.get('origin')
-      const appBaseUrl = process.env.APP_BASE_URL?.trim().replace(/\/+$/, '')
-      if (!origin && !appBaseUrl) {
+      // Repeated paid-plan clicks must not mint multiple billable subscriptions.
+      // If the org already has an active/pending subscription, refuse a second
+      // checkout (Stripe itself dedupes identical sessions, but the guard here
+      // keeps the API honest).
+      if (existing.stripeSubscriptionId && existing.stripeSubscriptionStatus !== 'canceled') {
         return NextResponse.json(
-          { error: 'Billing is not configured (missing APP_BASE_URL)' },
-          { status: 500 },
+          { error: 'Your organization already has an active subscription. Manage it from the billing page.' },
+          { status: 409 },
         )
       }
-      const baseUrl = origin ?? appBaseUrl!
+
+      const stripeModeName = stripeMode()
+      const settings = (existing.settings ?? {}) as Record<string, unknown>
+      const perModeCustomers = (settings.stripeCustomers ?? {}) as Record<string, string>
+
+      // Stripe customers live in either the test or live environment — never both.
+      // A customer created against test keys cannot be reused once live keys are
+      // activated, so each mode maintains its own customer ID namespace.
+      let customerId: string | null = perModeCustomers[stripeModeName] ?? null
+
+      const email = user.email ?? undefined
+      if (!customerId && email) {
+        const customer = await client.customers.create({
+          email,
+          metadata: { organizationId },
+        })
+        customerId = customer.id
+        const nextSettings = { ...settings, stripeCustomers: { ...perModeCustomers, [stripeModeName]: customer.id } }
+        await db.organization.update({
+          where: { id: organizationId },
+          data: {
+            stripeCustomerId: customer.id,
+            settings: nextSettings,
+          },
+        })
+      }
 
       const sessionRes = await client.checkout.sessions.create({
         mode: 'subscription',
@@ -137,8 +158,8 @@ export async function POST(request: Request) {
         subscription_data: {
           metadata: { organizationId, planId },
         },
-        success_url: `${baseUrl}/pricing?checkout=success&plan=${planId}`,
-        cancel_url: `${baseUrl}/pricing?checkout=canceled&plan=${planId}`,
+        success_url: `${appBaseUrl}/pricing?checkout=success&plan=${planId}`,
+        cancel_url: `${appBaseUrl}/pricing?checkout=canceled&plan=${planId}`,
       })
 
       return NextResponse.json({ status: 'checkout', url: sessionRes.url, planId, interval })

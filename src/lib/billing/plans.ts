@@ -86,31 +86,32 @@ export const PLANS: readonly PlanDefinition[] = [
   },
 ]
 
-/** Map for O(1) lookups by stored plan ID. */
-const PLAN_BY_ID: Readonly<Record<PlanId, PlanDefinition>> = Object.fromEntries(
+/** Map for O(1) lookups by stored plan ID. A Map (not a plain object) so
+ * inherited keys like `toString`/`__proto__` can never pass isPlanId. */
+const PLAN_BY_ID: ReadonlyMap<PlanId, PlanDefinition> = new Map(
   PLANS.map((plan) => [plan.planId, plan] as const),
-) as Record<PlanId, PlanDefinition>
+)
 
 export function isPlanId(value: string): value is PlanId {
-  return value in PLAN_BY_ID
+  return PLAN_BY_ID.has(value as PlanId)
 }
 
 export function getPlan(planId: string | null | undefined): PlanDefinition | null {
   if (!planId) return null
-  return PLAN_BY_ID[planId as PlanId] ?? null
+  return PLAN_BY_ID.get(planId as PlanId) ?? null
 }
 
 /** Strict rank comparison: true when `plan` has at least `required` access. */
 export function planAtLeast(plan: string | null | undefined, required: PlanId): boolean {
   const current = getPlan(plan)
   if (!current) return false
-  const requiredRank = PLAN_BY_ID[required]?.rank ?? 0
+  const requiredRank = PLAN_BY_ID.get(required)?.rank ?? 0
   return current.rank >= requiredRank
 }
 
 /** Price (in USD cents) Stripe should charge for a paid plan. */
 export function monthlyPriceCents(planId: PlanId): number {
-  const plan = PLAN_BY_ID[planId]
+  const plan = PLAN_BY_ID.get(planId)
   if (!plan) throw new Error(`Cannot price unknown plan: ${planId}`)
   return plan.monthlyPrice * 100
 }
