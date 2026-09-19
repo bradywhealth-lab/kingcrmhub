@@ -157,6 +157,15 @@ describe('PATCH /api/appointments/[id] — whitespace-only title rejected (same 
     expect(mockDb.appointment.update).not.toHaveBeenCalled()
   })
 
+  it('tabs/newlines-only title returns 400 and does NOT update the appointment', async () => {
+    const response = await patchBody('appointment_1', { title: '\t\n \n\t' })
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.error).toBe('Invalid request body')
+    expect(mockDb.appointment.update).not.toHaveBeenCalled()
+  })
+
   it('padded replacement title is persisted trimmed', async () => {
     const response = await patchBody('appointment_1', { title: '  Renamed appointment  ' })
     const json = await response.json()
