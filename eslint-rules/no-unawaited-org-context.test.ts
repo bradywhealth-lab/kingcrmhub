@@ -88,7 +88,9 @@ describe('eslint rule no-unawaited-org-context', () => {
   it('respects function boundaries: helper declared inside a try is not flagged', () => {
     const code = `export async function GET(request: any) {
       try {
-        const helper = () => withRequestOrgContext(request, async (ctx) => 1)
+        const helper = () => {
+          return withRequestOrgContext(request, async (ctx) => 1)
+        }
         return await helper()
       } catch (e) {
         return { error: 'x' }
@@ -97,10 +99,7 @@ describe('eslint rule no-unawaited-org-context', () => {
     expect(messages(code)).toEqual([])
   })
 
-  it('meta fixer rewrites to await (fix round-trip on the async invalid case)', () => {
-    // Linter.verifyAndFix: eslint 9 flat config support check — use verify with
-    // the fixer registered and assert the fix function produces valid output by
-    // re-linting the FIXED text and expecting zero reports.
+  it('meta fixer rewrites to await (verifyAndFix round-trip on the async invalid case)', () => {
     const before = `export async function GET(request: any) {
       try {
         return withRequestOrgContext(request, async (ctx) => 1)
@@ -108,15 +107,23 @@ describe('eslint rule no-unawaited-org-context', () => {
         return { error: 'x' }
       }
     }`
-    const fixed = `export async function GET(request: any) {
+    const expectedOutput = `export async function GET(request: any) {
       try {
         return await withRequestOrgContext(request, async (ctx) => 1)
       } catch (e) {
         return { error: 'x' }
       }
     }`
-    expect(messages(before)).toEqual(['mustAwait'])
-    expect(messages(fixed)).toEqual([])
+    const result = linter.verifyAndFix(before, [
+      {
+        languageOptions: { parser: tsParser, parserOptions: { ecmaVersion: 'latest' } },
+        plugins: { local: { rules: { 'no-unawaited-org-context': rule } } },
+        rules: { 'local/no-unawaited-org-context': 'error' },
+      },
+    ])
+    expect(result.fixed).toBe(true)
+    expect(result.output).toBe(expectedOutput)
+    expect(result.messages).toEqual([])
   })
 
   it('negative control: zero reports on the PR #185 fixed packages routes', () => {
