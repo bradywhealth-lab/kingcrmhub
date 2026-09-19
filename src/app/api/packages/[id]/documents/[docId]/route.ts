@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { deleteFromObjectStorage } from '@/lib/object-storage'
 import { objectStorageErrorResponse } from '@/lib/object-storage-http'
+import { serializePackageDocumentDetail } from '@/lib/package-documents'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 export async function GET(
@@ -11,7 +12,9 @@ export async function GET(
 ) {
   try {
     const { id: packageId, docId } = await params
-    return withRequestOrgContext(request, async (context) => {
+    // `return await` so a rejected handler promise reaches the catch below
+    // instead of leaking as a bare empty-body 500 (pitfall 41).
+    return await withRequestOrgContext(request, async (context) => {
       const document = await db.packageDocument.findFirst({
         where: {
           id: docId,
@@ -29,7 +32,7 @@ export async function GET(
         return NextResponse.json({ error: 'Document not found' }, { status: 404 })
       }
 
-      return NextResponse.json({ document })
+      return NextResponse.json({ document: serializePackageDocumentDetail(document) })
     })
   } catch (error) {
     console.error('PackageDocument GET error:', error)
