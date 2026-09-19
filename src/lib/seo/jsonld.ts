@@ -32,14 +32,14 @@ export function webSiteSchema(): JsonLd {
 
 /**
  * Offer data mirrors PLANS in src/components/pricing/crm-pricing-page.tsx
- * (Free $0, Pro $19/mo, Studio $39/mo, Elite $69/mo — monthly, USD).
+ * (Free $0, Pro $19/mo, Studio $39/mo, Elite $59/mo — monthly, USD).
  * Keep the two in sync when pricing changes.
  */
 export const APPLICATION_OFFERS = [
   { name: 'Free', price: 0 },
   { name: 'Pro', price: 19 },
   { name: 'Studio', price: 39 },
-  { name: 'Elite', price: 69 },
+  { name: 'Elite', price: 59 },
 ] as const
 
 export function softwareApplicationSchema(): JsonLd {
