@@ -74,16 +74,28 @@ export async function POST(request: Request) {
         // session timestamp here would make the out-of-order guard in
         // syncSubscriptionToOrg reject the follow-on subscription event and the
         // paid plan would never be granted.
-        await withOrgRlsTransaction(organizationId, () =>
-          db.organization.update({
+        //
+        // Ordering guard (cubic P1 round 3): if subscription.created already
+        // arrived BEFORE session completion (instant card payments/trials), the
+        // plan/status is already granted — do not downgrade an active/trialing
+        // status to 'incomplete' here.
+        await withOrgRlsTransaction(organizationId, async () => {
+          const current = await db.organization.findUnique({
+            where: { id: organizationId },
+            select: { stripeSubscriptionStatus: true },
+          })
+          const status = current?.stripeSubscriptionStatus === 'active' || current?.stripeSubscriptionStatus === 'trialing'
+            ? current.stripeSubscriptionStatus
+            : 'incomplete'
+          await db.organization.update({
             where: { id: organizationId },
             data: {
               stripeCustomerId: customerId,
               stripeSubscriptionId: subscriptionId,
-              stripeSubscriptionStatus: 'incomplete',
+              stripeSubscriptionStatus: status,
             },
-          }),
-        )
+          })
+        })
         break
       }
 

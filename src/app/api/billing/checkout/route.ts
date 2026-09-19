@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { buildNextAuthOptions } from '@/lib/next-auth'
 import { db, withOrgRlsTransaction } from '@/lib/db'
 import { PAID_PLAN_IDS, getPlan, type PlanId } from '@/lib/billing/plans'
+import { BILLABLE_STATUSES } from '@/lib/billing/subscription'
 import { stripe, stripeActive, stripePriceId, stripeMode } from '@/lib/billing/stripe'
 
 /**
@@ -110,16 +111,16 @@ export async function POST(request: Request) {
       }
 
       // Repeated paid-plan clicks must not mint multiple billable subscriptions.
-      // Block only while a subscription could still bill (trialing/active/
-      // past_due/unpaid). incomplete / incomplete_expired / unknown are either
-      // pre-billing or failed-start states — Stripe docs: incomplete_expired
-      // "don't bill customers", so those must stay retryable or a user whose
-      // initial payment failed is locked out of resubscribing forever.
-      const BILLABLE_SUBSCRIPTION_STATUSES = new Set(['trialing', 'active', 'past_due', 'unpaid'])
+      // Block while a subscription could still bill (trialing/active/past_due/
+      // unpaid/paused — paused is resumable and bills again). incomplete /
+      // incomplete_expired / unknown are either pre-billing or failed-start
+      // states — Stripe docs: incomplete_expired "don't bill customers", so
+      // those must stay retryable or a user whose initial payment failed is
+      // locked out of resubscribing forever.
       if (
         existing.stripeSubscriptionId &&
         existing.stripeSubscriptionStatus &&
-        BILLABLE_SUBSCRIPTION_STATUSES.has(existing.stripeSubscriptionStatus)
+        BILLABLE_STATUSES.has(existing.stripeSubscriptionStatus)
       ) {
         return NextResponse.json(
           { error: 'Your organization already has an active subscription. Manage it from the billing page.' },
@@ -138,16 +139,10 @@ export async function POST(request: Request) {
 
       // Backfill: customers created before per-mode namespacing were always
       // test-mode (live was never activated). Reuse the column value in test
-      // mode to avoid orphaning it, and persist the namespaced entry; never
-      // reuse a column value in live mode (cross-mode customers must not mix).
+      // mode to avoid orphaning it; never reuse a column value in live mode
+      // (cross-mode customers must not mix).
       if (!customerId && stripeModeName === 'test' && existing.stripeCustomerId) {
         customerId = existing.stripeCustomerId
-        await db.organization.update({
-          where: { id: organizationId },
-          data: {
-            settings: { ...settings, stripeCustomers: { ...perModeCustomers, test: customerId } },
-          },
-        })
       }
 
       const email = user.email ?? undefined
@@ -157,14 +152,41 @@ export async function POST(request: Request) {
           metadata: { organizationId },
         })
         customerId = customer.id
-        const nextSettings = { ...settings, stripeCustomers: { ...perModeCustomers, [stripeModeName]: customer.id } }
-        await db.organization.update({
-          where: { id: organizationId },
-          data: {
-            stripeCustomerId: customer.id,
-            settings: nextSettings,
-          },
-        })
+      }
+
+      // Persist the per-mode customer mapping with an atomic JSON merge
+      // (jsonb ||) so a concurrent settings write — AI keys, API keys, org
+      // settings — can never be clobbered by a stale read-modify-write of the
+      // whole settings object (cubic P2 round 3). Only the stripeCustomers key
+      // inside Organization.settings is touched; every other key is preserved.
+      if (customerId && perModeCustomers[stripeModeName] !== customerId) {
+        try {
+          await db.$executeRaw`
+            UPDATE "Organization"
+            SET "settings" = COALESCE("settings", '{}'::jsonb)
+                  || jsonb_build_object(
+                       'stripeCustomers',
+                       COALESCE(("settings" -> 'stripeCustomers'), '{}'::jsonb)
+                         || ${JSON.stringify({ [stripeModeName]: customerId })}::jsonb
+                     ),
+                "stripeCustomerId" = ${customerId}
+            WHERE "id" = ${organizationId}
+          `
+        } catch {
+          // Local SQLite dev backend has no jsonb functions — fall back to the
+          // repo's read-modify-write settings convention (same shape as
+          // src/app/api/settings/ai/route.ts).
+          await db.organization.update({
+            where: { id: organizationId },
+            data: {
+              stripeCustomerId: customerId,
+              settings: {
+                ...settings,
+                stripeCustomers: { ...perModeCustomers, [stripeModeName]: customerId },
+              } as never,
+            },
+          })
+        }
       }
 
       const sessionRes = await client.checkout.sessions.create({

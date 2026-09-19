@@ -96,6 +96,12 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
 
   it('links customer + subscription on checkout.session.completed but does NOT grant the plan', async () => {
     mockUpdate.mockResolvedValue({})
+    // No pre-existing granted status — the link write stores 'incomplete'.
+    mockFind.mockResolvedValue({
+      stripeSubscriptionId: 'sub_1',
+      stripeSubscriptionStatus: null,
+      planUpdatedAt: new Date(1699999999 * 1000),
+    })
     const event = {
       id: 'evt_1',
       type: 'checkout.session.completed',
@@ -122,6 +128,35 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     // The paid plan must NOT be set from a checkout session — entitlement is
     // granted only by a verified trialing/active subscription event.
     const call = mockUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+    expect(call.data.plan).toBeUndefined()
+  })
+
+  it('preserves an already-granted active status when completion arrives after subscription.created', async () => {
+    mockUpdate.mockResolvedValue({})
+    mockFind.mockResolvedValue({
+      stripeSubscriptionId: 'sub_1',
+      stripeSubscriptionStatus: 'active',
+      planUpdatedAt: new Date(1699999999 * 1000),
+    })
+    const event = {
+      id: 'evt_1b',
+      type: 'checkout.session.completed',
+      created: 1700000000,
+      data: {
+        object: {
+          id: 'cs_1',
+          metadata: { organizationId: 'org_1', planId: 'pro' },
+          customer: 'cus_1',
+          subscription: 'sub_1',
+        },
+      },
+    }
+    const res = await POST(webhookRequest(event))
+    expect(res.status).toBe(200)
+    const call = mockUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+    // Stripe emits subscription.created BEFORE checkout.session.completed for
+    // instant payments — the link write must never downgrade granted state.
+    expect(call.data.stripeSubscriptionStatus).toBe('active')
     expect(call.data.plan).toBeUndefined()
   })
 

@@ -224,7 +224,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(script).toContain("'stripeSubscriptionId'")
     expect(script).toContain("'stripeSubscriptionStatus'")
     expect(script).toContain("'planUpdatedAt'")
-    // Four nullable TEXT columns + one TIMESTAMP(3) column, all no-default,
+    // Three nullable TEXT columns + one TIMESTAMP(3) column, all no-default,
     // matching migration 20260919_add_stripe_billing and schema.prisma.
     expect(script).toContain("('stripeCustomerId', 'text', 'YES', NULL)")
     expect(script).toContain("('stripeSubscriptionId', 'text', 'YES', NULL)")

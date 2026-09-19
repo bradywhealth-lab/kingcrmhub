@@ -39,6 +39,15 @@ export type SubscriptionStatus =
 
 const ENTITLED_STATUSES: ReadonlySet<string> = new Set(['trialing', 'active'])
 
+/* Statuses under which a subscription is (or will be) billing the org. */
+export const BILLABLE_STATUSES: ReadonlySet<string> = new Set([
+  'trialing',
+  'active',
+  'past_due',
+  'unpaid',
+  'paused',
+])
+
 /** Map a Stripe subscription to the org plan it represents. Null = no change. */
 export function planIdFromSubscription(subscription: Stripe.Subscription): PlanId | null {
   const priceId = subscription.items.data[0]?.price.id
