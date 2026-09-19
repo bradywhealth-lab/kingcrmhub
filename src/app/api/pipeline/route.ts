@@ -24,7 +24,7 @@ const patchPipelineItemSchema = z.object({
 // GET /api/pipeline - Get pipeline with stages and items
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     const pipelineId = request.nextUrl.searchParams.get('pipelineId')
     
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'pipeline-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createPipelineItemSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -196,7 +196,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'pipeline-move', limit: 160, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     const parsed = await parseJsonBody(request, patchPipelineItemSchema)
     if (!parsed.success) return parsed.response

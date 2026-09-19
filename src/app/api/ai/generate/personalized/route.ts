@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, personalizedGenSchema)
       if (!parsed.success) return parsed.response
 

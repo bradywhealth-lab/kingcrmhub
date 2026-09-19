@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'eslint-rules/**/*.test.ts'],
     exclude: ['**/*.integration.test.ts', '**/node_modules/**'],
     setupFiles: ['src/test/setup-env.ts'],
   },

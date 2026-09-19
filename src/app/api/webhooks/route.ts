@@ -34,7 +34,7 @@ function serializeWebhook(hook: {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const hooks = await db.webhook.findMany({
         where: { organizationId: context.organizationId },
         orderBy: { createdAt: 'desc' },
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'webhooks-create', limit: 40, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, webhookSchema)
       if (!parsed.success) return parsed.response
 
@@ -80,7 +80,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'webhooks-update', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const id = request.nextUrl.searchParams.get('id')
       if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
@@ -112,7 +112,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'webhooks-delete', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const id = request.nextUrl.searchParams.get('id')
       if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'ai-feedback', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async () => {
+    return await withRequestOrgContext(request, async () => {
       const parsed = await parseJsonBody(request, feedbackSchema)
       if (!parsed.success) return parsed.response
       const { entityType, entityId, eventId, rating, feedback, corrections } = parsed.data

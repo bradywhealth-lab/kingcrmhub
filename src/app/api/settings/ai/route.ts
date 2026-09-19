@@ -65,7 +65,7 @@ function getProviderLabel(provider: AIProvider, hasKey: boolean) {
 // GET — return current AI settings (key masked)
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const org = await db.organization.findUnique({
         where: { id: context.organizationId },
         select: { settings: true },
@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest) {
     })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, aiSettingsSchema)
       if (!parsed.success) return parsed.response
 

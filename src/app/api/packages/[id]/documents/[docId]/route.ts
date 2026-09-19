@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const { id: packageId, docId } = await params
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const document = await db.packageDocument.findFirst({
         where: {
           id: docId,

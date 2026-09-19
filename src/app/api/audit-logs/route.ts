@@ -4,7 +4,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const limit = Math.max(1, Math.min(100, Number(request.nextUrl.searchParams.get('limit') || '25')))
       const logs = await db.auditLog.findMany({
         where: { organizationId: context.organizationId },

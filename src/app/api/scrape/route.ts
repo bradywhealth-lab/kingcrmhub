@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'scrape-create', limit: 30, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, scrapeRequestSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const jobId = searchParams.get('jobId')
     const limit = Math.max(1, Math.min(100, Number(searchParams.get('limit') || '20')))

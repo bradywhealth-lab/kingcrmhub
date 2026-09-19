@@ -55,8 +55,6 @@ function uniqueViolationError(): Prisma.PrismaClientKnownRequestError {
   )
 }
 
-const DUPLICATE_SLUG_MESSAGE = 'A service package with that slug already exists.'
-
 beforeEach(() => {
   vi.clearAllMocks()
   ctx.organizationId = 'org_1'
@@ -75,7 +73,8 @@ describe('PATCH /api/packages/[id] — duplicate-slug handling (t_f10ef70d)', ()
     const response = await PATCH(makePatch({ slug: 'brand-audit' }), params)
     expect(response.status).toBe(409)
     const json = (await response.json()) as { error?: string }
-    expect(json.error).toBe(DUPLICATE_SLUG_MESSAGE)
+    // P3 pin (t_8ab179e1): whole body shape, not just the message field.
+    expect(json).toEqual({ error: 'A service package with that slug already exists.' })
   })
 
   it('keeps genuine unexpected DB failures as 500 (no blanket 409 mapping)', async () => {

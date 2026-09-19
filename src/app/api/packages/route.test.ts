@@ -51,8 +51,6 @@ function uniqueViolationError(): Prisma.PrismaClientKnownRequestError {
   )
 }
 
-const DUPLICATE_MESSAGE = 'A service package with that name or slug already exists.'
-
 beforeEach(() => {
   vi.clearAllMocks()
   ctx.organizationId = 'org_1'
@@ -75,7 +73,8 @@ describe('POST /api/packages — duplicate-name handling (t_f10ef70d)', () => {
     const second = await POST(makePost({ name: 'Monthly Retainer' }))
     expect(second.status).toBe(409)
     const json = (await second.json()) as { error?: string }
-    expect(json.error).toBe(DUPLICATE_MESSAGE)
+    // P3 pin (t_8ab179e1): whole body shape, not just the message field.
+    expect(json).toEqual({ error: 'A service package with that name or slug already exists.' })
   })
 
   it('returns 409 when an explicit slug collides in the same org', async () => {
@@ -86,7 +85,8 @@ describe('POST /api/packages — duplicate-name handling (t_f10ef70d)', () => {
     )
     expect(response.status).toBe(409)
     const json = (await response.json()) as { error?: string }
-    expect(json.error).toBe(DUPLICATE_MESSAGE)
+    // P3 pin (t_8ab179e1): whole body shape, not just the message field.
+    expect(json).toEqual({ error: 'A service package with that name or slug already exists.' })
   })
 
   it('allows the same name in a DIFFERENT org (unique index is [organizationId, slug])', async () => {

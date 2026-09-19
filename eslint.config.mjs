@@ -2,6 +2,7 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { noUnawaitedOrgContext } from "./eslint-rules/no-unawaited-org-context.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +43,21 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-undef": "off",
     "no-unreachable": "off",
     "no-useless-escape": "off",
+  },
+}, {
+  plugins: {
+    "kc-await-guard": {
+      rules: {
+        "no-unawaited-org-context": noUnawaitedOrgContext,
+      },
+    },
+  },
+  rules: {
+    // Opaque-500 guard (t_f10ef70d / PR #185): withRequestOrgContext must be
+    // awaited inside a try block or handler rejections escape the catch and
+    // Next.js returns an empty-body 500 instead of the route's mapped JSON
+    // error. Rule + tests live in eslint-rules/.
+    "kc-await-guard/no-unawaited-org-context": "error",
   },
 }, {
   ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]

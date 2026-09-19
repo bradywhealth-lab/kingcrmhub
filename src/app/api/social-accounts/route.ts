@@ -43,7 +43,7 @@ function redactAccount(account: {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const accounts = await db.socialAccount.findMany({
         where: { organizationId: context.organizationId },
         orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'social-accounts-create', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, socialAccountSchema)
       if (!parsed.success) return parsed.response
 
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'social-accounts-update', limit: 60, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const id = request.nextUrl.searchParams.get('id')
       if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
@@ -190,7 +190,7 @@ export async function DELETE(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'social-accounts-delete', limit: 60, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const id = request.nextUrl.searchParams.get('id')
       if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 

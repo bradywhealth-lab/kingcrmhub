@@ -27,7 +27,7 @@ const ALLOWED_UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jp
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id: packageId } = await params
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const documents = await db.packageDocument.findMany({
         where: { packageId, organizationId: context.organizationId },
         orderBy: { createdAt: 'desc' },

@@ -27,7 +27,7 @@ const createSequenceSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const sequences = await db.sequence.findMany({
       where: { organizationId: context.organizationId },
       include: {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'sequence-create', limit: 60, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createSequenceSchema)
     if (!parsed.success) return parsed.response
     const { name, description, type = 'email', steps = [] } = parsed.data

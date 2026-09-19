@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   const action = searchParams.get("action") ?? "issues"
 
   try {
-    return withRequestOrgContext(req, async () => {
+    return await withRequestOrgContext(req, async () => {
       switch (action) {
         case "status": {
           const teams = await fetchLinearTeams()
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
   try {
     const limited = enforceRateLimit(req, { key: "linear-mutate", limit: 80, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(req, async () => {
+    return await withRequestOrgContext(req, async () => {
       const parsed = await parseJsonBody(req, linearSchema)
       if (!parsed.success) return parsed.response
       const body = parsed.data
