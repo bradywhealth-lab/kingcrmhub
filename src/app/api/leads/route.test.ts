@@ -357,10 +357,20 @@ describe('POST /api/leads — empty submit rejected 400 with NO insert (t_d2cbe6
   })
 
   it('(c) whitespace-only strings are rejected with 400 and no row is created', async () => {
-    const response = await postLead({ firstName: '  ', email: '\u00a0\u00a0' })
-    const json = await response.json()
+    // Keep email absent: an NBSP/space email fails the format validator first,
+    // so the 400 must come from the trim-based at-least-one check instead.
+    const ascii = await postLead({ firstName: '  ' })
+    const nb = await postLead({ firstName: '\u00a0\u00a0' })
 
-    expect(response.status).toBe(400)
+    expect(ascii.status).toBe(400)
+    expect(nb.status).toBe(400)
+    expect(await ascii.json()).toEqual(
+      expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringMatching(/at least one/i) }),
+        ]),
+      }),
+    )
     expect(mockDb.lead.create).not.toHaveBeenCalled()
   })
 
