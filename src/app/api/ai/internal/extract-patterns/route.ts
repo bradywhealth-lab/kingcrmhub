@@ -15,7 +15,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
  */
 export async function POST(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const userId = context.userId
       if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

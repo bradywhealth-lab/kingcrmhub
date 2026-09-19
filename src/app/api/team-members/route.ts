@@ -20,7 +20,7 @@ const patchSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const members = await db.teamMember.findMany({
         where: { organizationId: context.organizationId },
         orderBy: { createdAt: 'asc' },
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'team-members-create', limit: 20, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, inviteSchema)
       if (!parsed.success) return parsed.response
 
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'team-members-update', limit: 40, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const id = request.nextUrl.searchParams.get('id')
       if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
       const parsed = await parseJsonBody(request, patchSchema)

@@ -5,7 +5,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 // GET /api/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const organizationId = context.organizationId
     
     // Get lead counts

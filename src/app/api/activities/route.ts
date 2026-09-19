@@ -18,7 +18,7 @@ const createActivitySchema = z.object({
 // GET /api/activities - Get activity timeline
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'activities-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createActivitySchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data

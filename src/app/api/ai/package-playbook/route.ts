@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'package-playbook', limit: 30, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsedBody = await parseJsonBody(request, packagePlaybookSchema)
     if (!parsedBody.success) return parsedBody.response
     const { leadId, extraContext } = parsedBody.data

@@ -106,7 +106,7 @@ function extractProfession(company: string | null, title: string | null): string
 // GET /api/leads - Get all leads for organization
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const q = searchParams.get('q')?.trim()
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'leads-create', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, createLeadSchema)
     if (!parsed.success) return parsed.response
     const body = parsed.data

@@ -5,7 +5,7 @@ import { trackAIEvent } from '@/lib/ai-tracking'
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const leadId = searchParams.get('leadId')
     if (!leadId) return NextResponse.json({ error: 'leadId is required' }, { status: 400 })
