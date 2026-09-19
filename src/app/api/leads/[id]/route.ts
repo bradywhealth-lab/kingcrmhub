@@ -128,7 +128,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const limited = enforceRateLimit(request, { key: 'leads-update', limit: 160, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const { id } = await params
     const parsed = await parseJsonBody(request, updateLeadSchema)
     if (!parsed.success) return parsed.response

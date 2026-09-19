@@ -27,7 +27,7 @@ type StoredApiKey = {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const organization = await db.organization.findUnique({
         where: { id: context.organizationId },
         select: { settings: true },
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'security-api-keys', limit: 20, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, createSchema)
       if (!parsed.success) return parsed.response
 
@@ -105,7 +105,7 @@ export async function DELETE(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'security-api-keys-delete', limit: 40, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const id = request.nextUrl.searchParams.get('id')
       if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 

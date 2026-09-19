@@ -17,7 +17,7 @@ type InsightPayload = {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const limit = Math.max(1, Math.min(12, Number(request.nextUrl.searchParams.get('limit') || '6')))
 
       const storedInsights = await db.aIInsight.findMany({

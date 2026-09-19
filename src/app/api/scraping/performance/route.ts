@@ -13,7 +13,7 @@ import { getScrapingPerformanceReport } from '@/lib/scraping-tracker'
  */
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const report = await getScrapingPerformanceReport(context.organizationId)
 
       return NextResponse.json(report)

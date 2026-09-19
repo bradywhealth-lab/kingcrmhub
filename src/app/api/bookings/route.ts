@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const activities = await db.activity.findMany({
         where: {
           organizationId: context.organizationId,

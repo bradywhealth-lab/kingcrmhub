@@ -181,7 +181,7 @@ function calculateUploadLeadScore(input: {
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const limit = Math.max(1, Math.min(200, Number(request.nextUrl.searchParams.get('limit') || '50')))
       const uploads = await db.cSVUpload.findMany({
         where: { organizationId: context.organizationId },
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'upload-create', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       // Malformed or empty bodies (no multipart content-type, truncated
       // upload) make formData() throw. That is a client error — validate it
       // here so the outer catch-all can't turn it into a 500 (Sentinel

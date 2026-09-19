@@ -15,7 +15,7 @@ import { getUserAIProfile, ensureUserAIProfile } from '@/lib/ai-tracking'
  */
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const userId = context.userId || 'unknown'
 
       const profile = await getUserAIProfile(userId)
