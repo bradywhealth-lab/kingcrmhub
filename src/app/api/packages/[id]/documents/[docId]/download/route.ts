@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import {
   downloadFromObjectStorage,
+  isInlineStoragePath,
+  parseDataUrl,
   parseInlineStoragePath,
 } from '@/lib/object-storage'
 import { objectStorageErrorResponse } from '@/lib/object-storage-http'
@@ -44,7 +46,7 @@ export async function GET(
       }
 
       let buffer: Buffer
-      let contentType = document.fileType?.trim() || 'application/octet-stream'
+      let contentType = validMediaType(document.fileType) || 'application/octet-stream'
 
       if (document.storagePath) {
         const inline = parseInlineStoragePath(document.storagePath)
@@ -54,7 +56,19 @@ export async function GET(
           // stream it through the same auth-gated endpoint so the client
           // surface stays uniform.
           buffer = inline.buffer
-          contentType = inline.contentType || contentType
+          contentType = validMediaType(inline.contentType) || contentType
+        } else if (isInlineStoragePath(document.storagePath)) {
+          // Legacy dev-fallback marker (`inline:<object-path>`): the bytes
+          // were stored in the row's fileUrl as a data URL.
+          const legacy = parseDataUrl(document.fileUrl || '')
+          if (!legacy) {
+            return NextResponse.json(
+              { error: 'Document bytes are unavailable' },
+              { status: 404 },
+            )
+          }
+          buffer = legacy.buffer
+          contentType = validMediaType(legacy.contentType) || contentType
         } else {
           buffer = await downloadFromObjectStorage(document.storagePath)
         }
@@ -90,8 +104,28 @@ export async function GET(
 /**
  * RFC 5987 UTF-8 header-safe filename: ASCII fallback plus standard encoding
  * for anything else, so unicode names download correctly on every client.
+ * The `filename*` value percent-encodes every reserved character (`'`, `(`,
+ * `)`, `*` included) that RFC 5987 forbids unencoded.
  */
 function contentDisposition(fileName: string): string {
   const ascii = fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_')
-  return `attachment; filename="${ascii || 'document'}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+  return `attachment; filename="${ascii || 'document'}"; filename*=UTF-8''${encodeRFC5987(fileName)}`
+}
+
+/** Percent-encodes everything outside RFC 5987's attr-char set. */
+function encodeRFC5987(value: string): string {
+  return value
+    .split('')
+    .map((char) =>
+      /^[!#$&+.^_`|A-Za-z0-9-]$/.test(char) ? char : encodeURIComponent(char),
+    )
+    .join('')
+}
+
+/** True for a well-formed media type; invalid legacy values fall back. */
+function validMediaType(value?: string | null): string {
+  const trimmed = value?.trim() || ''
+  return /^[!#$%&'*+.^_`|~0-9A-Za-z-]+\/[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(trimmed)
+    ? trimmed
+    : ''
 }

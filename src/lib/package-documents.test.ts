@@ -3,6 +3,7 @@ import {
   packageDocumentDownloadPath,
   serializePackageDocument,
   serializePackageDocumentDetail,
+  serializePackageDocumentRow,
   type PackageDocumentDetail,
   type PackageDocumentListItem,
 } from './package-documents'
@@ -75,5 +76,34 @@ describe('package-document serializers — no public URL leakage (M173)', () => 
     expect(Object.hasOwn(out, 'fileUrl')).toBe(true)
     expect(JSON.stringify(out)).not.toContain('supabase.co')
     expect(JSON.stringify(out)).not.toContain('secret')
+  })
+
+  it('serializes a full Prisma row, replacing only the leaked fileUrl (M173)', () => {
+    const row = {
+      id: 'doc_2',
+      packageId: 'pkg_2',
+      organizationId: 'org_1',
+      type: 'brochure',
+      name: 'scope.pdf',
+      description: 'desc',
+      fileUrl: 'https://example.supabase.co/storage/v1/object/public/carrier-documents/old2.png',
+      storagePath: 'packages/org_1/pkg_2/2-scope.pdf',
+      fileType: 'application/pdf',
+      fileSize: 2048,
+      version: null,
+      extractedText: 'sensitive extracted text',
+      createdAt: new Date('2026-09-19T00:00:00Z'),
+      updatedAt: new Date('2026-09-19T00:00:00Z'),
+    }
+
+    const out = serializePackageDocumentRow(row)
+
+    expect(out.fileUrl).toBe('/api/packages/pkg_2/documents/doc_2/download')
+    expect(out.storagePath).toBe('packages/org_1/pkg_2/2-scope.pdf')
+    expect(out.extractedText).toBe('sensitive extracted text')
+    expect(out.organizationId).toBe('org_1')
+    expect(out.fileSize).toBe(2048)
+    expect(JSON.stringify(out)).not.toContain('supabase.co')
+    expect(JSON.stringify(out)).not.toContain('/storage/v1/object/public')
   })
 })

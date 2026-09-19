@@ -660,8 +660,14 @@ function CarrierLibrarySettings() {
   // M173: `fileUrl` from the API is a tenant-gated relative download path
   // — never a raw public bucket URL. The Open link must always hit the
   // auth-gated endpoint so unauthenticated fetches can never read files.
+  // Each row carries its own path (built from that document's own package
+  // id), so switching offers mid-request can never mix an old row with a
+  // new package id.
   const documentDownloadUrl = useCallback(
-    (doc: CarrierDoc) => `/api/packages/${encodeURIComponent(selectedCarrierId)}/documents/${encodeURIComponent(doc.id)}/download`,
+    (doc: CarrierDoc) =>
+      doc.fileUrl.startsWith('/api/packages/')
+        ? doc.fileUrl
+        : `/api/packages/${encodeURIComponent(selectedCarrierId)}/documents/${encodeURIComponent(doc.id)}/download`,
     [selectedCarrierId],
   )
   const offerPrepChecklist = [

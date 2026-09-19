@@ -22,6 +22,7 @@ import {
   deleteFromObjectStorage,
   downloadFromObjectStorage,
   isInlineStoragePath,
+  parseDataUrl,
   parseInlineStoragePath,
   uploadToObjectStorage,
 } from './object-storage'
@@ -135,13 +136,19 @@ describe('downloadFromObjectStorage — auth-gated byte retrieval (M173)', () =>
 
     const error = await downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf').catch((e: unknown) => e)
     expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    // Mirror the upload suite: the raw backend message must thread through
+    // as causeDetail so ops can diagnose the backend without the client
+    // ever seeing it.
+    expect((error as ObjectStorageUnavailableError).causeDetail).toBe('Bucket not found')
   })
 
   it('throws ObjectStorageUnavailableError when download returns no data', async () => {
     mockDownload.mockResolvedValueOnce({ data: null, error: null })
 
-    await expect(downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf')).rejects.toBeInstanceOf(
-      ObjectStorageUnavailableError,
+    const error = await downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    expect((error as ObjectStorageUnavailableError).causeDetail).toBe(
+      'download succeeded but returned no data',
     )
   })
 
@@ -187,6 +194,23 @@ describe('inline dev-fallback storage helpers (M173)', () => {
     expect(parseInlineStoragePath('packages/org_1/pkg_1/1-file.pdf')).toBeNull()
     expect(parseInlineStoragePath('inline:not-a-data-url')).toBeNull()
     expect(isInlineStoragePath('packages/org_1/pkg_1/1-file.pdf')).toBe(false)
+  })
+
+  it('decodes a plain data URL via parseDataUrl (legacy inline marker rows keep bytes in fileUrl)', () => {
+    const url = 'data:image/png;base64,aGVsbG8='
+    const parsed = parseDataUrl(url)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.contentType).toBe('image/png')
+    expect(parsed?.buffer.toString()).toBe('hello')
+    expect(parseDataUrl('not-a-data-url')).toBeNull()
+  })
+
+  it('classifies the legacy inline marker form separately from current inline paths', () => {
+    // Legacy dev-fallback rows stored `inline:<object-path>` in storagePath
+    // and the data URL in fileUrl. The marker is still inline (so the
+    // download route handles it) but has no parseable data URL itself.
+    expect(isInlineStoragePath('inline:packages/org_1/pkg_1/1-file.pdf')).toBe(true)
+    expect(parseInlineStoragePath('inline:packages/org_1/pkg_1/1-file.pdf')).toBeNull()
   })
 })
 

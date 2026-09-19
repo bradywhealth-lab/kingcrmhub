@@ -190,6 +190,76 @@ describe('GET /api/packages/[id]/documents/[docId]/download — auth-gated bytes
     expect(response.headers.get('content-type')).toBe('application/pdf')
   })
 
+  it('streams legacy inline-marker dev-fallback bytes (bytes live in fileUrl, M173)', async () => {
+    // Pre-M173 dev fallback rows: storagePath = `inline:<object-path>`
+    // marker, fileUrl = the actual data URL.
+    mockDb.packageDocument.findFirst.mockResolvedValue({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      organizationId: 'org_1',
+      fileUrl: 'data:image/png;base64,aGVsbG8=',
+      storagePath: 'inline:packages/org_1/pkg_1/1-file.pdf',
+      fileType: 'application/pdf',
+      name: 'dev.png',
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/packages/pkg_1/documents/doc_1/download'),
+      PARAMS,
+    )
+
+    expect(response.status).toBe(200)
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe('hello')
+    expect(response.headers.get('content-type')).toBe('image/png')
+    expect(mockDownloadFromObjectStorage).not.toHaveBeenCalled()
+  })
+
+  it('falls back to application/octet-stream when the stored media type is invalid', async () => {
+    mockDb.packageDocument.findFirst.mockResolvedValue({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      organizationId: 'org_1',
+      fileUrl: 'data:foo;base64,aGVsbG8=',
+      storagePath: 'inline:data:foo;base64,aGVsbG8=',
+      fileType: 'invalid media type',
+      name: 'legacy.bin',
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/packages/pkg_1/documents/doc_1/download'),
+      PARAMS,
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/octet-stream')
+  })
+
+  it('maps a storage not-configured failure to 503 with the safe shared message', async () => {
+    mockDb.packageDocument.findFirst.mockResolvedValue({
+      id: 'doc_1',
+      packageId: 'pkg_1',
+      organizationId: 'org_1',
+      fileUrl: 'legacy',
+      storagePath: 'packages/org_1/pkg_1/1-file.pdf',
+      fileType: 'application/pdf',
+      name: 'plan.pdf',
+    })
+    const { ObjectStorageNotConfiguredError } = await import('@/lib/object-storage')
+    mockDownloadFromObjectStorage.mockRejectedValueOnce(
+      new ObjectStorageNotConfiguredError(['SUPABASE_URL']),
+    )
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/packages/pkg_1/documents/doc_1/download'),
+      PARAMS,
+    )
+
+    expect(response.status).toBe(503)
+    const json = (await response.json()) as { error?: string }
+    expect(json.error).toBeTruthy()
+    expect(json.error).not.toContain('SUPABASE_URL')
+  })
+
   it('maps a storage backend failure to 502 with the safe shared message', async () => {
     mockDb.packageDocument.findFirst.mockResolvedValue({
       id: 'doc_1',

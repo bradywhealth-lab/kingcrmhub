@@ -76,8 +76,25 @@ export function isInlineStoragePath(storagePath: string): boolean {
 }
 
 /**
+ * Decodes a base64 data URL back to its original bytes and content type.
+ * Returns null when the value is not a data URL.
+ */
+export function parseDataUrl(
+  dataUrl: string,
+): { contentType: string; buffer: Buffer } | null {
+  const match = /^data:([^;,]+)?;base64,(.+)$/.exec(dataUrl)
+  if (!match) return null
+  return {
+    contentType: match[1] ?? '',
+    buffer: Buffer.from(match[2], 'base64'),
+  }
+}
+
+/**
  * Decodes an inline dev-fallback storage path (prefix + data URL) back to
- * its original bytes and content type. Returns null for non-inline paths.
+ * its original bytes and content type. Returns null for non-inline paths
+ * (including the legacy `inline:<object-path>` marker form, whose bytes
+ * live in the row's fileUrl — the download route handles that case).
  * The download route uses this to stream dev-fallback uploads through the
  * same auth-gated endpoint as real object-storage files.
  */
@@ -85,13 +102,7 @@ export function parseInlineStoragePath(
   storagePath: string,
 ): { contentType: string; buffer: Buffer } | null {
   if (!isInlineStoragePath(storagePath)) return null
-  const dataUrl = storagePath.slice(INLINE_STORAGE_PREFIX.length)
-  const match = /^data:([^;,]+)?;base64,(.+)$/.exec(dataUrl)
-  if (!match) return null
-  return {
-    contentType: match[1] ?? '',
-    buffer: Buffer.from(match[2], 'base64'),
-  }
+  return parseDataUrl(storagePath.slice(INLINE_STORAGE_PREFIX.length))
 }
 
 function buildInlineFallbackStoragePath(contentType: string, buffer: Buffer): string {

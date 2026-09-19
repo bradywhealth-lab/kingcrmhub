@@ -27,6 +27,23 @@ export type PackageDocumentListItem = {
   createdAt: Date
 }
 
+/**
+ * Serializes a full Prisma row while replacing the raw fileUrl (a legacy
+ * public bucket URL or the M173 empty placeholder) with the auth-gated
+ * download path. Used anywhere raw rows are embedded in a response (package
+ * detail) so no public bucket URL can leak through nested documents; every
+ * other field keeps its existing value.
+ */
+export function serializePackageDocumentRow<
+  T extends { id: string; packageId: string; fileUrl: string; [key: string]: unknown },
+>(document: T): Omit<T, 'fileUrl'> & { fileUrl: string } {
+  const { fileUrl: _fileUrl, ...rest } = document
+  return {
+    ...rest,
+    fileUrl: packageDocumentDownloadPath(document.packageId, document.id),
+  }
+}
+
 /** Serializes a document row for the package-documents list response. */
 export function serializePackageDocument(document: PackageDocumentListItem) {
   const { id, packageId, type, name, description, fileType, fileSize, version, createdAt } = document
@@ -49,7 +66,7 @@ export type PackageDocumentDetail = PackageDocumentListItem & {
   chunks: PackageDocumentChunk[]
 }
 
-/** Serializes a document row (with chunks) for the single-document response. */
+/** Serializes a document row for the single-document response. */
 export function serializePackageDocumentDetail(document: PackageDocumentDetail) {
   const {
     id,

@@ -134,7 +134,10 @@ describe('POST /api/packages/[id]/documents — adjudication: body parsing vs st
       id: 'doc_1',
       packageId: 'pkg_1',
       name: 'Adjudication PNG',
-      fileUrl: '/api/packages/pkg_1/documents/doc_1/download',
+      // M173: the row is created with an EMPTY persisted fileUrl (no public
+      // bucket URL is ever persisted). The response must still carry the
+      // auth-gated download path, so a serializer regression is caught here.
+      fileUrl: '',
     })
 
     const response = await POST(makeValidPngRequest(), PARAMS)
@@ -150,6 +153,16 @@ describe('POST /api/packages/[id]/documents — adjudication: body parsing vs st
     expect(uploadArg.originalFileName).toBe('probe.png')
     expect(uploadArg.contentType).toBe('image/png')
     expect(uploadArg.packageId).toBe('pkg_1')
+    // The gated path computation must be exercised end-to-end: the response
+    // document's fileUrl is derived from package + doc ids, never echoed
+    // from the persisted (empty/legacy) row value.
+    const json = (await response.json()) as {
+      document?: { fileUrl?: string }
+    }
+    expect(json.document?.fileUrl).toBe(
+      '/api/packages/pkg_1/documents/doc_1/download',
+    )
+    expect(json.document?.fileUrl?.startsWith('http')).toBe(false)
   })
 
   it('returns 502 with a safe message when the storage backend fails (bucket missing / permission denied)', async () => {
