@@ -103,4 +103,16 @@ describe('POST /api/leads/[id]/qualify — awaited org-context wrapper (t_648a0f
     expect(json.error).toBe('Failed to qualify lead')
     expect(text.length).toBeGreaterThan(0)
   })
+
+  it('(regression) handler DB rejection returns JSON 500 with body', async () => {
+    mockDb.lead.update.mockRejectedValueOnce(new Error('boom'))
+
+    const response = await qualifyLead()
+    const text = await response.text()
+    const json = JSON.parse(text)
+
+    expect(response.status).toBe(500)
+    expect(json.error).toBe('Failed to qualify lead')
+    expect(text.length).toBeGreaterThan(0)
+  })
 })
