@@ -9,6 +9,7 @@ import {
   STORAGE_UNCONFIGURED_MESSAGE,
   objectStorageErrorResponse,
 } from '@/lib/object-storage-http'
+import { serializePackageDocument } from '@/lib/package-documents'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ id: string }> }
@@ -27,12 +28,18 @@ const ALLOWED_UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jp
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id: packageId } = await params
-    return withRequestOrgContext(request, async (context) => {
+    // `return await` so a rejected handler promise reaches the catch below
+    // instead of leaking as a bare empty-body 500 (pitfall 41).
+    return await withRequestOrgContext(request, async (context) => {
       const documents = await db.packageDocument.findMany({
         where: { packageId, organizationId: context.organizationId },
         orderBy: { createdAt: 'desc' },
       })
-      return NextResponse.json({ documents })
+      return NextResponse.json({
+        documents: documents.map((document) =>
+          serializePackageDocument(document),
+        ),
+      })
     })
   } catch (error) {
     console.error('Package documents GET error:', error)
@@ -108,7 +115,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
-      const { fileUrl, storagePath } = await uploadToObjectStorage({
+      const { storagePath } = await uploadToObjectStorage({
         organizationId: context.organizationId,
         packageId,
         originalFileName: file.name,
@@ -126,7 +133,12 @@ export async function POST(request: NextRequest, { params }: Params) {
           type,
           name: name.trim() || file.name,
           description: description.trim() || null,
-          fileUrl,
+          // M173: never persist a public bucket URL. The gated download URL
+          // is derived by the serializers; storagePath stays server-side for
+          // delete/download. `fileUrl` is persisted only because the schema
+          // requires a String — it is never read (legacy rows keep their old
+          // value and are still served through the gated path).
+          fileUrl: '',
           storagePath,
           fileType: file.type || null,
           fileSize: file.size || null,
@@ -154,10 +166,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
       return NextResponse.json({
         document: {
-          id: document.id,
-          name: document.name,
-          type: document.type,
-          fileUrl: document.fileUrl,
+          ...serializePackageDocument(document),
           chunkCount,
         },
       })
