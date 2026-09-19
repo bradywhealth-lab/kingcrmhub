@@ -140,6 +140,7 @@ vi.mock('@/lib/rate-limit', () => ({
   enforceRateLimit: vi.fn(() => null),
 }))
 
+import { withRequestOrgContext } from '@/lib/request-context'
 import { GET, POST } from './route'
 
 function getList(url: string) {
@@ -403,6 +404,61 @@ describe('POST /api/leads — empty submit rejected 400 with NO insert (t_d2cbe6
 
   it('(f) handler DB rejection returns a JSON 500, never an opaque empty body', async () => {
     mockDb.lead.create.mockRejectedValueOnce(new Error('boom'))
+
+    const response = await postLead({ email: 'fail@example.com' })
+    const text = await response.text()
+    const json = JSON.parse(text)
+
+    expect(response.status).toBe(500)
+    expect(json.error).toBe('Failed to create lead')
+    expect(text.length).toBeGreaterThan(0)
+  })
+})
+
+describe('GET/POST /api/leads — awaited org-context wrapper, JSON 500 on rejection (t_648a0f58)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockDb.lead.create.mockResolvedValue({
+      id: 'lead-created',
+      createdAt: new Date(),
+      organizationId: 'org_1',
+    } as never)
+    mockDb.lead.update.mockResolvedValue({
+      id: 'lead-created',
+      aiScore: 30,
+      aiConfidence: 0.8,
+      aiLastAnalyzed: new Date(),
+      aiNextAction: 'Research lead and contact',
+    } as never)
+  })
+
+  it('(regression) GET wrapper rejection returns JSON 500, never an opaque empty body', async () => {
+    vi.mocked(withRequestOrgContext).mockRejectedValueOnce(new Error('boom'))
+
+    const response = await getList('http://localhost/api/leads')
+    const text = await response.text()
+    const json = JSON.parse(text)
+
+    expect(response.status).toBe(500)
+    expect(json.error).toBe('Failed to fetch leads')
+    expect(text.length).toBeGreaterThan(0)
+  })
+
+  it('(regression) POST wrapper rejection returns JSON 500, never an opaque empty body', async () => {
+    vi.mocked(withRequestOrgContext).mockRejectedValueOnce(new Error('boom'))
+
+    const response = await postLead({ email: 'fail@example.com' })
+    const text = await response.text()
+    const json = JSON.parse(text)
+
+    expect(response.status).toBe(500)
+    expect(json.error).toBe('Failed to create lead')
+    expect(text.length).toBeGreaterThan(0)
+  })
+
+  it('(regression) POST handler DB rejection returns JSON 500 with body', async () => {
+    mockDb.lead.create.mockRejectedValueOnce(new Error('boom'))
+
     const response = await postLead({ email: 'fail@example.com' })
     const text = await response.text()
     const json = JSON.parse(text)

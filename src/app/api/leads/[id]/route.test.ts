@@ -67,6 +67,13 @@ describe('PATCH /api/leads/[id] — awaited org-context wrapper (t_648a0f58)', (
     expect(response.status).toBe(200)
     expect(json.lead.firstName).toBe('Ada')
     expect(mockDb.lead.update).toHaveBeenCalledTimes(1)
+    // Org scoping must reach the lookup: a regression that drops the
+    // organizationId clause would leak another org's lead into the update.
+    expect(mockDb.lead.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'lead-1', organizationId: 'org_1' },
+      }),
+    )
   })
 
   it('404s when the lead is not in the organization', async () => {

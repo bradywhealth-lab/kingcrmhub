@@ -141,7 +141,6 @@ export async function POST(
 ) {
   try {
     return await withRequestOrgContext(request, async ({ organizationId }) => {
-      try {
       const { id } = await params
 
       // Fetch lead with related data
@@ -216,13 +215,6 @@ export async function POST(
         success: true,
         lead: updated
       })
-    } catch (error) {
-      console.error('Lead qualification error:', error)
-      return NextResponse.json(
-        { error: 'Failed to qualify lead' },
-        { status: 500 }
-      )
-    }
     })
   } catch (error) {
     console.error('Lead qualification error:', error)
