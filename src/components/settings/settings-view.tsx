@@ -645,7 +645,6 @@ function offerDocTypeLabel(type: string): string {
 function CarrierLibrarySettings() {
   type Carrier = { id: string; name: string; slug: string; website?: string | null; _count?: { documents: number } }
   type CarrierDoc = { id: string; type: string; name: string; fileUrl: string; createdAt: string; version?: string | null }
-
   const [carriers, setCarriers] = useState<Carrier[]>([])
   const [selectedCarrierId, setSelectedCarrierId] = useState<string>('')
   const [documents, setDocuments] = useState<CarrierDoc[]>([])
@@ -657,6 +656,14 @@ function CarrierLibrarySettings() {
   const [uploadVersion, setUploadVersion] = useState('')
   const [docFilter, setDocFilter] = useState('all')
   const [loading, setLoading] = useState(false)
+
+  // M173: `fileUrl` from the API is a tenant-gated relative download path
+  // — never a raw public bucket URL. The Open link must always hit the
+  // auth-gated endpoint so unauthenticated fetches can never read files.
+  const documentDownloadUrl = useCallback(
+    (doc: CarrierDoc) => `/api/packages/${encodeURIComponent(selectedCarrierId)}/documents/${encodeURIComponent(doc.id)}/download`,
+    [selectedCarrierId],
+  )
   const offerPrepChecklist = [
     'Service scope summary (deliverables, timeline)',
     'Pricing tiers and payment terms',
@@ -856,7 +863,7 @@ function CarrierLibrarySettings() {
                   <p className="truncate text-sm font-medium text-black">{doc.name}</p>
                   <p className="text-xs text-gray-500">{offerDocTypeLabel(doc.type)} {doc.version ? `• ${doc.version}` : ''}</p>
                 </div>
-                <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-[var(--teal-deep)] hover:underline">Open</a>
+                <a href={documentDownloadUrl(doc)} target="_blank" rel="noreferrer" className="text-sm text-[var(--teal-deep)] hover:underline">Open</a>
               </motion.div>
             ))}
           </div>

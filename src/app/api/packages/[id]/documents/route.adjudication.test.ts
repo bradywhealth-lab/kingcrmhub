@@ -132,8 +132,9 @@ describe('POST /api/packages/[id]/documents — adjudication: body parsing vs st
     })
     mockDb.packageDocument.create.mockResolvedValueOnce({
       id: 'doc_1',
+      packageId: 'pkg_1',
       name: 'Adjudication PNG',
-      fileUrl: 'https://example.supabase.co/x',
+      fileUrl: '/api/packages/pkg_1/documents/doc_1/download',
     })
 
     const response = await POST(makeValidPngRequest(), PARAMS)
