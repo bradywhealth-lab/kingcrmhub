@@ -36,6 +36,19 @@ describe('canonical billing catalog (reconciled vocabulary)', () => {
     expect(isPlanId('elite')).toBe(false)
   })
 
+  it('rejects inherited object keys (Map lookup, not object indexing)', () => {
+    // Regression pin for the PLAN_BY_ID Map: `value in obj` would accept
+    // inherited prototype keys and getPlan would return Object.prototype
+    // functions as plan definitions. A refactor back to object indexing
+    // must fail CI.
+    expect(isPlanId('toString')).toBe(false)
+    expect(isPlanId('__proto__')).toBe(false)
+    expect(isPlanId('constructor')).toBe(false)
+    expect(getPlan('toString')).toBeNull()
+    expect(getPlan('__proto__')).toBeNull()
+    expect(getPlan('constructor')).toBeNull()
+  })
+
   it('ranks entitlement from free -> enterprise', () => {
     expect(planAtLeast('free', 'free')).toBe(true)
     expect(planAtLeast('free', 'starter')).toBe(false)

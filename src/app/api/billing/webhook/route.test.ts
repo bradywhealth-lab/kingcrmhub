@@ -125,6 +125,73 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     expect(call.data.plan).toBeUndefined()
   })
 
+  it('sets org plan on customer.subscription.created when the status is active', async () => {
+    // Stripe creates subscriptions directly in active/trialing for instant card
+    // payments and may emit ONLY customer.subscription.created — no updated
+    // event follows. The plan grant path must cover it or first-time buyers
+    // never get entitled (cubic P1 round 2).
+    mockUpdate.mockResolvedValue({ plan: 'enterprise', status: 'active' })
+    const previous = process.env.STRIPE_PRICE_ELITE_MONTHLY
+    process.env.STRIPE_PRICE_ELITE_MONTHLY = 'price_elite_test'
+    try {
+      const event = {
+        id: 'evt_2c',
+        type: 'customer.subscription.created',
+        created: 1700000001,
+        data: {
+          object: {
+            id: 'sub_1',
+            status: 'active',
+            customer: 'cus_1',
+            metadata: { organizationId: 'org_1' },
+            items: { data: [{ price: { id: 'price_elite_test' } }] },
+          },
+        },
+      }
+      const res = await POST(webhookRequest(event))
+      expect(res.status).toBe(200)
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: 'org_1' },
+        data: expect.objectContaining({
+          stripeSubscriptionId: 'sub_1',
+          stripeSubscriptionStatus: 'active',
+          plan: 'enterprise',
+        }),
+      })
+    } finally {
+      if (previous === undefined) delete process.env.STRIPE_PRICE_ELITE_MONTHLY
+      else process.env.STRIPE_PRICE_ELITE_MONTHLY = previous
+    }
+  })
+
+  it('ignores stale- or out-of-order subscription events without DB writes', async () => {
+    // Guard negative paths: an event for a subscription that is no longer the
+    // org's current one (or older than the last applied state) must never
+    // overwrite org state, and must still acknowledge with 200.
+    mockFind.mockResolvedValue({
+      stripeSubscriptionId: 'sub_NEWER',
+      stripeSubscriptionStatus: 'active',
+      planUpdatedAt: new Date(1700000010 * 1000),
+    })
+    const event = {
+      id: 'evt_stale',
+      type: 'customer.subscription.updated',
+      created: 1700000001,
+      data: {
+        object: {
+          id: 'sub_OLD',
+          status: 'canceled',
+          customer: 'cus_1',
+          metadata: { organizationId: 'org_1' },
+          items: { data: [{ price: { id: 'price_any' } }] },
+        },
+      },
+    }
+    const res = await POST(webhookRequest(event))
+    expect(res.status).toBe(200)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
   it('sets org plan on customer.subscription.updated when the status is active', async () => {
     mockUpdate.mockResolvedValue({ plan: 'enterprise', status: 'active' })
     const previous = process.env.STRIPE_PRICE_ELITE_MONTHLY

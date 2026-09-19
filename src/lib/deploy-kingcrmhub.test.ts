@@ -215,6 +215,23 @@ describe('KingCRMhub deploy hardening', () => {
     expect(script).toContain('RAISE EXCEPTION')
   })
 
+  it('pins the four Stripe billing columns in the schema verification gate', () => {
+    // Round-2 cubic pin: a future commit that drops any of the Stripe column
+    // rows from the VERIFY ORG SCHEMA ALIGNMENT VALUES list must fail CI.
+    const script = readDeployScript()
+
+    expect(script).toContain("'stripeCustomerId'")
+    expect(script).toContain("'stripeSubscriptionId'")
+    expect(script).toContain("'stripeSubscriptionStatus'")
+    expect(script).toContain("'planUpdatedAt'")
+    // Four nullable TEXT columns + one TIMESTAMP(3) column, all no-default,
+    // matching migration 20260919_add_stripe_billing and schema.prisma.
+    expect(script).toContain("('stripeCustomerId', 'text', 'YES', NULL)")
+    expect(script).toContain("('stripeSubscriptionId', 'text', 'YES', NULL)")
+    expect(script).toContain("('stripeSubscriptionStatus', 'text', 'YES', NULL)")
+    expect(script).toContain("('planUpdatedAt', 'timestamp without time zone', 'YES', NULL)")
+  })
+
   it('uses the database-ready endpoint for replacement and rollback gates', () => {
     const script = readDeployScript()
 

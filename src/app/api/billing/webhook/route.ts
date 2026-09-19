@@ -8,7 +8,8 @@ import { planIdFromSubscription, syncSubscriptionToOrg } from '@/lib/billing/sub
  * Stripe webhook — subscription lifecycle sync.
  *
  * Handled events:
- * - checkout.session.completed   -> link customer/subscription + set org plan
+ * - checkout.session.completed    -> link customer/subscription (no plan grant)
+ * - customer.subscription.created -> grant plan when status is trialing/active
  * - customer.subscription.updated -> follow plan changes (upgrades/downgrades)
  * - customer.subscription.deleted -> mark canceled (entitlement stays until
  *                                    past_due/unpaid or a cancel job runs)
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
         break
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription

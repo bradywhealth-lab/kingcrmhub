@@ -110,10 +110,17 @@ export async function POST(request: Request) {
       }
 
       // Repeated paid-plan clicks must not mint multiple billable subscriptions.
-      // If the org already has an active/pending subscription, refuse a second
-      // checkout (Stripe itself dedupes identical sessions, but the guard here
-      // keeps the API honest).
-      if (existing.stripeSubscriptionId && existing.stripeSubscriptionStatus !== 'canceled') {
+      // Block only while a subscription could still bill (trialing/active/
+      // past_due/unpaid). incomplete / incomplete_expired / unknown are either
+      // pre-billing or failed-start states — Stripe docs: incomplete_expired
+      // "don't bill customers", so those must stay retryable or a user whose
+      // initial payment failed is locked out of resubscribing forever.
+      const BILLABLE_SUBSCRIPTION_STATUSES = new Set(['trialing', 'active', 'past_due', 'unpaid'])
+      if (
+        existing.stripeSubscriptionId &&
+        existing.stripeSubscriptionStatus &&
+        BILLABLE_SUBSCRIPTION_STATUSES.has(existing.stripeSubscriptionStatus)
+      ) {
         return NextResponse.json(
           { error: 'Your organization already has an active subscription. Manage it from the billing page.' },
           { status: 409 },
@@ -128,6 +135,20 @@ export async function POST(request: Request) {
       // A customer created against test keys cannot be reused once live keys are
       // activated, so each mode maintains its own customer ID namespace.
       let customerId: string | null = perModeCustomers[stripeModeName] ?? null
+
+      // Backfill: customers created before per-mode namespacing were always
+      // test-mode (live was never activated). Reuse the column value in test
+      // mode to avoid orphaning it, and persist the namespaced entry; never
+      // reuse a column value in live mode (cross-mode customers must not mix).
+      if (!customerId && stripeModeName === 'test' && existing.stripeCustomerId) {
+        customerId = existing.stripeCustomerId
+        await db.organization.update({
+          where: { id: organizationId },
+          data: {
+            settings: { ...settings, stripeCustomers: { ...perModeCustomers, test: customerId } },
+          },
+        })
+      }
 
       const email = user.email ?? undefined
       if (!customerId && email) {

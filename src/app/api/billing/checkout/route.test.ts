@@ -108,7 +108,8 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
   it('returns 409 when the org already has a live subscription', async () => {
     mockActive.mockReturnValue(true)
     mockMode.mockReturnValue('test')
-    mockStripe.mockReturnValue(buildStripeClient().client)
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
     mockFindOrg.mockResolvedValue({
       stripeCustomerId: 'cus_existing',
       stripeSubscriptionId: 'sub_existing',
@@ -117,7 +118,56 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     })
 
     const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    const json = await response.json()
     expect(response.status).toBe(409)
+    expect(json.error).toContain('already has an active subscription')
+    // The whole point of the guard: no second session, no second customer.
+    expect(sessionsCreate).not.toHaveBeenCalled()
+    expect(customersCreate).not.toHaveBeenCalled()
+  })
+
+  it('allows re-checkout after an incomplete_expired (never-billed) subscription', async () => {
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: 'cus_existing',
+      stripeSubscriptionId: 'sub_expired',
+      stripeSubscriptionStatus: 'incomplete_expired',
+      settings: { stripeCustomers: { test: 'cus_existing' } },
+    })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    expect(response.status).toBe(200)
+    expect(sessionsCreate).toHaveBeenCalledTimes(1)
+    expect(customersCreate).not.toHaveBeenCalled()
+  })
+
+  it('backfills a legacy stripeCustomerId into the per-mode map instead of orphaning it', async () => {
+    mockActive.mockReturnValue(true)
+    mockMode.mockReturnValue('test')
+    const { client, customersCreate, sessionsCreate } = buildStripeClient()
+    mockStripe.mockReturnValue(client)
+    mockFindOrg.mockResolvedValue({
+      stripeCustomerId: 'cus_legacy',
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      settings: null,
+    })
+
+    const response = await POST(post({ planId: 'pro', interval: 'monthly' }))
+    expect(response.status).toBe(200)
+    expect(customersCreate).not.toHaveBeenCalled()
+    expect(sessionsCreate.mock.calls[0]![0]).toMatchObject({ customer: 'cus_legacy' })
+    expect(mockUpdateOrg).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: expect.objectContaining({
+        settings: expect.objectContaining({
+          stripeCustomers: { test: 'cus_legacy' },
+        }),
+      }),
+    })
   })
 
   it('returns a checkout URL when test mode and price are configured, pinned to the env-price contract', async () => {
