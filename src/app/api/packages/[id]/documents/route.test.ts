@@ -26,6 +26,7 @@ vi.mock('@/lib/request-context', () => ({
 
 let nextUploadBuffer: Buffer | null = null
 let nextUploadName = ''
+let nextDeletedPath: string | null = null
 
 vi.mock('@/lib/object-storage', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/object-storage')>()
@@ -35,6 +36,9 @@ vi.mock('@/lib/object-storage', async (importOriginal) => {
       nextUploadBuffer = input.buffer
       nextUploadName = input.originalFileName
       return { storagePath: 'packages/org_1/pkg_1/test-contract.pdf' }
+    }),
+    deleteFromObjectStorage: vi.fn(async (storagePath: string) => {
+      nextDeletedPath = storagePath
     }),
   }
 })
@@ -115,6 +119,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   nextUploadBuffer = null
   nextUploadName = ''
+  nextDeletedPath = null
   // Storage deliberately unconfigured for the degradation tests (audit G6 scenario).
   delete process.env.SUPABASE_URL
   delete process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -219,16 +224,18 @@ describe('POST /api/packages/[id]/documents — text extraction (M159 regression
 
     expect(response.status).toBe(200)
     const json = (await response.json()) as {
-      document: { chunkCount?: number; name?: string }
+      document: { chunkCount?: number }
     }
 
-    expect(json.document.name).toBe('contract.pdf')
     expect(json.document.chunkCount ?? 0).toBeGreaterThan(0)
 
     // The document row must carry extracted text and an indexedAt timestamp.
     const createArgs = mockDb.packageDocument.create.mock.calls[0]?.[0] as {
-      data?: { extractedText?: string | null; indexedAt?: Date | null }
+      data?: { name?: string; extractedText?: string | null; indexedAt?: Date | null }
     }
+    // The route persists the form's name field ('Test document'), not the
+    // mocked row's name — assert the create argument, not the mock return.
+    expect(createArgs?.data?.name).toBe('Test document')
     const savedText = createArgs?.data?.extractedText ?? ''
     expect(savedText.length).toBeGreaterThan(0)
     expect(savedText).toContain('Sentinel parse test contract.')
@@ -306,6 +313,29 @@ describe('POST /api/packages/[id]/documents — text extraction (M159 regression
 
     expect(nextUploadName).toBe('contract3.pdf')
     expect(nextUploadBuffer).not.toBeNull()
-    expect(nextUploadBuffer!.byteLength).toBe(pdfBytes.byteLength)
+    // Byte-for-byte comparison, not just length — same-length corruption
+    // would slip past a length-only assertion.
+    expect(nextUploadBuffer).toEqual(Buffer.from(pdfBytes))
+  })
+
+  it('returns 422 and rolls back the upload when PDF extraction fails (no fake-good 200)', async () => {
+    setupStorageEnv()
+    mockDb.servicePackage.findFirst.mockResolvedValueOnce({ id: 'pkg_1', organizationId: 'org_1' })
+
+    // Definitely-not-a-PDF bytes: pdfjs throws while parsing, which the
+    // route maps to PdfExtractionError → 422 + storage rollback.
+    const junk = new TextEncoder().encode('this is definitely not a pdf at all')
+    const response = await POST(
+      makeRequest('broken.pdf', 'application/pdf', junk),
+      { params: Promise.resolve({ id: 'pkg_1' }) },
+    )
+
+    expect(response.status).toBe(422)
+    const json = (await response.json()) as { error?: string }
+    expect(json.error).toContain('Failed to extract text')
+    // No document row is persisted for a failed extraction.
+    expect(mockDb.packageDocument.create).not.toHaveBeenCalled()
+    // The uploaded blob is rolled back so no orphaned object stays behind.
+    expect(nextDeletedPath).toBe('packages/org_1/pkg_1/test-contract.pdf')
   })
 })
