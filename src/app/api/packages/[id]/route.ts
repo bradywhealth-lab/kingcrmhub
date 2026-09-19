@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { isUniqueConstraintViolation } from '@/lib/prisma-errors'
+import { serializePackageDocumentRow } from '@/lib/package-documents'
 
 const updatePackageSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -35,7 +36,14 @@ export async function GET(
         return NextResponse.json({ error: 'Service package not found' }, { status: 404 })
       }
 
-      return NextResponse.json({ servicePackage })
+      return NextResponse.json({
+        servicePackage: {
+          ...servicePackage,
+          packageDocuments: servicePackage.packageDocuments.map((document) =>
+            serializePackageDocumentRow(document),
+          ),
+        },
+      })
     })
   } catch (error) {
     console.error('ServicePackage GET error:', error)

@@ -68,8 +68,45 @@ function getStorageClient() {
   })
 }
 
-function buildInlineFallbackFileUrl(contentType: string, buffer: Buffer): string {
-  return `data:${contentType || 'application/octet-stream'};base64,${buffer.toString('base64')}`
+const INLINE_STORAGE_PREFIX = 'inline:'
+
+/** True when a storage path refers to inline dev-fallback storage. */
+export function isInlineStoragePath(storagePath: string): boolean {
+  return storagePath.startsWith(INLINE_STORAGE_PREFIX)
+}
+
+/**
+ * Decodes a base64 data URL back to its original bytes and content type.
+ * Returns null when the value is not a data URL.
+ */
+export function parseDataUrl(
+  dataUrl: string,
+): { contentType: string; buffer: Buffer } | null {
+  const match = /^data:([^;,]+)?;base64,(.+)$/.exec(dataUrl)
+  if (!match) return null
+  return {
+    contentType: match[1] ?? '',
+    buffer: Buffer.from(match[2], 'base64'),
+  }
+}
+
+/**
+ * Decodes an inline dev-fallback storage path (prefix + data URL) back to
+ * its original bytes and content type. Returns null for non-inline paths
+ * (including the legacy `inline:<object-path>` marker form, whose bytes
+ * live in the row's fileUrl — the download route handles that case).
+ * The download route uses this to stream dev-fallback uploads through the
+ * same auth-gated endpoint as real object-storage files.
+ */
+export function parseInlineStoragePath(
+  storagePath: string,
+): { contentType: string; buffer: Buffer } | null {
+  if (!isInlineStoragePath(storagePath)) return null
+  return parseDataUrl(storagePath.slice(INLINE_STORAGE_PREFIX.length))
+}
+
+function buildInlineFallbackStoragePath(contentType: string, buffer: Buffer): string {
+  return `inline:data:${contentType || 'application/octet-stream'};base64,${buffer.toString('base64')}`
 }
 
 export async function uploadToObjectStorage(input: {
@@ -79,7 +116,7 @@ export async function uploadToObjectStorage(input: {
   originalFileName: string
   contentType: string
   buffer: Buffer
-}): Promise<{ fileUrl: string; storagePath: string }> {
+}): Promise<{ storagePath: string }> {
   const missingEnv = findMissingObjectStorageEnv()
   if (missingEnv.length > 0) {
     throw new ObjectStorageNotConfiguredError(missingEnv)
@@ -100,13 +137,7 @@ export async function uploadToObjectStorage(input: {
       throw new ObjectStorageUnavailableError(uploadResult.error.message)
     }
 
-    const { data } = client.storage.from(bucket).getPublicUrl(storagePath)
-    if (!data?.publicUrl) {
-      throw new ObjectStorageUnavailableError('upload succeeded but no public URL was returned')
-    }
-
     return {
-      fileUrl: data.publicUrl,
       storagePath,
     }
   } catch (error) {
@@ -128,14 +159,50 @@ export async function uploadToObjectStorage(input: {
     }
     console.error('Object storage unavailable, using inline dev fallback:', error)
     return {
-      fileUrl: buildInlineFallbackFileUrl(input.contentType, input.buffer),
-      storagePath: `inline:${storagePath}`,
+      storagePath: buildInlineFallbackStoragePath(input.contentType, input.buffer),
     }
   }
 }
 
+/**
+ * Reads the object's bytes from object storage for an auth-gated download
+ * route. M173: downloads are proxied server-side so files in a private
+ * bucket are never exposed through raw public URLs — clients receive
+ * bytes only through the tenant-checked endpoint.
+ */
+export async function downloadFromObjectStorage(storagePath: string): Promise<Buffer> {
+  if (isInlineStoragePath(storagePath)) {
+    throw new Error(`Cannot download an inline fallback path through object storage: ${storagePath}`)
+  }
+  const missingEnv = findMissingObjectStorageEnv()
+  if (missingEnv.length > 0) {
+    throw new ObjectStorageNotConfiguredError(missingEnv)
+  }
+  const bucket = getRequiredEnv('SUPABASE_STORAGE_BUCKET')
+  try {
+    const client = getStorageClient()
+    const downloadResult = await client.storage.from(bucket).download(storagePath)
+    if (downloadResult.error) {
+      throw new ObjectStorageUnavailableError(downloadResult.error.message)
+    }
+    if (!downloadResult.data) {
+      throw new ObjectStorageUnavailableError('download succeeded but returned no data')
+    }
+    return Buffer.from(await downloadResult.data.arrayBuffer())
+  } catch (error) {
+    // Normalize rejects AND typed-throw exits to the typed error so routes
+    // map every storage outage to 502 (same contract as delete).
+    throw error instanceof ObjectStorageUnavailableError
+      ? error
+      : new ObjectStorageUnavailableError(
+          error instanceof Error ? error.message : String(error),
+          { cause: error },
+        )
+  }
+}
+
 export async function deleteFromObjectStorage(storagePath: string): Promise<void> {
-  if (storagePath.startsWith('inline:')) return
+  if (isInlineStoragePath(storagePath)) return
   const missingEnv = findMissingObjectStorageEnv()
   if (missingEnv.length > 0) {
     throw new ObjectStorageNotConfiguredError(missingEnv)

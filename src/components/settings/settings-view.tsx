@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Bot,
@@ -35,6 +35,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { AISettingsPanel } from '@/components/settings/ai-settings-panel'
+import { packageDocumentDownloadPath } from '@/lib/package-documents'
 
 
 function OrganizationSettingsPanel() {
@@ -644,8 +645,7 @@ function offerDocTypeLabel(type: string): string {
 
 function CarrierLibrarySettings() {
   type Carrier = { id: string; name: string; slug: string; website?: string | null; _count?: { documents: number } }
-  type CarrierDoc = { id: string; type: string; name: string; fileUrl: string; createdAt: string; version?: string | null }
-
+  type CarrierDoc = { id: string; packageId: string; type: string; name: string; fileUrl: string; createdAt: string; version?: string | null }
   const [carriers, setCarriers] = useState<Carrier[]>([])
   const [selectedCarrierId, setSelectedCarrierId] = useState<string>('')
   const [documents, setDocuments] = useState<CarrierDoc[]>([])
@@ -657,6 +657,14 @@ function CarrierLibrarySettings() {
   const [uploadVersion, setUploadVersion] = useState('')
   const [docFilter, setDocFilter] = useState('all')
   const [loading, setLoading] = useState(false)
+  const selectedCarrierIdRef = useRef('')
+
+  // M173: `fileUrl` from the API is a tenant-gated relative download path
+  // — never a raw public bucket URL. The Open link uses the shared
+  // packageDocumentDownloadPath helper, built from the document's OWN
+  // packageId, so switching offers mid-request can never mix an old row
+  // with a new package id (cubic P2: race combined new selectedCarrierId
+  // with a row from the previous offer -> 404).
   const offerPrepChecklist = [
     'Service scope summary (deliverables, timeline)',
     'Pricing tiers and payment terms',
@@ -677,10 +685,17 @@ function CarrierLibrarySettings() {
   const loadDocuments = useCallback(async () => {
     if (!selectedCarrierId) {
       setDocuments([])
+      selectedCarrierIdRef.current = ''
       return
     }
-    const res = await fetch(`/api/packages/${selectedCarrierId}/documents`)
+    // Stale-guard: remember the offer this request belongs to and drop
+    // results that arrive after the user switched offers, so an older
+    // offer's rows can never render under the new selection.
+    selectedCarrierIdRef.current = selectedCarrierId
+    const requestPackageId = selectedCarrierId
+    const res = await fetch(`/api/packages/${requestPackageId}/documents`)
     const data = await res.json()
+    if (selectedCarrierIdRef.current !== requestPackageId) return
     if (!data.error) setDocuments(data.documents || [])
   }, [selectedCarrierId])
 
@@ -763,7 +778,14 @@ function CarrierLibrarySettings() {
               <button
                 type="button"
                 key={carrier.id}
-                onClick={() => setSelectedCarrierId(carrier.id)}
+                onClick={() => {
+                  // Switching offers: clear the previous offer's rows
+                  // synchronously so a stale row can never render under the
+                  // new selection while the fetch for it is in flight.
+                  selectedCarrierIdRef.current = carrier.id
+                  setDocuments([])
+                  setSelectedCarrierId(carrier.id)
+                }}
                 className={cn(
                   'w-full rounded-lg border p-3 text-left',
                   selectedCarrierId === carrier.id ? 'border-[var(--teal-deep)] bg-[var(--teal-tint)]' : 'border-[var(--ink-line)] bg-[var(--paper)]',
@@ -856,7 +878,7 @@ function CarrierLibrarySettings() {
                   <p className="truncate text-sm font-medium text-black">{doc.name}</p>
                   <p className="text-xs text-gray-500">{offerDocTypeLabel(doc.type)} {doc.version ? `• ${doc.version}` : ''}</p>
                 </div>
-                <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-[var(--teal-deep)] hover:underline">Open</a>
+                <a href={packageDocumentDownloadPath(doc.packageId, doc.id)} target="_blank" rel="noreferrer" className="text-sm text-[var(--teal-deep)] hover:underline">Open</a>
               </motion.div>
             ))}
           </div>

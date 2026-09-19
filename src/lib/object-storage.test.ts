@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockUpload = vi.hoisted(() => vi.fn())
 const mockRemove = vi.hoisted(() => vi.fn())
-const mockGetPublicUrl = vi.hoisted(() => vi.fn())
+const mockDownload = vi.hoisted(() => vi.fn())
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
@@ -10,7 +10,7 @@ vi.mock('@supabase/supabase-js', () => ({
       from: () => ({
         upload: mockUpload,
         remove: mockRemove,
-        getPublicUrl: mockGetPublicUrl,
+        download: mockDownload,
       }),
     },
   })),
@@ -20,6 +20,10 @@ import {
   ObjectStorageNotConfiguredError,
   ObjectStorageUnavailableError,
   deleteFromObjectStorage,
+  downloadFromObjectStorage,
+  isInlineStoragePath,
+  parseDataUrl,
+  parseInlineStoragePath,
   uploadToObjectStorage,
 } from './object-storage'
 
@@ -65,13 +69,18 @@ describe('uploadToObjectStorage — backend failure classification (production)'
     expect(error).not.toBeInstanceOf(ObjectStorageNotConfiguredError)
   })
 
-  it('throws ObjectStorageUnavailableError when upload succeeds but no public URL is returned', async () => {
-    mockUpload.mockResolvedValueOnce({ data: { path: 'p' }, error: null })
-    mockGetPublicUrl.mockReturnValueOnce({ data: null })
+  it('returns only the storage path on success — no public URL is ever generated (M173)', async () => {
+    // M173: upload must never hand a public-URL string to callers. The
+    // download path is a server-side, auth-gated proxy; storagePath alone
+    // is sufficient for delete and download.
+    const uploadArg = { ...UPLOAD_INPUT, buffer: Buffer.from('png-bytes') }
+    mockUpload.mockResolvedValueOnce({ data: { path: 'ignored' }, error: null })
 
-    await expect(uploadToObjectStorage(UPLOAD_INPUT)).rejects.toBeInstanceOf(
-      ObjectStorageUnavailableError,
-    )
+    const result = await uploadToObjectStorage(uploadArg)
+
+    expect(result.storagePath).toMatch(/^packages\/org_1\/pkg_1\/\d+-sample\.png$/)
+    expect(Object.hasOwn(result, 'fileUrl')).toBe(false)
+    expect(mockUpload).toHaveBeenCalledTimes(1)
   })
 
   it('keeps throwing ObjectStorageNotConfiguredError when env vars are missing', async () => {
@@ -108,6 +117,100 @@ describe('uploadToObjectStorage — backend failure classification (production)'
       expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
       expect((error as ObjectStorageUnavailableError).causeDetail).toBe('Bucket not found')
     }
+  })
+})
+
+describe('downloadFromObjectStorage — auth-gated byte retrieval (M173)', () => {
+  it('returns the Blob bytes as a Buffer for a valid download', async () => {
+    const blob = new Blob(['pdf-bytes'], { type: 'application/pdf' })
+    mockDownload.mockResolvedValueOnce({ data: blob, error: null })
+
+    const buffer = await downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf')
+
+    expect(buffer.toString()).toBe('pdf-bytes')
+    expect(mockDownload).toHaveBeenCalledWith('packages/org_1/pkg_1/1-file.pdf')
+  })
+
+  it('throws ObjectStorageUnavailableError when the backend rejects the download', async () => {
+    mockDownload.mockResolvedValueOnce({ data: null, error: { message: 'Bucket not found' } })
+
+    const error = await downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    // Mirror the upload suite: the raw backend message must thread through
+    // as causeDetail so ops can diagnose the backend without the client
+    // ever seeing it.
+    expect((error as ObjectStorageUnavailableError).causeDetail).toBe('Bucket not found')
+  })
+
+  it('throws ObjectStorageUnavailableError when download returns no data', async () => {
+    mockDownload.mockResolvedValueOnce({ data: null, error: null })
+
+    const error = await downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    expect((error as ObjectStorageUnavailableError).causeDetail).toBe(
+      'download succeeded but returned no data',
+    )
+  })
+
+  it('normalizes network rejections to ObjectStorageUnavailableError with cause preserved', async () => {
+    const original = new TypeError('fetch failed')
+    mockDownload.mockRejectedValueOnce(original)
+
+    const error = await downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ObjectStorageUnavailableError)
+    expect((error as Error & { cause?: unknown }).cause).toBe(original)
+  })
+
+  it('keeps throwing ObjectStorageNotConfiguredError when env vars are missing', async () => {
+    delete process.env.SUPABASE_URL
+
+    await expect(downloadFromObjectStorage('packages/org_1/pkg_1/1-file.pdf')).rejects.toBeInstanceOf(
+      ObjectStorageNotConfiguredError,
+    )
+    expect(mockDownload).not.toHaveBeenCalled()
+  })
+
+  it('refuses inline fallback paths — they are streamed by the route, not object storage', async () => {
+    mockDownload.mockResolvedValueOnce({ data: new Blob(['x']), error: null })
+
+    await expect(
+      downloadFromObjectStorage('inline:data:image/png;base64,aGVsbG8='),
+    ).rejects.toThrow(/inline fallback path/i)
+    expect(mockDownload).not.toHaveBeenCalled()
+  })
+})
+
+describe('inline dev-fallback storage helpers (M173)', () => {
+  it('classifies and decodes inline storage paths', () => {
+    const path = 'inline:data:image/png;base64,aGVsbG8='
+    expect(isInlineStoragePath(path)).toBe(true)
+    const parsed = parseInlineStoragePath(path)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.contentType).toBe('image/png')
+    expect(parsed?.buffer.toString()).toBe('hello')
+  })
+
+  it('returns null for real object-storage paths and malformed inline paths', () => {
+    expect(parseInlineStoragePath('packages/org_1/pkg_1/1-file.pdf')).toBeNull()
+    expect(parseInlineStoragePath('inline:not-a-data-url')).toBeNull()
+    expect(isInlineStoragePath('packages/org_1/pkg_1/1-file.pdf')).toBe(false)
+  })
+
+  it('decodes a plain data URL via parseDataUrl (legacy inline marker rows keep bytes in fileUrl)', () => {
+    const url = 'data:image/png;base64,aGVsbG8='
+    const parsed = parseDataUrl(url)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.contentType).toBe('image/png')
+    expect(parsed?.buffer.toString()).toBe('hello')
+    expect(parseDataUrl('not-a-data-url')).toBeNull()
+  })
+
+  it('classifies the legacy inline marker form separately from current inline paths', () => {
+    // Legacy dev-fallback rows stored `inline:<object-path>` in storagePath
+    // and the data URL in fileUrl. The marker is still inline (so the
+    // download route handles it) but has no parseable data URL itself.
+    expect(isInlineStoragePath('inline:packages/org_1/pkg_1/1-file.pdf')).toBe(true)
+    expect(parseInlineStoragePath('inline:packages/org_1/pkg_1/1-file.pdf')).toBeNull()
   })
 })
 

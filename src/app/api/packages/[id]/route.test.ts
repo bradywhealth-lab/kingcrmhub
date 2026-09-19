@@ -32,7 +32,7 @@ vi.mock('@/lib/rate-limit', () => ({
   enforceRateLimit: vi.fn(() => null),
 }))
 
-import { PATCH } from './route'
+import { GET, PATCH } from './route'
 
 function makePatch(body: unknown): NextRequest {
   return new NextRequest('http://localhost/api/packages/pkg_1', {
@@ -65,6 +65,47 @@ beforeEach(() => {
     organizationId: 'org_1',
     name: 'Monthly Retainer',
     slug: 'monthly-retainer',
+  })
+})
+
+describe('GET /api/packages/[id] — nested documents never leak raw fileUrl (M173)', () => {
+  it('serializes nested package documents with gated download paths', async () => {
+    mockDb.servicePackage.findFirst.mockResolvedValue({
+      id: 'pkg_1',
+      organizationId: 'org_1',
+      name: 'Monthly Retainer',
+      slug: 'monthly-retainer',
+      packageDocuments: [
+        {
+          id: 'doc_1',
+          packageId: 'pkg_1',
+          organizationId: 'org_1',
+          type: 'brochure',
+          name: 'scope.pdf',
+          fileUrl: 'https://example.supabase.co/storage/v1/object/public/carrier-documents/old.png',
+          storagePath: 'packages/org_1/pkg_1/1-scope.pdf',
+          fileType: 'application/pdf',
+          fileSize: 1024,
+          version: null,
+          extractedText: 'secret',
+          createdAt: new Date('2026-09-19T00:00:00Z'),
+          updatedAt: new Date('2026-09-19T00:00:00Z'),
+        },
+      ],
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/packages/pkg_1'),
+      params,
+    )
+
+    expect(response.status).toBe(200)
+    const json = (await response.json()) as { servicePackage?: any }
+    const [nested] = json.servicePackage?.packageDocuments ?? []
+    expect(nested.fileUrl).toBe('/api/packages/pkg_1/documents/doc_1/download')
+    expect(nested.fileUrl.startsWith('http')).toBe(false)
+    expect(JSON.stringify(json)).not.toContain('supabase.co')
+    expect(JSON.stringify(json)).not.toContain('/storage/v1/object/public')
   })
 })
 
