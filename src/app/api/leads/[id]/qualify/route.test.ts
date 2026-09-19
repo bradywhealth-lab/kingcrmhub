@@ -6,8 +6,9 @@ import { NextRequest } from 'next/server'
  * /api/leads/[id]/qualify must `await withRequestOrgContext` so that a
  * rejection from the org-context wrapper (auth/RLS transaction) is converted
  * to a JSON 500 with body instead of escaping the route as an unhandled
- * rejection / opaque empty-body 500. The handler body already has its own
- * try/catch; the wrapper call itself sat OUTSIDE it.
+ * rejection / opaque empty-body 500. The route now relies on one outer
+ * try/catch around the awaited `withRequestOrgContext` call, converting both
+ * wrapper and handler rejections into a JSON 500 with body.
  */
 
 const mockDb = vi.hoisted(() => ({

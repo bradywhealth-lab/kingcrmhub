@@ -423,13 +423,9 @@ describe('GET/POST /api/leads — awaited org-context wrapper, JSON 500 on rejec
       createdAt: new Date(),
       organizationId: 'org_1',
     } as never)
-    mockDb.lead.update.mockResolvedValue({
-      id: 'lead-created',
-      aiScore: 30,
-      aiConfidence: 0.8,
-      aiLastAnalyzed: new Date(),
-      aiNextAction: 'Research lead and contact',
-    } as never)
+    // NB: no `lead.update` mock here — no test in this describe reaches
+    // `db.lead.update`; keep the `update: vi.fn()` factory entry so a future
+    // happy-path POST test can resolve it without touching this setup.
   })
 
   it('(regression) GET wrapper rejection returns JSON 500, never an opaque empty body', async () => {
