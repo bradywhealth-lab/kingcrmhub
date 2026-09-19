@@ -4,6 +4,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { isUniqueConstraintViolation } from '@/lib/prisma-errors'
 
 const updatePackageSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -19,7 +20,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    return withRequestOrgContext(request, async (context) => {
+    // `await` keeps rejections inside the try/catch (opaque-500 bug class).
+    return await withRequestOrgContext(request, async (context) => {
       const servicePackage = await db.servicePackage.findFirst({
         where: { id, organizationId: context.organizationId },
         include: {
@@ -50,7 +52,9 @@ export async function PATCH(
     const limited = enforceRateLimit(request, { key: 'packages-update', limit: 60, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `await` is required so P2002 from a slug collision reaches the
+    // discriminating catch below (see POST in ../route.ts).
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, updatePackageSchema)
       if (!parsed.success) return parsed.response
       const body = parsed.data
@@ -80,6 +84,16 @@ export async function PATCH(
       return NextResponse.json({ servicePackage })
     })
   } catch (error) {
+    // An explicit slug update can collide with another package in the same org
+    // (unique index [organizationId, slug]) and raises P2002. Return a clear
+    // 409; genuine failures stay 500.
+    if (isUniqueConstraintViolation(error)) {
+      console.warn('ServicePackage PATCH conflict (P2002):', error)
+      return NextResponse.json(
+        { error: 'A service package with that slug already exists.' },
+        { status: 409 },
+      )
+    }
     console.error('ServicePackage PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update service package' }, { status: 500 })
   }
@@ -94,7 +108,8 @@ export async function DELETE(
     const limited = enforceRateLimit(request, { key: 'packages-delete', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    // `await` keeps rejections inside the try/catch (opaque-500 bug class).
+    return await withRequestOrgContext(request, async (context) => {
       const existing = await db.servicePackage.findFirst({
         where: { id, organizationId: context.organizationId },
       })
