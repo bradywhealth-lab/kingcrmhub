@@ -10,14 +10,25 @@
 // Scope is deliberately narrow:
 //   - flags ONLY a ReturnStatement whose argument is a non-awaited
 //     `withRequestOrgContext(...)` call and that sits inside a try block
+//     belonging to the SAME function (function boundaries are respected: a
+//     helper declared inside a try is its own scope)
 //   - does NOT flag `return await withRequestOrgContext(...)` (the fixed form)
 //   - does NOT flag bare `withRequestOrgContext(...)` outside a try (Next.js
 //     awaits the returned promise itself; adding await there is pure churn)
 //
-// Meta fixer: rewrites `return withRequestOrgContext(` to
-// `return await withRequestOrgContext(` — same-line, zero semantic change.
+// Autofix: offered ONLY when the containing function is `async`. For a
+// synchronous containing function the report carries an explicit
+// must-be-async message and no blind fix (inserting `await` inside a sync
+// function would produce invalid JavaScript).
 
 const MESSAGE_ID = 'mustAwait'
+const MESSAGE_ID_SYNC = 'mustBeAsyncFunction'
+
+const FUNCTION_TYPES = new Set([
+  'FunctionDeclaration',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
+])
 
 /** @type {import('eslint').Rule.RuleModule} */
 const noUnawaitedOrgContext = {
@@ -31,6 +42,8 @@ const noUnawaitedOrgContext = {
     messages: {
       [MESSAGE_ID]:
         'withRequestOrgContext(...) must be awaited inside a try block: an un-awaited rejection escapes the catch and Next.js returns an opaque empty-body 500. Use `return await withRequestOrgContext(request, handler)`.',
+      [MESSAGE_ID_SYNC]:
+        'withRequestOrgContext(...) is used inside a try block of a NON-async function: an un-awaited rejection escapes the catch and Next.js returns an opaque empty-body 500. Make the containing function async and use `return await withRequestOrgContext(request, handler)`.',
     },
     schema: [],
   },
@@ -45,17 +58,32 @@ const noUnawaitedOrgContext = {
       )
     }
 
+    function nearestFunctionAncestor(node) {
+      const ancestors = context.sourceCode.getAncestors(node)
+      for (let i = ancestors.length - 1; i >= 0; i--) {
+        if (FUNCTION_TYPES.has(ancestors[i].type)) return ancestors[i]
+      }
+      return null
+    }
+
     function insideTryBlock(node) {
-      const sourceCode = context.sourceCode
-      for (const ancestor of sourceCode.getAncestors(node)) {
-        if (ancestor.type === 'TryStatement' && ancestor.block) {
-          const block = ancestor.block
-          if (block.range[0] <= node.range[0] && node.range[1] <= block.range[1]) {
+      const ancestors = context.sourceCode.getAncestors(node)
+      // Respect function boundaries: only try blocks that lexically enclose the
+      // return INSIDE the nearest function count. A function declared inside a
+      // try block does not inherit that try's catch for its own returns.
+      let functionIndex = -1
+      for (let i = ancestors.length - 1; i >= 0; i--) {
+        if (FUNCTION_TYPES.has(ancestors[i].type)) {
+          functionIndex = i
+          break
+        }
+      }
+      for (let i = functionIndex + 1; i < ancestors.length; i++) {
+        const a = ancestors[i]
+        if (a.type === 'TryStatement' && a.block) {
+          if (a.block.range[0] <= node.range[0] && node.range[1] <= a.block.range[1]) {
             return true
           }
-        }
-        if (ancestor.type === 'CatchClause') {
-          return false
         }
       }
       return false
@@ -68,6 +96,13 @@ const noUnawaitedOrgContext = {
         if (argument.type === 'AwaitExpression') return // fixed form
         if (!isCallTo(argument, 'withRequestOrgContext')) return
         if (!insideTryBlock(node)) return // safe fail-through: Next.js awaits the promise
+
+        const fn = nearestFunctionAncestor(node)
+        if (!fn || fn.async !== true) {
+          context.report({ node, messageId: MESSAGE_ID_SYNC })
+          return
+        }
+
         context.report({
           node,
           messageId: MESSAGE_ID,
