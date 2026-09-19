@@ -20,13 +20,13 @@ export function AuthLoadingSkeleton() {
     <main
       aria-busy="true"
       aria-label="Loading sign in"
-      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)] px-4 py-6 lg:px-8 lg:py-8"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,var(--cream)_0%,var(--paper)_100%)] px-4 py-6 lg:px-8 lg:py-8"
     >
       <p role="status" aria-live="polite" className="sr-only">
         Loading sign in
       </p>
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden rounded-[32px] border border-white/60 bg-[rgba(252,252,252,0.76)] shadow-[0_30px_100px_rgba(31,42,54,0.14)] backdrop-blur-xl lg:min-h-[calc(100vh-4rem)]">
-        <section className="relative hidden flex-1 overflow-hidden bg-[#0c111b] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-14">
+        <section className="relative hidden flex-1 overflow-hidden bg-[var(--ink)] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-14">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
