@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 
 const updateAppointmentSchema = z.object({
-  title: z.string().min(1).max(500).optional(),
+  title: z.string().trim().min(1).max(500).optional(),
   description: z.string().max(5000).nullable().optional(),
   startTime: z.string().datetime().optional(),
   endTime: z.string().datetime().optional(),
