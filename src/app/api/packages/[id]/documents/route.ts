@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import {
+  deleteFromObjectStorage,
   findMissingObjectStorageEnv,
   uploadToObjectStorage,
 } from '@/lib/object-storage'
@@ -13,6 +14,20 @@ import { serializePackageDocument } from '@/lib/package-documents'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ id: string }> }
+
+/**
+ * Raised when a supported uploaded file parses as a failure rather than
+ * empty text. The POST handler turns this into an explicit 422 and rolls
+ * back the uploaded blob — a file stored but never indexed must not
+ * report upload success (M159 fake-good).
+ */
+export class PdfExtractionError extends Error {
+  constructor(cause: unknown) {
+    super('Failed to extract text from the uploaded PDF')
+    this.name = 'PdfExtractionError'
+    if (cause instanceof Error) this.cause = cause
+  }
+}
 const CHUNK_SIZE = 900
 const CHUNK_OVERLAP = 150
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -123,7 +138,28 @@ export async function POST(request: NextRequest, { params }: Params) {
         buffer,
       })
 
-      const extractedText = await extractPackageText(file, buffer)
+      let extractedText: string
+      try {
+        extractedText = await extractPackageText(file, buffer)
+      } catch (error) {
+        if (error instanceof PdfExtractionError) {
+          // Roll back the uploaded blob so a failing extraction never
+          // leaves orphaned storage behind a fake-good response.
+          try {
+            await deleteFromObjectStorage(storagePath)
+          } catch (rollbackError) {
+            console.error(
+              'Package documents POST: rollback of uploaded object failed:',
+              rollbackError,
+            )
+          }
+          return NextResponse.json(
+            { error: 'Failed to extract text from the uploaded PDF. The document was not indexed.' },
+            { status: 422 },
+          )
+        }
+        throw error
+      }
       const normalizedText = normalizeText(extractedText)
 
       const document = await db.packageDocument.create({
@@ -186,12 +222,34 @@ async function extractPackageText(file: File, buffer: Buffer): Promise<string> {
   if (ext === 'pdf') {
     try {
       const pdfModule = await import('pdf-parse')
-      const parser = new pdfModule.PDFParse({ data: buffer })
-      const result = await parser.getText()
-      await parser.destroy()
-      return result.text || ''
-    } catch {
-      return ''
+      const parser = new pdfModule.PDFParse({ data: buffer }) as {
+        getText(): Promise<{ text: string }>
+        destroy(): Promise<void>
+      }
+      try {
+        const result = await parser.getText()
+        const text = result.text || ''
+        if (!text) {
+          // Success-but-empty is still invisible behind a 200 fake-good
+          // status — log it explicitly. Image-only/scanned PDFs legitimately
+          // yield ''; a text-bearing PDF yielding '' is a defect.
+          console.error(
+            'Package documents POST: PDF text extraction produced empty text for',
+            file.name,
+          )
+        }
+        return text
+      } finally {
+        // Destroy on every path, including getText() throwing — otherwise
+        // repeated failed uploads accumulate pdfjs workers in a
+        // long-running server process.
+        await parser.destroy().catch(() => {})
+      }
+    } catch (error) {
+      // M159: never swallow extraction failures silently. The caller maps
+      // this to an explicit non-2xx so upload is not fake-good 200.
+      console.error('Package documents POST: PDF text extraction failed:', error)
+      throw new PdfExtractionError(error)
     }
   }
   if (ext === 'docx') {

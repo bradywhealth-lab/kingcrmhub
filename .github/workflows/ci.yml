@@ -110,3 +110,8 @@ jobs:
 
       - name: Run build
         run: npm run build
+
+      - name: Verify pdf-parse externalization (M159 bundling regression)
+        run: |
+          ls .next/server/chunks/ | grep -qE '^\[externals\]_pdf-parse' || { echo "pdf-parse not externalized - M159 may regress"; exit 1; }
+          ! ls .next/server/chunks/ | grep -q 'node_modules_pdf-parse_dist' || { echo "pdf-parse inlined by Turbopack - M159 may regress"; exit 1; }

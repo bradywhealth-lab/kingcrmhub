@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 
 const createTaskSchema = z.object({
-  title: z.string().min(1).max(500),
+  title: z.string().trim().min(1).max(500),
   description: z.string().max(5000).optional(),
   status: z.enum(['todo', 'in_progress', 'done', 'blocked']).optional(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
