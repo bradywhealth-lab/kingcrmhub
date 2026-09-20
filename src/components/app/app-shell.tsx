@@ -1,7 +1,7 @@
 "use client"
 
 import { Bell, Bot, CheckSquare, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Plus, Search, Settings, Share2, Sparkles, Users, X, Zap, GitBranch } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -53,13 +53,26 @@ export function AppShell({
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const unreadCount = useMemo(() => mockNotifications.filter((notification) => notification.unread).length, [])
+  const [isDesktop, setIsDesktop] = useState(false)
+  const prevIsDesktop = useRef(false)
 
-  // Start with the sidebar closed on small screens (off-canvas drawer) regardless of
-  // the persisted desktop default; desktop (lg+) keeps the store's open state.
+  // Track the lg breakpoint live so the drawer open state can re-derive on resize/rotation.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 1024 && sidebarOpen) setSidebarOpen(false)
-    // Intentionally once on mount: opening state is derived from viewport, not deps.
+    const mq = window.matchMedia("(min-width: 1024px)")
+    const apply = () => setIsDesktop(mq.matches)
+    apply()
+    mq.addEventListener("change", apply)
+    return () => mq.removeEventListener("change", apply)
   }, [])
+
+  // Off-canvas drawer below lg: when the viewport crosses from desktop into mobile while
+  // the drawer is open, force-close it so it never overlays content at 375px. A plain
+  // hamburger toggle on mobile never trips this (previous viewport is still mobile).
+  useEffect(() => {
+    const crossedToMobile = prevIsDesktop.current && !isDesktop
+    prevIsDesktop.current = isDesktop
+    if (crossedToMobile && sidebarOpen) setSidebarOpen(false)
+  }, [isDesktop, sidebarOpen])
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_48%,#fcf8ec_100%)] text-[#0c111b]">
@@ -135,7 +148,12 @@ export function AppShell({
           {APP_NAV_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => {
+                setActiveView(item.id)
+                // Off-canvas drawer: close on selection so the destination view is not
+                // hidden behind the open drawer on mobile.
+                if (!isDesktop) setSidebarOpen(false)
+              }}
               className={cn(
                 "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
                 activeView === item.id
@@ -221,7 +239,11 @@ export function AppShell({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button onClick={onAddLead} className="h-12 shrink-0 rounded-2xl bg-[var(--teal)] px-3 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95 sm:px-5">
+              <Button
+                onClick={onAddLead}
+                aria-label="Add lead"
+                className="h-12 shrink-0 rounded-2xl bg-[var(--teal)] px-3 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95 sm:px-5"
+              >
                 <Plus className={cn("h-4 w-4", "lg:mr-2")} />
                 <span className="hidden lg:inline">Add lead</span>
               </Button>

@@ -811,7 +811,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
               <div className="min-w-0 overflow-x-auto overscroll-x-contain">
                 <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
               </div>
-              <div className="min-w-[80px] text-right">
+              <div className="ml-auto min-w-[80px] text-right">
                 <p className="text-xs font-medium text-[#0c111b]/45">
                   Step {currentStep} of {totalSteps - 2}
                 </p>
