@@ -27,6 +27,11 @@ vi.mock('@/lib/object-storage', async (importOriginal) => {
   return {
     ...actual,
     uploadToObjectStorage: mockUploadToObjectStorage,
+    // Keep this suite deterministic and offline: the write-txn
+    // compensation path (t_fd623cbf) calls deleteFromObjectStorage when a
+    // generic DB error rejects the write -- the real helper would hit
+    // Supabase over the network for every DB-error test.
+    deleteFromObjectStorage: vi.fn(async () => {}),
   }
 })
 
