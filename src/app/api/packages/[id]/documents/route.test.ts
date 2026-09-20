@@ -366,3 +366,96 @@ describe('POST /api/packages/[id]/documents — text extraction (M159 regression
     expect(nextDeletedPath).toBe('packages/org_1/pkg_1/test-contract.pdf')
   })
 })
+
+describe('POST /api/packages/[id]/documents — orphan-blob compensation on write txn failure (t_fd623cbf)', () => {
+  it('deletes the uploaded storage blob when the write transaction rejects, response stays 500', async () => {
+    setupStorageEnv()
+    mockDb.servicePackage.findFirst.mockResolvedValueOnce({ id: 'pkg_1', organizationId: 'org_1' })
+    mockDb.packageDocument.create.mockResolvedValueOnce({
+      id: 'doc_4',
+      organizationId: 'org_1',
+      packageId: 'pkg_1',
+      type: 'other',
+      name: 'contract4.pdf',
+      description: null,
+      fileUrl: '',
+      storagePath: 'packages/org_1/pkg_1/test-contract.pdf',
+      fileType: 'application/pdf',
+      fileSize: 700,
+      version: null,
+      extractedText: null,
+      indexedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    // createMany rejects AFTER create resolved — the atomic write txn aborts
+    // (create is rolled back by Prisma), leaving the uploaded blob orphaned
+    // unless the route compensates by deleting it from object storage.
+    mockDb.packageDocumentChunk.createMany.mockRejectedValueOnce(new Error('transaction aborted'))
+
+    const response = await POST(
+      makeRequest('contract4.pdf', 'application/pdf', textBearingPdfBytes()),
+      { params: Promise.resolve({ id: 'pkg_1' }) },
+    )
+
+    // Status contract unchanged: write failure stays 500 with the same body.
+    expect(response.status).toBe(500)
+    const json = (await response.json()) as { error?: string }
+    expect(json.error).toBe('Failed to upload package document')
+    // No document row survives a failed write txn (Prisma rolls back the
+    // create when createMany rejects in the same txn)...
+    expect(mockDb.packageDocument.create).toHaveBeenCalledTimes(1)
+    // ...and the uploaded blob is compensated (deleted), not orphaned.
+    expect(nextDeletedPath).toBe('packages/org_1/pkg_1/test-contract.pdf')
+  })
+
+  it('stays 500 with the same body when the compensation delete itself rejects', async () => {
+    setupStorageEnv()
+    mockDb.servicePackage.findFirst.mockResolvedValueOnce({ id: 'pkg_1', organizationId: 'org_1' })
+    mockDb.packageDocument.create.mockResolvedValueOnce({
+      id: 'doc_5',
+      organizationId: 'org_1',
+      packageId: 'pkg_1',
+      type: 'other',
+      name: 'contract5.pdf',
+      description: null,
+      fileUrl: '',
+      storagePath: 'packages/org_1/pkg_1/test-contract.pdf',
+      fileType: 'application/pdf',
+      fileSize: 700,
+      version: null,
+      extractedText: null,
+      indexedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    mockDb.packageDocumentChunk.createMany.mockRejectedValueOnce(new Error('transaction aborted'))
+    // The compensation delete fails too (best-effort): the original WRITE
+    // error must still be rethrown — not the delete error, which would
+    // otherwise map to a storage 502/503 via objectStorageErrorResponse.
+    const { deleteFromObjectStorage } = await import('@/lib/object-storage')
+    ;(deleteFromObjectStorage as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('storage delete failed'),
+    )
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await POST(
+      makeRequest('contract5.pdf', 'application/pdf', textBearingPdfBytes()),
+      { params: Promise.resolve({ id: 'pkg_1' }) },
+    )
+    // Capture before restore: mockRestore() wipes mock.calls history.
+    const errorLog = errorSpy.mock.calls.map((args) => args.map((a) => String(a)))
+    errorSpy.mockRestore()
+
+    expect(response.status).toBe(500)
+    const json = (await response.json()) as { error?: string }
+    expect(json.error).toBe('Failed to upload package document')
+    // The write rejection (not the swallowed delete failure) is what
+    // reaches the outer handler: it is logged as the POST error.
+    expect(errorLog.some((args) => args.some((a) => a.includes('transaction aborted')))).toBe(true)
+    // The delete failure is logged as a rollback failure, never raised.
+    expect(
+      errorLog.some((args) => args.some((a) => a.includes('rollback of uploaded object failed'))),
+    ).toBe(true)
+  })
+})
