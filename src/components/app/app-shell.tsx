@@ -1,7 +1,7 @@
 "use client"
 
 import { Bell, Bot, CheckSquare, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Plus, Search, Settings, Share2, Sparkles, Users, X, Zap, GitBranch } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -53,14 +53,46 @@ export function AppShell({
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const unreadCount = useMemo(() => mockNotifications.filter((notification) => notification.unread).length, [])
+  const [isDesktop, setIsDesktop] = useState(false)
+  const prevIsDesktop = useRef(false)
+
+  // Track the lg breakpoint live so the drawer open state can re-derive on resize/rotation.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)")
+    const apply = () => setIsDesktop(mq.matches)
+    apply()
+    mq.addEventListener("change", apply)
+    return () => mq.removeEventListener("change", apply)
+  }, [])
+
+  // Off-canvas drawer below lg: when the viewport crosses from desktop into mobile while
+  // the drawer is open, force-close it so it never overlays content at 375px. A plain
+  // hamburger toggle on mobile never trips this (previous viewport is still mobile).
+  useEffect(() => {
+    const crossedToMobile = prevIsDesktop.current && !isDesktop
+    prevIsDesktop.current = isDesktop
+    if (crossedToMobile && sidebarOpen) setSidebarOpen(false)
+  }, [isDesktop, sidebarOpen])
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_48%,#fcf8ec_100%)] text-[#0c111b]">
+      {/* Mobile backdrop — closes the drawer when the sidebar is open on small screens */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          aria-hidden="true"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       <motion.aside
         initial={false}
         animate={{ width: sidebarOpen ? 288 : 88 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0c111b] shadow-[24px_0_60px_rgba(15,23,42,0.16)]"
+        className={cn(
+          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0c111b] shadow-[24px_0_60px_rgba(15,23,42,0.16)]",
+          // Off-canvas drawer below lg: the app shell leaves no left margin on mobile (overflow fix)
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
       >
         <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
           <AnimatePresence mode="wait">
@@ -116,7 +148,12 @@ export function AppShell({
           {APP_NAV_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => {
+                setActiveView(item.id)
+                // Off-canvas drawer: close on selection so the destination view is not
+                // hidden behind the open drawer on mobile.
+                if (!isDesktop) setSidebarOpen(false)
+              }}
               className={cn(
                 "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
                 activeView === item.id
@@ -150,24 +187,38 @@ export function AppShell({
         </div>
       </motion.aside>
 
-      <div className="transition-all duration-150 ease-out" style={{ marginLeft: sidebarOpen ? 288 : 88 }}>
+      <div
+        className={cn(
+          "ml-0 transition-all duration-150 ease-out",
+          sidebarOpen ? "lg:ml-[288px]" : "lg:ml-[88px]"
+        )}
+      >
         <header className="sticky top-0 z-30 border-b border-[rgba(31,42,54,0.08)] bg-[rgba(252,252,252,0.82)] backdrop-blur-xl">
-          <div className="flex min-h-20 items-center justify-between gap-4 px-6 py-4 lg:px-8">
-            <div className="flex flex-1 items-center gap-4">
+          <div className="flex min-h-20 items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-4">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Open navigation"
+                onClick={() => setSidebarOpen(true)}
+                className="h-11 w-11 shrink-0 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#0c111b]/70 shadow-sm lg:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
               <div className="hidden min-w-0 lg:block">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#0c111b]/45">Workspace command center</p>
                 <h1 className="truncate text-xl font-semibold text-[#0c111b]">{APP_NAV_ITEMS.find((item) => item.id === activeView)?.label || "Dashboard"}</h1>
               </div>
-              <div className="relative ml-auto w-full max-w-xl">
+              <div className="relative ml-auto w-full min-w-0 max-w-xl">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0c111b]/35" />
-                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 rounded-2xl border-[rgba(31,42,54,0.08)] bg-white pl-11 shadow-[0_8px_24px_rgba(31,42,54,0.05)] focus-visible:ring-[#18b897]/30" />
+                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 w-full rounded-2xl border-[rgba(31,42,54,0.08)] bg-white pl-11 shadow-[0_8px_24px_rgba(31,42,54,0.05)] focus-visible:ring-[#18b897]/30" />
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#0c111b]/70 shadow-sm hover:bg-[#f6f9ff] hover:text-[#127c66]">
+                  <Button variant="ghost" size="icon" className="relative h-11 w-11 shrink-0 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#0c111b]/70 shadow-sm hover:bg-[#f6f9ff] hover:text-[#127c66]">
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#18b897]" />}
                   </Button>
@@ -188,9 +239,13 @@ export function AppShell({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button onClick={onAddLead} className="h-12 rounded-2xl bg-[var(--teal)] px-5 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95">
-                <Plus className="mr-2 h-4 w-4" />
-                Add lead
+              <Button
+                onClick={onAddLead}
+                aria-label="Add lead"
+                className="h-12 shrink-0 rounded-2xl bg-[var(--teal)] px-3 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95 sm:px-5"
+              >
+                <Plus className={cn("h-4 w-4", "lg:mr-2")} />
+                <span className="hidden lg:inline">Add lead</span>
               </Button>
             </div>
           </div>

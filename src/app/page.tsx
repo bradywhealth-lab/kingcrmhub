@@ -880,7 +880,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <h1 className="text-2xl font-bold text-black">Leads</h1>
           <p className="text-gray-500">Lead management with smart scoring and clear next steps</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
             className="border-[#127c66] text-[#0c111b] hover:bg-[#f4f0e6] gap-2"
