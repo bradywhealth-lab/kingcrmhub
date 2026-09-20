@@ -1351,8 +1351,8 @@ function WebhooksSettingsPanel() {
   )
 }
 
-export function SettingsView() {
-  const [activeSettingsTab, setActiveSettingsTab] = useState('organization')
+export function SettingsView({ initialTab }: { initialTab?: string } = {}) {
+  const [activeSettingsTab, setActiveSettingsTab] = useState(initialTab ?? 'organization')
 
   return (
     <div className="min-h-screen space-y-6 bg-[var(--paper)] p-6">

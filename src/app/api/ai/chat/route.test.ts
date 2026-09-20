@@ -77,6 +77,7 @@ describe('/api/ai/chat', () => {
 
   it('never leaks raw SDK text through the route catch — maps to friendly error instead', async () => {
     mockCreateChatStream.mockRejectedValueOnce(new Error('401 Missing Authentication header'))
+    mockFriendlyProviderError.mockImplementation((_provider: string, _err: unknown) => 'Friendly mapped error')
 
     const res = await POST(chatRequest())
     const json = await res.json()
@@ -84,7 +85,23 @@ describe('/api/ai/chat', () => {
     expect(res.status).toBe(500)
     expect(json.error).toBe('Friendly mapped error')
     expect(JSON.stringify(json)).not.toContain('Missing Authentication')
-    expect(mockFriendlyProviderError).toHaveBeenCalled()
+    expect(mockFriendlyProviderError).toHaveBeenCalledWith('openai', expect.any(Error))
+  })
+
+  it('returns a neutral message for failures before a config resolves (bad JSON)', async () => {
+    const res = await POST(
+      new NextRequest('http://localhost/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{not-json',
+      }),
+    )
+    const json = await res.json()
+
+    expect(res.status).toBe(500)
+    expect(json.error).toBe('Something went wrong while starting the AI assistant. Please try again.')
+    expect(JSON.stringify(json)).not.toContain('Missing Authentication')
+    expect(mockFriendlyProviderError).not.toHaveBeenCalled()
   })
 
   it('returns a streaming response on success', async () => {

@@ -21,6 +21,7 @@ If you don't have enough context about a specific lead, ask the user to paste th
 Always be concise unless depth is required. Bullet points over walls of text. Numbered steps when order matters.`
 
 export async function POST(request: NextRequest) {
+  let config: Awaited<ReturnType<typeof resolveAIConfig>> | null = null
   try {
     // Auth check without RLS wrapper (streaming outlives handler)
     const ctx = await getOrgContext(request)
@@ -39,8 +40,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'messages array is required' }, { status: 400 })
     }
 
-    // Resolve AI provider for this org (BYOK → platform key → Groq free)
-    const config = await resolveAIConfig(ctx.organizationId)
+    // Resolve AI provider for this org (BYOK → platform key → free tier)
+    config = await resolveAIConfig(ctx.organizationId)
 
     if (!config.apiKey) {
       return NextResponse.json(
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       ...messages,
     ]
 
-    const readable = await createChatStream(config, chatMessages)
+    const readable = await createChatStream(config, chatMessages, { organizationId: ctx.organizationId })
 
     return new Response(readable, {
       headers: {
@@ -70,8 +71,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('AI chat error:', error)
     // Never pass raw SDK/provider text (e.g. "401 Missing Authentication header")
-    // to the client — map to a friendly, actionable message instead.
-    const msg = friendlyProviderError('openai', error)
+    // to the client, and only map provider failures when a config actually
+    // resolved (a pre-config error — bad JSON or a DB outage — is not the
+    // user's AI key problem, so do not send them to Settings).
+    const msg = config
+      ? friendlyProviderError(config.provider, error)
+      : 'Something went wrong while starting the AI assistant. Please try again.'
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

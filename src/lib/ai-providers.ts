@@ -12,6 +12,8 @@ type AIConfig = {
   label: string
   /** Set when the org's saved BYOK key was rejected/skipped and we fell back to the platform free tier. */
   byokFailure?: string
+  /** True when this config uses the org's own saved key (so a runtime auth rejection can retry on the free tier). */
+  byokKey?: boolean
 }
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
@@ -74,11 +76,13 @@ function isOutageClassError(err: unknown): boolean {
  * header") must NEVER reach the user — it is confusing and exposes provider
  * internals with no actionable info.
  */
-export function friendlyProviderError(provider: AIProvider, err: unknown, byokFailure?: string): string {
+export function friendlyProviderError(provider: AIProvider, err: unknown): string {
   if (isAuthClassError(err)) {
-    return byokFailure && byokFailure.length > 0
-      ? byokFailure
-      : 'Your AI provider key is invalid or expired — open Settings → AI to fix it.'
+    // Stream errors surface the runtime provider failure. When a BYOK key
+    // 401s we retry with the platform free tier at createChatStream, so an
+    // auth error here means the ACTIVE (platform) key failed — never claim
+    // the org's saved key is the problem; send the generic actionable message.
+    return 'Your AI provider key is invalid or expired — open Settings → AI to fix it.'
   }
   if (isOutageClassError(err)) {
     return 'AI provider temporarily unavailable. Please try again in a moment.'
@@ -97,7 +101,16 @@ export function friendlyProviderError(provider: AIProvider, err: unknown, byokFa
  * 5. Last-resort platform keys
  * 6. No provider
  */
-export async function resolveAIConfig(organizationId: string): Promise<AIConfig> {
+function byokFailureNotice(rejected: boolean): string {
+  return rejected
+    ? 'Your saved AI provider key was rejected by the provider — using the platform AI service instead. Open Settings → AI to fix it.'
+    : 'Your saved AI provider key is invalid or missing — using the platform AI service instead. Open Settings → AI to fix it.'
+}
+
+export async function resolveAIConfig(
+  organizationId: string,
+  opts?: { skipByokKey?: boolean },
+): Promise<AIConfig> {
   const org = await db.organization.findUnique({
     where: { id: organizationId },
     select: { settings: true },
@@ -108,22 +121,23 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
     ? settings.aiProvider
     : null) as AIProvider | null
   const storedKey = typeof settings.aiApiKey === 'string' ? settings.aiApiKey : null
-  const orgKey = storedKey && !isInvalidByokKey(storedKey) ? storedKey : null
+  const orgKey = storedKey && !isInvalidByokKey(storedKey) ? storedKey.trim() : null
   const model = typeof settings.aiModel === 'string' && settings.aiModel
     ? settings.aiModel
     : null
 
-  const byokFailure = storedKey && !orgKey
-    ? 'Your saved AI provider key is invalid or missing — using the platform free tier. Open Settings → AI to fix it.'
+  const byokFailure = storedKey && (opts?.skipByokKey || !orgKey)
+    ? byokFailureNotice(Boolean(opts?.skipByokKey))
     : undefined
 
   // If org has a plausible BYOK key, use their chosen provider
-  if (orgKey && provider) {
+  if (!opts?.skipByokKey && orgKey && provider) {
     return {
       provider,
       model: model || getDefaultModel(provider),
       apiKey: orgKey,
       label: `${provider} (BYOK)`,
+      byokKey: true,
     }
   }
 
@@ -134,6 +148,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       model: model || 'gpt-4o',
       apiKey: process.env.OPENAI_API_KEY,
       label: 'OpenAI (platform)',
+      byokFailure,
     }
   }
 
@@ -144,6 +159,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       model: model || 'claude-sonnet-4-20250514',
       apiKey: process.env.ANTHROPIC_API_KEY,
       label: 'Anthropic (platform)',
+      byokFailure,
     }
   }
 
@@ -154,6 +170,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       model: model || 'openrouter/free',
       apiKey: process.env.OPENROUTER_API_KEY,
       label: 'OpenRouter (platform)',
+      byokFailure,
     }
   }
 
@@ -220,26 +237,40 @@ export function getDefaultModel(provider: AIProvider): string {
 export async function createChatStream(
   config: AIConfig,
   messages: ChatMessage[],
+  opts?: { organizationId?: string },
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder()
 
-  if (config.provider === 'groq') {
-    return createGroqStream(config, messages, encoder)
+  const attempt = async (cfg: AIConfig): Promise<ReadableStream<Uint8Array>> => {
+    if (cfg.provider === 'groq') {
+      return createGroqStream(cfg, messages, encoder)
+    }
+    if (cfg.provider === 'openai') {
+      return createOpenAIStream(cfg, messages, encoder)
+    }
+    if (cfg.provider === 'anthropic') {
+      return createAnthropicStream(cfg, messages, encoder)
+    }
+    if (cfg.provider === 'openrouter') {
+      return createOpenRouterStream(cfg, messages, encoder)
+    }
+    throw new Error(`Unsupported provider: ${cfg.provider}`)
   }
 
-  if (config.provider === 'openai') {
-    return createOpenAIStream(config, messages, encoder)
+  try {
+    return await attempt(config)
+  } catch (err) {
+    // When the org's BYOK key is structurally valid but rejected at request
+    // time (expired/revoked), retry once with the platform free tier so a bad
+    // BYOK key cannot shadow the free default (P1).
+    if (config.byokKey && isAuthClassError(err) && opts?.organizationId) {
+      const fallback = await resolveAIConfig(opts.organizationId, { skipByokKey: true })
+      if (fallback.apiKey) {
+        return await attempt(fallback)
+      }
+    }
+    throw err
   }
-
-  if (config.provider === 'anthropic') {
-    return createAnthropicStream(config, messages, encoder)
-  }
-
-  if (config.provider === 'openrouter') {
-    return createOpenRouterStream(config, messages, encoder)
-  }
-
-  throw new Error(`Unsupported provider: ${config.provider}`)
 }
 
 /** Prefix a BYOK-fallback notice onto a stream (SSE event the client renders as a banner). */
@@ -296,7 +327,7 @@ async function createGroqStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = friendlyProviderError('groq', err, config.byokFailure)
+        const msg = friendlyProviderError('groq', err)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
@@ -333,7 +364,7 @@ async function createOpenAIStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = friendlyProviderError('openai', err, config.byokFailure)
+        const msg = friendlyProviderError('openai', err)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
@@ -377,7 +408,7 @@ async function createAnthropicStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = friendlyProviderError('anthropic', err, config.byokFailure)
+        const msg = friendlyProviderError('anthropic', err)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
@@ -421,7 +452,7 @@ async function createOpenRouterStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = friendlyProviderError('openrouter', err, config.byokFailure)
+        const msg = friendlyProviderError('openrouter', err)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }

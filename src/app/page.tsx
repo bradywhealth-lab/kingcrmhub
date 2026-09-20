@@ -2568,6 +2568,7 @@ function SocialMediaView() {
 // Main App
 export default function EliteCRM() {
   const [activeView, setActiveView] = useState("dashboard")
+  const [settingsInitialTab, setSettingsInitialTab] = useState<string | null>(null)
   const { authLoading, currentUser, signOut } = useWorkspaceSession()
   const { theme } = useAppStore()
 
@@ -2609,10 +2610,15 @@ export default function EliteCRM() {
       case "leads": return <LeadsView onAddLead={() => setShowAddLeadDialog(true)} onUploadCSV={() => setShowUploadDialog(true)} onScrape={() => setShowScrapeDialog(true)} refreshKey={leadsRefreshKey} />
       case "pipeline": return <PipelineView />
       case "automation": return <AutomationView />
-      case "assistant": return <AiAssistantView />
+      case "assistant": return <AiAssistantView onOpenAISettings={() => { setSettingsInitialTab("ai"); setActiveView("settings") }} />
       case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
-      case "settings": return <SettingsView />
+      case "settings": {
+        const initialTab = settingsInitialTab ?? undefined
+        // Consume the deep-link once so later manual visits start on Organization.
+        if (settingsInitialTab !== null) setSettingsInitialTab(null)
+        return <SettingsView initialTab={initialTab} />
+      }
       case "tasks": return <TasksView />
       default: return <DashboardView />
     }
