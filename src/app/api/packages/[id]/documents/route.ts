@@ -187,6 +187,20 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
     const normalizedText = normalizeText(extractedText)
 
+    // Precompute chunks BEFORE opening the write transaction: chunk-array
+    // construction is CPU work proportional to text length, and the
+    // interactive txn (5000ms default) must stay limited to the two DB
+    // writes. A large text-bearing document can otherwise still expire the
+    // write txn (cubic PR #198 R1, thread 3).
+    const chunks = normalizedText
+      ? chunkText(normalizedText, CHUNK_SIZE, CHUNK_OVERLAP)
+      : []
+    const chunkCount = chunks.length
+    // Chunk payloads are also prepared outside the txn: only the document
+    // id (known after create resolves) is attached inside, so the write
+    // txn itself is limited to the two DB calls.
+    const chunkPayloads = chunks.map((content, index) => ({ content, chunkIndex: index }))
+
     // Short transaction #2 (write): document row + chunks commit
     // atomically — a createMany rejection rolls back the create (no
     // orphan row). Same statuses and payloads as the pre-hoist route.
@@ -213,20 +227,15 @@ export async function POST(request: NextRequest, { params }: Params) {
         },
       })
 
-      let chunkCount = 0
-      if (normalizedText) {
-        const chunks = chunkText(normalizedText, CHUNK_SIZE, CHUNK_OVERLAP)
-        chunkCount = chunks.length
-        if (chunks.length > 0) {
-          await db.packageDocumentChunk.createMany({
-            data: chunks.map((content, index) => ({
-              organizationId: orgId,
-              packageDocumentId: document.id,
-              content,
-              chunkIndex: index,
-            })),
-          })
-        }
+      if (chunkPayloads.length > 0) {
+        await db.packageDocumentChunk.createMany({
+          data: chunkPayloads.map(({ content, chunkIndex }) => ({
+            organizationId: orgId,
+            packageDocumentId: document.id,
+            content,
+            chunkIndex,
+          })),
+        })
       }
 
       return NextResponse.json({

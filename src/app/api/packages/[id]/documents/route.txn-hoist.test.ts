@@ -54,8 +54,14 @@ const mockGetOrgContext = vi.hoisted(() =>
 
 const mockWithOrgRlsTransaction = vi.hoisted(() =>
   vi.fn(async (_organizationId: string, callback: () => Promise<unknown>) => {
-    eventLog.push('txn')
-    return callback()
+    // Close marker per cubic R1 (thread 2): asserting on open-only events
+    // would let a stretched read txn (findFirst, upload, parse inside the
+    // first callback) pass as "hoisted", because its log is byte-identical
+    // to the correct order without a close boundary.
+    eventLog.push('txnOpen')
+    const result = await callback()
+    eventLog.push('txnClose')
+    return result
   }),
 )
 
@@ -126,11 +132,34 @@ function makePdfRequest(): NextRequest {
 
 const PARAMS = { params: Promise.resolve({ id: 'pkg_1' }) }
 
+/**
+ * Boundary predicate shared by the order tests and the regression guard
+ * (cubic R1 thread 2): slow work (upload, parse) must fall strictly
+ * between the read transaction's CLOSE and the write transaction's OPEN.
+ * Open-only markers cannot express this — a read txn stretched to include
+ * upload+parse produces a log byte-identical to the correct order.
+ */
+function uploadAndParseOutsideTxns(log: string[]): boolean {
+  const readClose = log.indexOf('txnClose')
+  const writeOpen = log.lastIndexOf('txnOpen')
+  return (
+    readClose >= 0 &&
+    writeOpen > readClose &&
+    log.indexOf('upload') > readClose &&
+    log.indexOf('upload') < writeOpen &&
+    log.indexOf('parse') > readClose &&
+    log.indexOf('parse') < writeOpen
+  )
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   eventLog.length = 0
   pdfInstances.created = 0
-  // Re-arm the hoisted default implementations (clearAllMocks resets them).
+  // Re-arm the hoisted default implementations. clearAllMocks() clears
+  // calls/results but KEEPS implementations (it never resets them); the
+  // re-arm below exists to guard against a future mockReset() swap, which
+  // would wipe every hoisted implementation in one call.
   mockDb.servicePackage.findFirst.mockImplementation(async () => {
     eventLog.push('findFirst')
     return { id: 'pkg_1', organizationId: 'org_1' }
@@ -153,8 +182,10 @@ beforeEach(() => {
   }))
   mockWithOrgRlsTransaction.mockImplementation(
     async (_organizationId: string, callback: () => Promise<unknown>) => {
-      eventLog.push('txn')
-      return callback()
+      eventLog.push('txnOpen')
+      const result = await callback()
+      eventLog.push('txnClose')
+      return result
     },
   )
   process.env.SUPABASE_URL = 'https://example.supabase.co'
@@ -168,14 +199,9 @@ describe('POST /api/packages/[id]/documents — RLS txn hoist (t_771f12e9)', () 
     const response = await POST(makePdfRequest(), PARAMS)
 
     expect(response.status).toBe(200)
-    // Two short org-scoped transactions: the read (findFirst) opens first,
-    // then the write (create/createMany) opens after upload+parse.
-    const firstTxn = eventLog.indexOf('txn')
-    const writeTxn = eventLog.lastIndexOf('txn')
-    expect(firstTxn).toBeGreaterThanOrEqual(0)
-    expect(writeTxn).toBeGreaterThan(firstTxn)
-    expect(eventLog.indexOf('upload')).toBeGreaterThan(firstTxn)
-    expect(eventLog.indexOf('upload')).toBeLessThan(writeTxn)
+    // upload must fall between the read txn's close and the write txn's
+    // open — never inside either txn.
+    expect(uploadAndParseOutsideTxns(eventLog)).toBe(true)
   })
 
   it('runs the pdf text extraction BEFORE the write transaction opens', async () => {
@@ -183,24 +209,70 @@ describe('POST /api/packages/[id]/documents — RLS txn hoist (t_771f12e9)', () 
 
     expect(response.status).toBe(200)
     expect(pdfInstances.created).toBe(1)
-    const firstTxn = eventLog.indexOf('txn')
-    const writeTxn = eventLog.lastIndexOf('txn')
-    expect(eventLog.indexOf('parse')).toBeGreaterThan(firstTxn)
-    expect(eventLog.indexOf('parse')).toBeLessThan(writeTxn)
+    // parse (cold pdfjs JIT/worker spawn — the work the hoist exists to
+    // keep outside the 5000ms interactive txn) must also fall between the
+    // read close and write open.
+    expect(uploadAndParseOutsideTxns(eventLog)).toBe(true)
+  })
+
+  it('REGRESSION GUARD: a read txn stretched to include upload+parse is rejected by the boundary assertions', () => {
+    // The exact log the defect would produce with open-only markers is
+    // byte-identical to the correct hoisted order:
+    //   txnOpen findFirst upload parse txnOpen create createMany
+    // With close markers, the stretched sequence violates the boundary and
+    // the shared predicate must reject it — otherwise the suite would go
+    // green while slow work runs inside a transaction.
+    const stretched: string[] = [
+      'txnOpen',
+      'findFirst',
+      'upload',
+      'parse',
+      'txnOpen',
+      'create',
+      'createMany',
+    ]
+    const hoisted: string[] = [
+      'txnOpen',
+      'findFirst',
+      'txnClose',
+      'upload',
+      'parse',
+      'txnOpen',
+      'create',
+      'createMany',
+      'txnClose',
+    ]
+    expect(uploadAndParseOutsideTxns(stretched)).toBe(false)
+    expect(uploadAndParseOutsideTxns(hoisted)).toBe(true)
+  })
+
+  it('returns 401 before any transaction or upload when getOrgContext resolves null (auth seam preserved outside the wrapper)', async () => {
+    mockGetOrgContext.mockResolvedValueOnce(null)
+
+    const response = await POST(makePdfRequest(), PARAMS)
+
+    expect(response.status).toBe(401)
+    expect(mockWithOrgRlsTransaction).not.toHaveBeenCalled()
+    expect(mockUploadToObjectStorage).not.toHaveBeenCalled()
+    expect(eventLog).not.toContain('txnOpen')
   })
 
   it('keeps the package 404 read inside the first org txn and writes inside the second (all DB calls scoped)', async () => {
     const response = await POST(makePdfRequest(), PARAMS)
 
     expect(response.status).toBe(200)
-    const firstTxn = eventLog.indexOf('txn')
-    const writeTxn = eventLog.lastIndexOf('txn')
-    // findFirst (the 404 read) happens inside the first scoped txn.
-    expect(eventLog.indexOf('findFirst')).toBeGreaterThan(firstTxn)
-    expect(eventLog.indexOf('findFirst')).toBeLessThan(writeTxn)
-    // create + createMany happen inside the second scoped txn.
+    const readOpen = eventLog.indexOf('txnOpen')
+    const readClose = eventLog.indexOf('txnClose')
+    const writeOpen = eventLog.lastIndexOf('txnOpen')
+    // findFirst (the 404 read) is inside the first scoped txn — between its
+    // open and close markers.
+    expect(eventLog.indexOf('findFirst')).toBeGreaterThan(readOpen)
+    expect(eventLog.indexOf('findFirst')).toBeLessThan(readClose)
+    // create + createMany happen inside the second scoped txn — after its
+    // open, before its close.
     const createAt = eventLog.indexOf('create')
-    expect(createAt).toBeGreaterThan(writeTxn)
+    expect(createAt).toBeGreaterThan(writeOpen)
+    expect(createAt).toBeLessThan(eventLog.lastIndexOf('txnClose'))
     expect(eventLog.indexOf('createMany')).toBeGreaterThan(createAt)
     expect(mockWithOrgRlsTransaction).toHaveBeenCalledTimes(2)
     expect(mockWithOrgRlsTransaction.mock.calls[0][0]).toBe('org_1')
@@ -218,11 +290,14 @@ describe('POST /api/packages/[id]/documents — RLS txn hoist (t_771f12e9)', () 
     expect(response.status).toBe(500)
     // Both writes were attempted inside ONE transaction — a rejection there
     // rolls the whole txn back, so no orphan document row is left behind.
-    const writeTxn = eventLog.lastIndexOf('txn')
-    expect(writeTxn).toBeGreaterThan(eventLog.indexOf('txn'))
-    expect(eventLog.indexOf('create')).toBeGreaterThan(writeTxn)
-    expect(eventLog.indexOf('createMany')).toBeGreaterThan(writeTxn)
+    const writeOpen = eventLog.lastIndexOf('txnOpen')
+    expect(writeOpen).toBeGreaterThan(eventLog.indexOf('txnOpen'))
+    expect(eventLog.indexOf('create')).toBeGreaterThan(writeOpen)
+    expect(eventLog.indexOf('createMany')).toBeGreaterThan(writeOpen)
     expect(mockWithOrgRlsTransaction).toHaveBeenCalledTimes(2)
+    // The rejection propagates before the write txn's close marker is
+    // reached — only the read txn ever closes.
+    expect(eventLog.filter((e) => e === 'txnClose').length).toBe(1)
   })
 
   it('maps a storage-backend failure to 502 and never opens the write transaction', async () => {
@@ -238,8 +313,9 @@ describe('POST /api/packages/[id]/documents — RLS txn hoist (t_771f12e9)', () 
     expect(response.status).toBe(502)
     expect(eventLog.indexOf('create')).toBe(-1)
     // Only the read txn (findFirst / 404) may have opened — the write txn
-    // must never start when the upload failed.
-    expect(eventLog.filter((e) => e === 'txn').length).toBeLessThan(2)
+    // must never start when the upload failed: one open and one close pair.
+    expect(eventLog.filter((e) => e === 'txnOpen').length).toBe(1)
+    expect(eventLog.filter((e) => e === 'txnClose').length).toBe(1)
   })
 
   it('blocks cross-site POST with 403 before any upload or transaction (CSRF preserved outside the wrapper)', async () => {
@@ -260,6 +336,6 @@ describe('POST /api/packages/[id]/documents — RLS txn hoist (t_771f12e9)', () 
 
     expect(response.status).toBe(403)
     expect(mockUploadToObjectStorage).not.toHaveBeenCalled()
-    expect(eventLog).not.toContain('txn')
+    expect(eventLog).not.toContain('txnOpen')
   })
 })

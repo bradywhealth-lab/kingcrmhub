@@ -132,6 +132,27 @@ beforeEach(() => {
   delete process.env.SUPABASE_STORAGE_BUCKET
 })
 
+describe('POST /api/packages/[id]/documents — auth seam outside the wrapper (t_771f12e9 hoist)', () => {
+  it('returns 401 before any DB read or upload when getOrgContext resolves null', async () => {
+    setupStorageEnv()
+    // The route now implements the 401 seam itself (the hoist replicated
+    // withRequestOrgContext's seams explicitly). Pin: null context → 401
+    // before the read txn or any storage upload happens.
+    const { getOrgContext } = await import('@/lib/request-context')
+    const mockGetOrgContext = getOrgContext as ReturnType<typeof vi.fn>
+    mockGetOrgContext.mockResolvedValueOnce(null)
+
+    const response = await POST(
+      makeRequest('sample.pdf', 'application/pdf', validSmallPdfBytes()),
+      { params: Promise.resolve({ id: 'pkg_1' }) },
+    )
+
+    expect(response.status).toBe(401)
+    expect(mockDb.servicePackage.findFirst).not.toHaveBeenCalled()
+    expect(mockDb.packageDocument.create).not.toHaveBeenCalled()
+  })
+})
+
 describe('POST /api/packages/[id]/documents — storage unconfigured degradation', () => {
   it('returns 503 with a clear message (not 500) for a valid small PDF when SUPABASE_URL is unset', async () => {
     mockDb.servicePackage.findFirst.mockResolvedValueOnce({ id: 'pkg_1', organizationId: 'org_1' })
