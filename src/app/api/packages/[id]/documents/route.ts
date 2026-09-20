@@ -204,47 +204,63 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Short transaction #2 (write): document row + chunks commit
     // atomically — a createMany rejection rolls back the create (no
     // orphan row). Same statuses and payloads as the pre-hoist route.
-    return await withOrgRlsTransaction(orgId, async () => {
-      const document = await db.packageDocument.create({
-        data: {
-          organizationId: orgId,
-          packageId,
-          type,
-          name: name.trim() || file.name,
-          description: description.trim() || null,
-          // M173: never persist a public bucket URL. The gated download URL
-          // is derived by the serializers; storagePath stays server-side for
-          // delete/download. `fileUrl` is persisted only because the schema
-          // requires a String — it is never read (legacy rows keep their old
-          // value and are still served through the gated path).
-          fileUrl: '',
-          storagePath,
-          fileType: file.type || null,
-          fileSize: file.size || null,
-          version: version.trim() || null,
-          extractedText: normalizedText || null,
-          indexedAt: normalizedText ? new Date() : null,
-        },
-      })
-
-      if (chunkPayloads.length > 0) {
-        await db.packageDocumentChunk.createMany({
-          data: chunkPayloads.map(({ content, chunkIndex }) => ({
+    try {
+      return await withOrgRlsTransaction(orgId, async () => {
+        const document = await db.packageDocument.create({
+          data: {
             organizationId: orgId,
-            packageDocumentId: document.id,
-            content,
-            chunkIndex,
-          })),
+            packageId,
+            type,
+            name: name.trim() || file.name,
+            description: description.trim() || null,
+            // M173: never persist a public bucket URL. The gated download URL
+            // is derived by the serializers; storagePath stays server-side for
+            // delete/download. `fileUrl` is persisted only because the schema
+            // requires a String — it is never read (legacy rows keep their old
+            // value and are still served through the gated path).
+            fileUrl: '',
+            storagePath,
+            fileType: file.type || null,
+            fileSize: file.size || null,
+            version: version.trim() || null,
+            extractedText: normalizedText || null,
+            indexedAt: normalizedText ? new Date() : null,
+          },
         })
-      }
 
-      return NextResponse.json({
-        document: {
-          ...serializePackageDocument(document),
-          chunkCount,
-        },
+        if (chunkPayloads.length > 0) {
+          await db.packageDocumentChunk.createMany({
+            data: chunkPayloads.map(({ content, chunkIndex }) => ({
+              organizationId: orgId,
+              packageDocumentId: document.id,
+              content,
+              chunkIndex,
+            })),
+          })
+        }
+
+        return NextResponse.json({
+          document: {
+            ...serializePackageDocument(document),
+            chunkCount,
+          },
+        })
       })
-    })
+    } catch (error) {
+      // The write txn aborted after the upload already committed: the DB
+      // rows roll back atomically, but the storage blob would otherwise be
+      // orphaned (t_fd623cbf). Compensate with a best-effort delete that
+      // logs its own failure and never masks the write error.
+      try {
+        await deleteFromObjectStorage(storagePath)
+      } catch (rollbackError) {
+        console.error(
+          'Package documents POST: rollback of uploaded object failed:',
+          rollbackError,
+        )
+      }
+      throw error
+    }
   } catch (error) {
     // Typed storage errors map to 503 (unconfigured) / 502 (backend
     // failure) via the shared helper — backend detail stays server-side.
