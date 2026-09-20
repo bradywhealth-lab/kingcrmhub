@@ -13,7 +13,12 @@ const mockDb = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/lib/db', () => ({ db: mockDb }))
+vi.mock('@/lib/db', () => ({
+  db: mockDb,
+  withOrgRlsTransaction: vi.fn(
+    async (_organizationId: string, callback: () => Promise<unknown>) => callback(),
+  ),
+}))
 
 vi.mock('@/lib/request-context', () => ({
   withRequestOrgContext: vi.fn(
@@ -22,6 +27,7 @@ vi.mock('@/lib/request-context', () => ({
       handler: (context: { organizationId: string; userId: string | null }) => Promise<unknown>,
     ) => handler({ organizationId: 'org_1', userId: 'user_1' }),
   ),
+  getOrgContext: vi.fn(async () => ({ organizationId: 'org_1', userId: 'user_1' })),
 }))
 
 let nextUploadBuffer: Buffer | null = null
@@ -124,6 +130,27 @@ beforeEach(() => {
   delete process.env.SUPABASE_URL
   delete process.env.SUPABASE_SERVICE_ROLE_KEY
   delete process.env.SUPABASE_STORAGE_BUCKET
+})
+
+describe('POST /api/packages/[id]/documents — auth seam outside the wrapper (t_771f12e9 hoist)', () => {
+  it('returns 401 before any DB read or upload when getOrgContext resolves null', async () => {
+    setupStorageEnv()
+    // The route now implements the 401 seam itself (the hoist replicated
+    // withRequestOrgContext's seams explicitly). Pin: null context → 401
+    // before the read txn or any storage upload happens.
+    const { getOrgContext } = await import('@/lib/request-context')
+    const mockGetOrgContext = getOrgContext as ReturnType<typeof vi.fn>
+    mockGetOrgContext.mockResolvedValueOnce(null)
+
+    const response = await POST(
+      makeRequest('sample.pdf', 'application/pdf', validSmallPdfBytes()),
+      { params: Promise.resolve({ id: 'pkg_1' }) },
+    )
+
+    expect(response.status).toBe(401)
+    expect(mockDb.servicePackage.findFirst).not.toHaveBeenCalled()
+    expect(mockDb.packageDocument.create).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/packages/[id]/documents — storage unconfigured degradation', () => {
