@@ -13,7 +13,12 @@ const mockDb = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/lib/db', () => ({ db: mockDb }))
+vi.mock('@/lib/db', () => ({
+  db: mockDb,
+  withOrgRlsTransaction: vi.fn(
+    async (_organizationId: string, callback: () => Promise<unknown>) => callback(),
+  ),
+}))
 
 vi.mock('@/lib/request-context', () => ({
   withRequestOrgContext: vi.fn(
@@ -22,6 +27,7 @@ vi.mock('@/lib/request-context', () => ({
       handler: (context: { organizationId: string; userId: string | null }) => Promise<unknown>,
     ) => handler({ organizationId: 'org_1', userId: 'user_1' }),
   ),
+  getOrgContext: vi.fn(async () => ({ organizationId: 'org_1', userId: 'user_1' })),
 }))
 
 let nextUploadBuffer: Buffer | null = null

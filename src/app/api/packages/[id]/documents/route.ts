@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { withRequestOrgContext } from '@/lib/request-context'
+import { db, withOrgRlsTransaction } from '@/lib/db'
+import { getOrgContext, withRequestOrgContext } from '@/lib/request-context'
+import { enforceSameOrigin } from '@/lib/security'
 import {
   deleteFromObjectStorage,
   findMissingObjectStorageEnv,
@@ -68,103 +69,131 @@ export async function POST(request: NextRequest, { params }: Params) {
     const limited = enforceRateLimit(request, { key: 'package-doc-upload', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    // `return await` (not bare `return`) so a rejected handler promise is
-    // caught by this try/catch instead of leaking to the framework as a
-    // bare empty-body 500.
-    return await withRequestOrgContext(request, async (context) => {
-      // Malformed or non-multipart bodies make formData() throw. That is a
-      // client error — map it to 400 here so the catch-all can't turn it
-      // into a generic 500 (same class PR #180 closed for /api/upload;
-      // regression t_2ef8e432: prod logged "Failed to parse body as
-      // FormData." and clients saw 500 "Failed to upload package document").
-      let formData: FormData
-      try {
-        formData = await request.formData()
-      } catch {
-        return NextResponse.json(
-          { error: 'Request body must be multipart/form-data containing a "file" field' },
-          { status: 400 }
-        )
-      }
+    // This route deliberately does NOT wrap the whole handler in
+    // withRequestOrgContext. That wrapper opens an interactive Prisma
+    // transaction (withOrgRlsTransaction, 5000ms default timeout) and the
+    // handler's storage upload + cold pdf-parse run INSIDE it — on a fresh
+    // container the first upload exceeds 5000ms and the transaction expires
+    // (t_771f12e9: "A query cannot be executed on an expired transaction").
+    // Replicate the wrapper's CSRF + auth seams explicitly, keep short
+    // org-scoped transactions around ONLY the DB reads/writes, and run the
+    // slow network/CPU work outside any transaction.
+    const csrfBlocked = enforceSameOrigin(request)
+    if (csrfBlocked) return csrfBlocked
 
-      const file = formData.get('file') as File | null
-      const name = String(formData.get('name') || '')
-      const type = String(formData.get('type') || 'other')
-      const description = String(formData.get('description') || '')
-      const version = String(formData.get('version') || '')
+    const context = await getOrgContext(request)
+    if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      if (!file) return NextResponse.json({ error: 'file is required' }, { status: 400 })
-      if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
-        return NextResponse.json({ error: 'file must be between 1B and 10MB' }, { status: 400 })
-      }
+    // Every awaited DB call below runs inside one of the org-scoped
+    // transactions; all work in between (validation, upload, extraction) is
+    // transaction-free and may take as long as it needs.
+    const orgId = context.organizationId
 
-      const normalizedName = file.name.toLowerCase()
-      const hasAllowedExtension = ALLOWED_UPLOAD_EXTENSIONS.some((ext) => normalizedName.endsWith(ext))
-      const hasAllowedMimeType = ALLOWED_UPLOAD_TYPES.has((file.type || '').toLowerCase())
-      if (!hasAllowedExtension || !hasAllowedMimeType) {
-        return NextResponse.json(
-          { error: 'Unsupported file type. Allowed types: pdf, doc, docx, png, jpg' },
-          { status: 400 }
-        )
-      }
+    // Malformed or non-multipart bodies make formData() throw. That is a
+    // client error — map it to 400 here so the catch-all can't turn it
+    // into a generic 500 (same class PR #180 closed for /api/upload;
+    // regression t_2ef8e432: prod logged "Failed to parse body as
+    // FormData." and clients saw 500 "Failed to upload package document").
+    let formData: FormData
+    try {
+      formData = await request.formData()
+    } catch {
+      return NextResponse.json(
+        { error: 'Request body must be multipart/form-data containing a "file" field' },
+        { status: 400 }
+      )
+    }
 
-      const servicePackage = await db.servicePackage.findFirst({
-        where: { id: packageId, organizationId: context.organizationId },
-      })
+    const file = formData.get('file') as File | null
+    const name = String(formData.get('name') || '')
+    const type = String(formData.get('type') || 'other')
+    const description = String(formData.get('description') || '')
+    const version = String(formData.get('version') || '')
 
-      if (!servicePackage) {
-        return NextResponse.json({ error: 'Service package not found' }, { status: 404 })
-      }
+    if (!file) return NextResponse.json({ error: 'file is required' }, { status: 400 })
+    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: 'file must be between 1B and 10MB' }, { status: 400 })
+    }
 
-      // Graceful degradation: mirror the missing-AI-key 503 pattern — an
-      // unconfigured storage backend is a service-availability problem, not
-      // an unhandled server error.
-      const missingStorageEnv = findMissingObjectStorageEnv()
-      if (missingStorageEnv.length > 0) {
-        console.error(
-          'Package documents POST: object storage not configured, missing env vars:',
-          missingStorageEnv.join(', ')
-        )
-        return NextResponse.json({ error: STORAGE_UNCONFIGURED_MESSAGE }, { status: 503 })
-      }
+    const normalizedName = file.name.toLowerCase()
+    const hasAllowedExtension = ALLOWED_UPLOAD_EXTENSIONS.some((ext) => normalizedName.endsWith(ext))
+    const hasAllowedMimeType = ALLOWED_UPLOAD_TYPES.has((file.type || '').toLowerCase())
+    if (!hasAllowedExtension || !hasAllowedMimeType) {
+      return NextResponse.json(
+        { error: 'Unsupported file type. Allowed types: pdf, doc, docx, png, jpg' },
+        { status: 400 }
+      )
+    }
 
-      const bytes = await file.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      const { storagePath } = await uploadToObjectStorage({
-        organizationId: context.organizationId,
-        packageId,
-        originalFileName: file.name,
-        contentType: file.type || 'application/octet-stream',
-        buffer,
-      })
+    // Short transaction #1 (read-only): org-scoped existence check. Returns
+    // as soon as it commits — the slow work below never holds it open.
+    const servicePackage = await withOrgRlsTransaction(orgId, () =>
+      db.servicePackage.findFirst({
+        where: { id: packageId, organizationId: orgId },
+      }),
+    )
 
-      let extractedText: string
-      try {
-        extractedText = await extractPackageText(file, buffer)
-      } catch (error) {
-        if (error instanceof PdfExtractionError) {
-          // Roll back the uploaded blob so a failing extraction never
-          // leaves orphaned storage behind a fake-good response.
-          try {
-            await deleteFromObjectStorage(storagePath)
-          } catch (rollbackError) {
-            console.error(
-              'Package documents POST: rollback of uploaded object failed:',
-              rollbackError,
-            )
-          }
-          return NextResponse.json(
-            { error: 'Failed to extract text from the uploaded PDF. The document was not indexed.' },
-            { status: 422 },
+    if (!servicePackage) {
+      return NextResponse.json({ error: 'Service package not found' }, { status: 404 })
+    }
+
+    // Graceful degradation: mirror the missing-AI-key 503 pattern — an
+    // unconfigured storage backend is a service-availability problem, not
+    // an unhandled server error.
+    const missingStorageEnv = findMissingObjectStorageEnv()
+    if (missingStorageEnv.length > 0) {
+      console.error(
+        'Package documents POST: object storage not configured, missing env vars:',
+        missingStorageEnv.join(', ')
+      )
+      return NextResponse.json({ error: STORAGE_UNCONFIGURED_MESSAGE }, { status: 503 })
+    }
+
+    // Network upload — OUTSIDE any transaction (t_771f12e9).
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    const { storagePath } = await uploadToObjectStorage({
+      organizationId: orgId,
+      packageId,
+      originalFileName: file.name,
+      contentType: file.type || 'application/octet-stream',
+      buffer,
+    })
+
+    // Extraction (dynamic import + pdfjs worker spawn on first use — the
+    // cold path that exceeded 5000ms after deploy) — OUTSIDE any
+    // transaction.
+    let extractedText: string
+    try {
+      extractedText = await extractPackageText(file, buffer)
+    } catch (error) {
+      if (error instanceof PdfExtractionError) {
+        // Roll back the uploaded blob so a failing extraction never
+        // leaves orphaned storage behind a fake-good response.
+        try {
+          await deleteFromObjectStorage(storagePath)
+        } catch (rollbackError) {
+          console.error(
+            'Package documents POST: rollback of uploaded object failed:',
+            rollbackError,
           )
         }
-        throw error
+        return NextResponse.json(
+          { error: 'Failed to extract text from the uploaded PDF. The document was not indexed.' },
+          { status: 422 },
+        )
       }
-      const normalizedText = normalizeText(extractedText)
+      throw error
+    }
+    const normalizedText = normalizeText(extractedText)
 
+    // Short transaction #2 (write): document row + chunks commit
+    // atomically — a createMany rejection rolls back the create (no
+    // orphan row). Same statuses and payloads as the pre-hoist route.
+    return await withOrgRlsTransaction(orgId, async () => {
       const document = await db.packageDocument.create({
         data: {
-          organizationId: context.organizationId,
+          organizationId: orgId,
           packageId,
           type,
           name: name.trim() || file.name,
@@ -191,7 +220,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         if (chunks.length > 0) {
           await db.packageDocumentChunk.createMany({
             data: chunks.map((content, index) => ({
-              organizationId: context.organizationId,
+              organizationId: orgId,
               packageDocumentId: document.id,
               content,
               chunkIndex: index,
