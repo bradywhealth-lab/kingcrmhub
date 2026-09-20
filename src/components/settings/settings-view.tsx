@@ -1361,8 +1361,8 @@ export function SettingsView() {
         <p className="text-gray-500">Multi-tenant organization, team, security, and integrations</p>
       </div>
 
-      <Tabs value={activeSettingsTab} onValueChange={setActiveSettingsTab} className="w-full">
-        <TabsList className="flex h-auto flex-wrap gap-1 border border-[var(--ink-line)] bg-[var(--paper)] p-1">
+      <Tabs value={activeSettingsTab} onValueChange={setActiveSettingsTab} className="w-full min-w-0">
+        <TabsList className="flex h-auto w-full max-w-full flex-wrap gap-1 overflow-x-auto overscroll-x-contain border border-[var(--ink-line)] bg-[var(--paper)] p-1">
           <TabsTrigger value="organization" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
             <Building2 className="h-4 w-4" />
             Organization

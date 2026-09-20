@@ -807,8 +807,10 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         {/* Header - progress */}
         {!isDoneStep && currentStep > 0 && (
           <div className="border-b border-[rgba(31,42,54,0.06)] px-8 py-5">
-            <div className="flex items-center justify-between gap-6">
-              <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+              <div className="min-w-0 overflow-x-auto overscroll-x-contain">
+                <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
+              </div>
               <div className="min-w-[80px] text-right">
                 <p className="text-xs font-medium text-[#0c111b]/45">
                   Step {currentStep} of {totalSteps - 2}
