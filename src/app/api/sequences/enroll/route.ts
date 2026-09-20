@@ -20,7 +20,7 @@ const enrollSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const { searchParams } = new URL(request.url)
     const leadId = searchParams.get('leadId')
     const sequenceId = searchParams.get('sequenceId')
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'sequence-enroll', limit: 120, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
     const parsed = await parseJsonBody(request, enrollSchema)
     if (!parsed.success) return parsed.response
     const { leadId, sequenceId, startNow = true } = parsed.data

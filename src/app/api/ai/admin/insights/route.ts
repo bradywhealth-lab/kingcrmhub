@@ -18,7 +18,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
  */
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async ({ organizationId, userId }) => {
+    return await withRequestOrgContext(request, async ({ organizationId, userId }) => {
       if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }

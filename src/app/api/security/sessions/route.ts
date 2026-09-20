@@ -6,7 +6,7 @@ import { enforceRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       if (!context.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
       const currentToken = request.cookies.get(AUTH_COOKIE_NAME)?.value?.trim() || null
@@ -67,7 +67,7 @@ export async function DELETE(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'security-sessions-delete', limit: 30, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       if (!context.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
       const id = request.nextUrl.searchParams.get('id')

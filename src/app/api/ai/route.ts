@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   try {
     const limited = enforceRateLimit(request, { key: 'ai-generate', limit: 50, windowMs: 60_000 })
     if (limited) return limited
-    return withRequestOrgContext(request, async () => {
+    return await withRequestOrgContext(request, async () => {
       const parsed = await parseJsonBody(request, aiRequestSchema)
       if (!parsed.success) return parsed.response
       const { action, data } = parsed.data

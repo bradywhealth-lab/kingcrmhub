@@ -22,7 +22,7 @@ function normalizeSettings(value: Prisma.JsonValue | null): Record<string, unkno
 
 export async function GET(request: NextRequest) {
   try {
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const organization = await db.organization.findUnique({
         where: { id: context.organizationId },
         select: {
@@ -72,7 +72,7 @@ export async function PATCH(request: NextRequest) {
     const limited = enforceRateLimit(request, { key: 'organization-settings', limit: 40, windowMs: 60_000 })
     if (limited) return limited
 
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
       const parsed = await parseJsonBody(request, organizationSchema)
       if (!parsed.success) return parsed.response
 

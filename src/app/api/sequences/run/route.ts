@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     if (!isInternalRunnerAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized runner request' }, { status: 401 })
     }
-    return withRequestOrgContext(request, async (context) => {
+    return await withRequestOrgContext(request, async (context) => {
 
     const now = new Date()
     const dueEnrollments = await db.sequenceEnrollment.findMany({
