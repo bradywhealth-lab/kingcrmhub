@@ -54,6 +54,15 @@ describe('eslint rule no-unawaited-org-context', () => {
       }
     }`
     expect(messages(code)).toEqual(['mustBeAsyncFunction'])
+    const fixResult = linter.verifyAndFix(code, [
+      {
+        languageOptions: { parser: tsParser, parserOptions: { ecmaVersion: 'latest' } },
+        plugins: { local: { rules: { 'no-unawaited-org-context': rule } } },
+        rules: { 'local/no-unawaited-org-context': 'error' },
+      },
+    ])
+    expect(fixResult.fixed).toBe(false)
+    expect(fixResult.output).toBe(code)
   })
 
   it('accepts the fixed awaited form inside a try', () => {
