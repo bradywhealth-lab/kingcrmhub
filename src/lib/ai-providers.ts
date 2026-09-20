@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client'
 import OpenAI from 'openai'
 import Groq from 'groq-sdk'
 import { db } from '@/lib/db'
+import { classifyAIError, AI_GENERIC_MESSAGE } from '@/lib/ai-errors'
 
 export type AIProvider = 'groq' | 'openai' | 'anthropic' | 'openrouter'
 
@@ -195,8 +196,8 @@ async function createGroqStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Groq stream error'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        const { message } = classifyAIError(err)
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`))
         controller.close()
       }
     },
@@ -230,8 +231,8 @@ async function createOpenAIStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'OpenAI stream error'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        const { message } = classifyAIError(err)
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`))
         controller.close()
       }
     },
@@ -272,8 +273,8 @@ async function createAnthropicStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Anthropic stream error'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        const { message } = classifyAIError(err)
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`))
         controller.close()
       }
     },
@@ -314,8 +315,8 @@ async function createOpenRouterStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'OpenRouter stream error'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        const { message } = classifyAIError(err)
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`))
         controller.close()
       }
     },

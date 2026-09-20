@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrgContext } from '@/lib/request-context'
 import { resolveAIConfig, createChatStream } from '@/lib/ai-providers'
+import { classifyAIError } from '@/lib/ai-errors'
 
 const SYSTEM_PROMPT = `You are an elite AI client assistant built into King CRM — the client pipeline for freelancers and one-person businesses. Your job is to help the user win more clients, qualify leads faster, write high-converting outreach, and make smarter pipeline decisions.
 
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('AI chat error:', error)
-    const msg = error instanceof Error ? error.message : 'Failed to process chat request'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    const { message } = classifyAIError(error)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
