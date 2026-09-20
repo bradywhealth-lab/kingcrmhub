@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { AuthLoadingSkeleton } from '@/components/auth/auth-loading'
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset'
 
@@ -37,15 +38,7 @@ const TRUST_METRICS = [
 
 export default function AuthPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[var(--ink)]" role="status" aria-label="Loading sign in">
-          <div className="mx-auto max-w-7xl px-6 py-10">
-            <div className="h-10 w-40 animate-pulse rounded-2xl bg-white/10" />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<AuthLoadingSkeleton />}>
       <AuthPageInner />
     </Suspense>
   )
