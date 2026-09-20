@@ -176,6 +176,9 @@ MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
         *add_tasks_appointments_hub*)
           CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Task', 'Appointment', 'CalendarSync', 'BookingLink')) < 4 THEN RAISE EXCEPTION 'Tasks Hub tables missing (need all 4)'; END IF; END \$\$;"
           ;;
+        *add_stripe_billing*)
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('stripeCustomerId', 'stripeSubscriptionId', 'stripeSubscriptionStatus', 'planUpdatedAt')) < 4 THEN RAISE EXCEPTION 'Stripe billing columns missing (need all 4)'; END IF; END \$\$;"
+          ;;
         *)
           echo "MIGRATE_BASELINE_UNKNOWN_MIGRATION: $name has no schema probe — refusing to baseline blindly (add a probe before deploying this migration)" >&2
           restore_old
@@ -222,7 +225,11 @@ BEGIN
     VALUES
       ('onboardingCompleted', 'boolean', 'NO', 'false'),
       ('onboardingCompletedAt', 'timestamp without time zone', 'YES', NULL),
-      ('onboardingStep', 'integer', 'NO', '0')
+      ('onboardingStep', 'integer', 'NO', '0'),
+      ('stripeCustomerId', 'text', 'YES', NULL),
+      ('stripeSubscriptionId', 'text', 'YES', NULL),
+      ('stripeSubscriptionStatus', 'text', 'YES', NULL),
+      ('planUpdatedAt', 'timestamp without time zone', 'YES', NULL)
   ) AS expected(column_name, data_type, is_nullable, column_default)
   LEFT JOIN information_schema.columns AS actual
     ON actual.table_schema = 'public'

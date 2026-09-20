@@ -68,6 +68,7 @@ function createDeployHarness({
   mkdirSync(join(repoDir, 'prisma/migrations/20260426_add_onboarding_fields'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260909_rename_carrier_to_service_package'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260911_add_tasks_appointments_hub'), { recursive: true })
+  mkdirSync(join(repoDir, 'prisma/migrations/20260919_add_stripe_billing'), { recursive: true })
   writeFileSync(composeFile, 'services: {}\n')
   writeFileSync(deployLog, '')
 
@@ -214,6 +215,23 @@ describe('KingCRMhub deploy hardening', () => {
     expect(script).toContain('RAISE EXCEPTION')
   })
 
+  it('pins the four Stripe billing columns in the schema verification gate', () => {
+    // Round-2 cubic pin: a future commit that drops any of the Stripe column
+    // rows from the VERIFY ORG SCHEMA ALIGNMENT VALUES list must fail CI.
+    const script = readDeployScript()
+
+    expect(script).toContain("'stripeCustomerId'")
+    expect(script).toContain("'stripeSubscriptionId'")
+    expect(script).toContain("'stripeSubscriptionStatus'")
+    expect(script).toContain("'planUpdatedAt'")
+    // Three nullable TEXT columns + one TIMESTAMP(3) column, all no-default,
+    // matching migration 20260919_add_stripe_billing and schema.prisma.
+    expect(script).toContain("('stripeCustomerId', 'text', 'YES', NULL)")
+    expect(script).toContain("('stripeSubscriptionId', 'text', 'YES', NULL)")
+    expect(script).toContain("('stripeSubscriptionStatus', 'text', 'YES', NULL)")
+    expect(script).toContain("('planUpdatedAt', 'timestamp without time zone', 'YES', NULL)")
+  })
+
   it('uses the database-ready endpoint for replacement and rollback gates', () => {
     const script = readDeployScript()
 
@@ -342,6 +360,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('Baselining 20260426_add_onboarding_fields')
     expect(output).toContain('Baselining 20260909_rename_carrier_to_service_package')
     expect(output).toContain('Baselining 20260911_add_tasks_appointments_hub')
+    expect(output).toContain('Baselining 20260919_add_stripe_billing')
     expect(output).toContain('DEPLOY_V4_DONE')
   })
 

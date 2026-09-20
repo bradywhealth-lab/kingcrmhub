@@ -1,24 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check, X, Zap, Crown, Building2, Users, Shield, ChevronDown,
-  Loader2, Star, ArrowRight,
+  Check, X, Zap, Crown, Building2, Shield, ChevronDown,
+  Loader2, Star, ArrowRight, type LucideIcon,
 } from "lucide-react";
+import { PLANS as CATALOG, type PlanId } from "@/lib/billing/plans";
 
-type Interval = "monthly" | "yearly";
-type PlanId = "free" | "starter" | "pro" | "enterprise";
+/**
+ * Pricing page — plan data comes from the canonical billing catalog
+ * (src/lib/billing/plans.ts). The catalog reconciles the vocabulary used by
+ * checkout, Stripe price IDs, Organization.plan, and entitlement gates:
+ *   Free -> free | Pro -> starter ($19) | Studio -> pro ($39) | Elite -> enterprise ($59)
+ * Yearly billing is NOT available in v1 (monthly only, Brady-confirmed).
+ */
 
-// Exported so src/lib/seo/seo.test.ts can pin JSON-LD offers to this source
-// of truth (pricing parity gate — cubic P2).
-export const PLANS = [
-  {
-    id: "free" as PlanId,
-    name: "Free",
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    description: "Get started with the basics. No credit card required.",
+interface PresentationPlan {
+  icon: LucideIcon;
+  color: string;
+  btnClass: string;
+  popular?: boolean;
+  features: { text: string; included: boolean }[];
+}
+
+const PRESENTATION: Record<PlanId, PresentationPlan> = {
+  free: {
     icon: Shield,
     color: "border-gray-200",
     btnClass: "bg-[#0c111b] text-white hover:bg-[#14202e]",
@@ -35,12 +42,7 @@ export const PLANS = [
       { text: "AI lead prioritization", included: false },
     ],
   },
-  {
-    id: "starter" as PlanId,
-    name: "Pro",
-    monthlyPrice: 19,
-    yearlyPrice: 16,
-    description: "For freelancers ready to systematize client work and follow-up.",
+  starter: {
     icon: Zap,
     color: "border-[#127c66]/40",
     btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
@@ -57,12 +59,7 @@ export const PLANS = [
       { text: "AI lead prioritization", included: false },
     ],
   },
-  {
-    id: "pro" as PlanId,
-    name: "Studio",
-    monthlyPrice: 39,
-    yearlyPrice: 32,
-    description: "The complete client operations stack for established solo businesses.",
+  pro: {
     icon: Crown,
     color: "border-[#127c66]",
     popular: true,
@@ -80,12 +77,7 @@ export const PLANS = [
       { text: "Priority support", included: true },
     ],
   },
-  {
-    id: "enterprise" as PlanId,
-    name: "Elite",
-    monthlyPrice: 69,
-    yearlyPrice: 57,
-    description: "Advanced scale, support, and customization for growing studios.",
+  enterprise: {
     icon: Building2,
     color: "border-gray-200",
     btnClass: "bg-[#0c111b] text-white hover:bg-[#14202e]",
@@ -102,7 +94,18 @@ export const PLANS = [
       { text: "Security review", included: true },
     ],
   },
-];
+};
+
+// Exported so src/lib/seo/seo.test.ts can pin JSON-LD offers to this source
+// of truth (pricing parity gate — cubic P2). Prices/names come from the
+// canonical billing catalog; presentation stays local to this page.
+export const PLANS = CATALOG.map((plan) => ({
+  id: plan.planId,
+  name: plan.displayName,
+  monthlyPrice: plan.monthlyPrice,
+  description: plan.description,
+  ...PRESENTATION[plan.planId],
+}));
 
 const COMPARE_FEATURES = [
   "User seats",
@@ -135,7 +138,7 @@ const FAQ = [
   },
   {
     q: "What happens when I choose a paid plan?",
-    a: "Sign in or create a workspace and we will show an availability notice. You will not be charged while billing is offline.",
+    a: "If billing is active for your account, you will be taken to a secure checkout to complete your subscription. You will not be charged before that checkout.",
   },
   {
     q: "Will my free workspace keep working?",
@@ -147,12 +150,39 @@ const FAQ = [
   },
 ];
 
+type BillingDisplay = "loading" | "off" | "test" | "live";
+
+const BILLING_LABEL: Record<BillingDisplay, string> = {
+  loading: "Checking billing status…",
+  off: "Paid-plan preview. Billing is not active yet.",
+  test: "Test-mode billing — no real charges.",
+  live: "Live billing is active.",
+};
+
 export function CrmPricingPage() {
   const router = useRouter();
-  const [interval, setInterval] = useState<Interval>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [billing, setBilling] = useState<BillingDisplay>("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/billing/status")
+      .then((res) => (res.ok ? res.json() : Promise.resolve(null)))
+      .then((data: { active?: string } | null) => {
+        if (cancelled) return;
+        if (data?.active === "test") setBilling("test");
+        else if (data?.active === "live") setBilling("live");
+        else setBilling("off");
+      })
+      .catch(() => {
+        if (!cancelled) setBilling("off");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -169,11 +199,11 @@ export function CrmPricingPage() {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, interval }),
+        body: JSON.stringify({ planId, interval: "monthly" }),
       });
       const data = (await res.json()) as { url?: string | null; message?: string; error?: string };
       if (res.status === 401) {
-        router.push(`/auth?callbackUrl=${encodeURIComponent(`/pricing?plan=${planId}&interval=${interval}`)}`);
+        router.push(`/auth?callbackUrl=${encodeURIComponent(`/pricing?plan=${planId}&interval=monthly`)}`);
         return;
       }
       if (!res.ok) {
@@ -214,7 +244,7 @@ export function CrmPricingPage() {
       <section className="px-6 pb-12 pt-12 text-center sm:px-10 sm:pt-16">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#127c66]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#127c66] shadow-sm backdrop-blur-sm">
           <Star className="h-3 w-3 fill-[#18b897]" />
-          Paid-plan preview. Billing is not active yet.
+          {BILLING_LABEL[billing]}
         </div>
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-[#0c111b] sm:text-5xl">
           Plans built for{" "}
@@ -225,31 +255,6 @@ export function CrmPricingPage() {
         <p className="mx-auto mt-4 max-w-lg text-base text-[#545961] sm:text-lg">
           Start free, then choose the tier that matches your freelance business as it grows.
         </p>
-
-        {/* Toggle */}
-        <div className="mt-8 inline-flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 p-1.5 shadow-sm backdrop-blur-sm">
-          <button
-            onClick={() => setInterval("monthly")}
-            className={`rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${
-              interval === "monthly" ? "bg-[#0c111b] text-white shadow-sm" : "text-[#545961] hover:text-[#0c111b]"
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setInterval("yearly")}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${
-              interval === "yearly" ? "bg-[#0c111b] text-white shadow-sm" : "text-[#545961] hover:text-[#0c111b]"
-            }`}
-          >
-            Yearly
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-all ${
-              interval === "yearly" ? "bg-emerald-400/30 text-emerald-200" : "bg-emerald-100 text-emerald-700"
-            }`}>
-              Save up to 18%
-            </span>
-          </button>
-        </div>
       </section>
 
       {/* Plan Cards */}
@@ -257,7 +262,7 @@ export function CrmPricingPage() {
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {PLANS.map((plan) => {
             const Icon = plan.icon;
-            const price = interval === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
+            const price = plan.monthlyPrice;
             const isLoading = loadingPlan === plan.id;
             return (
               <div
@@ -291,8 +296,8 @@ export function CrmPricingPage() {
                   {price === 0 && (
                     <span className="text-sm text-[#6b6e74]">Free forever</span>
                   )}
-                  {interval === "yearly" && price > 0 && (
-                    <p className="mt-1 text-xs text-emerald-600">Billed ${price * 12}/year</p>
+                  {price > 0 && (
+                    <p className="mt-1 text-xs text-[#6b6e74]">Billed monthly</p>
                   )}
                 </div>
                 <button
@@ -373,7 +378,7 @@ export function CrmPricingPage() {
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-2xl font-bold text-white">Use the free workspace now</h2>
           <p className="mt-3 text-base leading-7 text-white/75">
-            The paid ladder is a preview. Checkout stays disabled until billing, entitlements, and cancellation terms are fully verified.
+            The free workspace is fully available. Paid checkout runs in test mode first and moves live only after billing, entitlements, and cancellation terms are fully verified.
           </p>
         </div>
       </section>

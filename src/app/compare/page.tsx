@@ -39,7 +39,7 @@ const INCLUDED = [
   },
   {
     title: 'Unlimited seats',
-    detail: 'Grow your team with no per-seat pricing — Elite ($69/mo)',
+    detail: 'Grow your team with no per-seat pricing — Elite ($59/mo)',
   },
 ] as const
 
@@ -47,13 +47,13 @@ const TIERS = [
   { name: 'Free', price: '$0', note: 'Lead capture' },
   { name: 'Pro', price: '$19/mo', note: 'Solo freelancer' },
   { name: 'Studio', price: '$39/mo', note: 'Most popular' },
-  { name: 'Elite', price: '$69/mo', note: 'Team scale' },
+  { name: 'Elite', price: '$59/mo', note: 'Team scale' },
 ] as const
 
 const WHY = [
   {
     title: 'Flat pricing',
-    detail: 'No per-seat tax — unlimited seats flat at Elite ($69/mo)',
+    detail: 'No per-seat tax — unlimited seats flat at Elite ($59/mo)',
   },
   {
     title: 'Freelancer-first',
