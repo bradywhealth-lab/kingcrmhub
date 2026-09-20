@@ -4,6 +4,15 @@ import { join } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
 import { afterEach, describe, expect, it } from 'vitest'
 
+// spawnSync-heavy harness tests run the full deploy script (some twice),
+// which is wall-clock heavy under parallel load and on slow/AVX-less boxes.
+// The vitest 5s default is a real flake source here — the rollback-tag test
+// timed out at 5037-5566ms (Sentinel 2026-09-19; reproduced isolated
+// 2026-09-19) while passing when given headroom. Per-test timeout so only
+// these tests get the raised ceiling: the fast semantic-scan tests keep the
+// 5s default, so a genuine 6-14s regression in them still fails promptly.
+const deployTimeout = { timeout: 15000 }
+
 const repoRoot = join(import.meta.dirname, '..', '..')
 const deployScriptPath = join(repoRoot, 'scripts', 'deploy-kingcrmhub.sh')
 const tempDirs: string[] = []
@@ -249,7 +258,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(script).toContain('migrate resolve --applied')
   })
 
-  it('completes when mocked build, migration, schema, and HTTP gates pass', () => {
+  it('completes when mocked build, migration, schema, and HTTP gates pass', deployTimeout, () => {
     const { result } = runMockDeploy()
 
     expect(result.status, result.stderr).toBe(0)
@@ -259,7 +268,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(result.stdout).toContain('DEPLOY_V4_DONE')
   })
 
-  it('restores the original container when Prisma schema verification fails', () => {
+  it('restores the original container when Prisma schema verification fails', deployTimeout, () => {
     const { deployLog, result } = runMockDeploy({ failVerify: true })
     const output = `${result.stdout}\n${result.stderr}`
     const dockerCalls = readFileSync(deployLog, 'utf8')
@@ -279,7 +288,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(dockerCalls).not.toContain('rename kingcrmhub')
   })
 
-  it('rejects a deploy when the lock cannot be acquired, before any Docker work', () => {
+  it('rejects a deploy when the lock cannot be acquired, before any Docker work', deployTimeout, () => {
     const { deployLog, result } = runMockDeploy({ failLock: true })
     const output = `${result.stdout}\n${result.stderr}`
 
@@ -288,7 +297,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(readFileSync(deployLog, 'utf8')).toBe('')
   })
 
-  it('serializes concurrent deploys through a real file lock', async () => {
+  it('serializes concurrent deploys through a real file lock', deployTimeout, async () => {
     const harness = createDeployHarness()
 
     // External holder takes a real LOCK_EX on the same lock file and keeps it.
@@ -328,7 +337,7 @@ describe('KingCRMhub deploy hardening', () => {
     }
   })
 
-  it('uses unique per-process rollback tags across separate deploys', () => {
+  it('uses unique per-process rollback tags across separate deploys', deployTimeout, () => {
     const script = readDeployScript()
     expect(script).toContain('flock -n 9')
     expect(script).toContain('$(date +%Y%m%d%H%M%S)-$$')
@@ -341,7 +350,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(first).not.toBe(second)
   })
 
-  it('reports a distinct rollback failure when the replacement name remains occupied', () => {
+  it('reports a distinct rollback failure when the replacement name remains occupied', deployTimeout, () => {
     const { result } = runMockDeploy({ failVerify: true, keepContainerAfterRemove: true })
     const output = `${result.stdout}\n${result.stderr}`
 
@@ -350,7 +359,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).not.toContain('ROLLED_BACK_TO_ORIGINAL')
   })
 
-  it('baselines and succeeds when migrate deploy returns P3005 and migrations exist in schema', () => {
+  it('baselines and succeeds when migrate deploy returns P3005 and migrations exist in schema', deployTimeout, () => {
     const { result } = runMockDeploy({ failMigrateDeploy: 'P3005' })
     const output = `${result.stdout}\n${result.stderr}`
 
@@ -364,7 +373,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('DEPLOY_V4_DONE')
   })
 
-  it('rolls back when migrate deploy returns P3005 and baseline resolve fails', () => {
+  it('rolls back when migrate deploy returns P3005 and baseline resolve fails', deployTimeout, () => {
     const { result } = runMockDeploy({ failMigrateDeploy: 'P3005', failMigrateResolve: true })
     const output = `${result.stdout}\n${result.stderr}`
 
@@ -373,7 +382,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
   })
 
-  it('fails deploy entirely when migrate deploy fails with a generic error', () => {
+  it('fails deploy entirely when migrate deploy fails with a generic error', deployTimeout, () => {
     const { result } = runMockDeploy({ failMigrateDeploy: 'generic' })
     const output = `${result.stdout}\n${result.stderr}`
 
@@ -387,7 +396,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).not.toContain('DEPLOY_V4_DONE')
   })
 
-  it('applies pending migrations before the legacy per-file db execute step', () => {
+  it('applies pending migrations before the legacy per-file db execute step', deployTimeout, () => {
     const { deployLog, result } = runMockDeploy()
     const dockerCalls = readFileSync(deployLog, 'utf8')
 
