@@ -77,7 +77,6 @@ describe('/api/ai/chat', () => {
 
   it('never leaks raw SDK text through the route catch — maps to friendly error instead', async () => {
     mockCreateChatStream.mockRejectedValueOnce(new Error('401 Missing Authentication header'))
-    mockFriendlyProviderError.mockImplementation((_provider: string, _err: unknown) => 'Friendly mapped error')
 
     const res = await POST(chatRequest())
     const json = await res.json()

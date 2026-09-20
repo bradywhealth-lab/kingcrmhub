@@ -258,11 +258,17 @@ describe('createChatStream retry (P1)', () => {
       settings: { aiProvider: 'openai', aiApiKey: 'sk-live-1234567890abcdef' },
     })
 
-    mockSdkCreate.mockRejectedValue(new Error('502 Bad Gateway'))
+    // BYOK attempt 401s (auth-class -> triggers retry), then the free-tier
+    // fallback attempt fails with a distinct 502 — assert the second failure.
+    mockSdkCreate
+      .mockRejectedValueOnce(new Error('401 Missing Authentication header'))
+      .mockRejectedValueOnce(new Error('502 Bad Gateway'))
 
     await expect(
       createChatStream(byokConfig, [{ role: 'user', content: 'hi' }], { organizationId: 'org-1' }),
     ).rejects.toThrow('502 Bad Gateway')
+    expect(mockSdkCreate).toHaveBeenCalledTimes(2)
+    expect(mockDb.organization.findUnique).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -281,8 +287,9 @@ describe('friendlyProviderError', () => {
   })
 
   it('gives the generic auth message for fallback-provider auth failures (never mis-blame the org key)', () => {
-    expect(friendlyProviderError('openrouter', { status: 401 })).toBe(NO_KEY_MSG)
-    expect(NO_KEY_MSG).not.toContain('saved AI provider key')
+    const msg = friendlyProviderError('openrouter', { status: 401 })
+    expect(msg).toBe(NO_KEY_MSG)
+    expect(msg).not.toContain('saved AI provider key')
   })
 
   it('keeps 5xx provider-outage cases distinct', () => {
