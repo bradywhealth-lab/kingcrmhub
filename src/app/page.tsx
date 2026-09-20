@@ -2568,6 +2568,18 @@ function SocialMediaView() {
 // Main App
 export default function EliteCRM() {
   const [activeView, setActiveView] = useState("dashboard")
+  const [settingsInitialTab, setSettingsInitialTab] = useState<string | null>(null)
+
+  // Any manual navigation clears a pending Settings deep-link so it applies to
+  // exactly one mount (assistant "Open AI settings" -> AI tab, then subsequent
+  // sidebar visits start on Organization again).
+  const handleNavigate = (view: string) => {
+    if (view !== "settings") {
+      setSettingsInitialTab(null)
+    }
+    setActiveView(view)
+  }
+
   const { authLoading, currentUser, signOut } = useWorkspaceSession()
   const { theme } = useAppStore()
 
@@ -2609,10 +2621,10 @@ export default function EliteCRM() {
       case "leads": return <LeadsView onAddLead={() => setShowAddLeadDialog(true)} onUploadCSV={() => setShowUploadDialog(true)} onScrape={() => setShowScrapeDialog(true)} refreshKey={leadsRefreshKey} />
       case "pipeline": return <PipelineView />
       case "automation": return <AutomationView />
-      case "assistant": return <AiAssistantView />
+      case "assistant": return <AiAssistantView onOpenAISettings={() => { setSettingsInitialTab("ai"); handleNavigate("settings") }} />
       case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
-      case "settings": return <SettingsView />
+      case "settings": return <SettingsView initialTab={settingsInitialTab ?? undefined} />
       case "tasks": return <TasksView />
       default: return <DashboardView />
     }
@@ -2644,7 +2656,7 @@ export default function EliteCRM() {
 
       <AppShell
       activeView={activeView}
-      setActiveView={setActiveView}
+      setActiveView={handleNavigate}
       currentUser={currentUser}
       onAddLead={() => setShowAddLeadDialog(true)}
       onSignOut={() => void signOut()}
@@ -2685,7 +2697,7 @@ export default function EliteCRM() {
         scrapeJobs={scrapeJobs}
         commandPaletteOpen={commandPaletteOpen}
         setCommandPaletteOpen={setCommandPaletteOpen}
-        onNavigate={setActiveView}
+        onNavigate={handleNavigate}
         onAddLead={() => setShowAddLeadDialog(true)}
         onUploadCSV={() => setShowUploadDialog(true)}
       />
