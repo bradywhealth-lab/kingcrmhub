@@ -179,6 +179,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
   const [streaming, setStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState("")
   const [assistantError, setAssistantError] = useState<string | null>(null)
+  const [assistantNotice, setAssistantNotice] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -266,6 +267,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
 
     try {
       setAssistantError(null)
+      setAssistantNotice(null)
       const currentMessages = activeChat?.messages ?? []
       const apiMessages = [...currentMessages, userMsg].map((m) => ({
         role: m.role,
@@ -308,13 +310,16 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
 
           const parsed = (() => {
             try {
-              return JSON.parse(data) as { content?: string; error?: string }
+              return JSON.parse(data) as { content?: string; error?: string; notice?: string }
             } catch {
               return null
             }
           })()
 
           if (!parsed) continue
+          if (parsed.notice) {
+            setAssistantNotice(parsed.notice)
+          }
           if (parsed.error) {
             setAssistantError(parsed.error)
             throw new Error(parsed.error)
@@ -459,6 +464,23 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
             {/* Messages */}
             <ScrollArea className="flex-1 px-6 py-6">
               <div className="max-w-3xl mx-auto space-y-6">
+                {assistantNotice ? (
+                  <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div className="flex-1">
+                        <div className="font-medium">Using the free AI tier</div>
+                        <div className="mt-1">{assistantNotice}</div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => onOpenAISettings?.()}>
+                            <Settings className="mr-2 h-4 w-4" /> Open AI settings
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
                 {assistantError ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                     <div className="flex items-start gap-3">

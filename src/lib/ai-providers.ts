@@ -10,9 +10,38 @@ type AIConfig = {
   model: string
   apiKey: string
   label: string
+  /** Set when the org's saved BYOK key was rejected/skipped and we fell back to the platform free tier. */
+  byokFailure?: string
 }
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
+
+/**
+ * Placeholder/junk keys that can be saved through the Settings UI but will
+ * never authenticate. Treating these as "no key" lets the platform free tier
+ * resolve instead of letting a bogus BYOK key shadow it (production 2026-09-19:
+ * every chat 401'd with "Missing Authentication header" because a placeholder
+ * BYOK key existed and the free fallback was skipped).
+ */
+const BYOK_INVALID_PATTERNS: RegExp[] = [
+  /^sk-placeholder$/i,
+  /^placeholder$/i,
+  /^your[_-]?key$/i,
+  /^xxx+$/i,
+  /^test(ing)?$/i,
+  /^api[_-]?key$/i,
+  /^(sk|key)-?$/i,
+  /^null$/i,
+  /^undefined$/i,
+]
+
+function isInvalidByokKey(key: string): boolean {
+  const trimmed = key.trim()
+  if (!trimmed) return true
+  if (trimmed.length < 8) return true
+  if (BYOK_INVALID_PATTERNS.some((p) => p.test(trimmed.replace(/\s+/g, '')))) return true
+  return false
+}
 
 function normalizeSettings(value: Prisma.JsonValue | null): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -20,14 +49,53 @@ function normalizeSettings(value: Prisma.JsonValue | null): Record<string, unkno
     : {}
 }
 
+function isAuthClassError(err: unknown): boolean {
+  const status =
+    typeof err === 'object' && err !== null && 'status' in err
+      ? (err as { status?: unknown }).status
+      : undefined
+  if (typeof status === 'number' && (status === 401 || status === 403)) return true
+  const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+  return /401|403|invalid api|api key|auth|permission|missing .*header|denied|forbidden|unauthorized/i.test(msg)
+}
+
+function isOutageClassError(err: unknown): boolean {
+  const status =
+    typeof err === 'object' && err !== null && 'status' in err
+      ? (err as { status?: unknown }).status
+      : undefined
+  if (typeof status === 'number' && status >= 500) return true
+  const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+  return /5\d\d|overloaded|unavailable|timeout|temporarily/i.test(msg)
+}
+
+/**
+ * Client-safe error messages. Raw SDK text (e.g. "401 Missing Authentication
+ * header") must NEVER reach the user — it is confusing and exposes provider
+ * internals with no actionable info.
+ */
+export function friendlyProviderError(provider: AIProvider, err: unknown, byokFailure?: string): string {
+  if (isAuthClassError(err)) {
+    return byokFailure && byokFailure.length > 0
+      ? byokFailure
+      : 'Your AI provider key is invalid or expired — open Settings → AI to fix it.'
+  }
+  if (isOutageClassError(err)) {
+    return 'AI provider temporarily unavailable. Please try again in a moment.'
+  }
+  return 'AI provider error. Please try again. If it persists, check your provider settings in Settings → AI.'
+}
+
 /**
  * Resolve the AI config for an organization.
  * Priority:
- * 1. Org-level BYOK key + chosen provider
- * 2. Platform env key (OPENAI_API_KEY) if provider is openai
- * 3. Platform OpenRouter key (OPENROUTER_API_KEY) — free tier with auto-routing
- * 4. Platform Groq key (GROQ_API_KEY) as fallback
- * 5. Hard fallback: no provider
+ * 1. Org-level BYOK key + chosen provider (ONLY when the key is plausibly real —
+ *    placeholder/empty/junk keys do not shadow the free tier)
+ * 2. Platform env key for the org's chosen provider
+ * 3. OpenRouter free tier (auto-routing)
+ * 4. Groq free tier
+ * 5. Last-resort platform keys
+ * 6. No provider
  */
 export async function resolveAIConfig(organizationId: string): Promise<AIConfig> {
   const org = await db.organization.findUnique({
@@ -39,14 +107,17 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
   const provider = (['groq', 'openai', 'anthropic', 'openrouter'].includes(settings.aiProvider as string)
     ? settings.aiProvider
     : null) as AIProvider | null
-  const orgKey = typeof settings.aiApiKey === 'string' && settings.aiApiKey.length > 0
-    ? settings.aiApiKey
-    : null
+  const storedKey = typeof settings.aiApiKey === 'string' ? settings.aiApiKey : null
+  const orgKey = storedKey && !isInvalidByokKey(storedKey) ? storedKey : null
   const model = typeof settings.aiModel === 'string' && settings.aiModel
     ? settings.aiModel
     : null
 
-  // If org has a BYOK key, use their chosen provider
+  const byokFailure = storedKey && !orgKey
+    ? 'Your saved AI provider key is invalid or missing — using the platform free tier. Open Settings → AI to fix it.'
+    : undefined
+
+  // If org has a plausible BYOK key, use their chosen provider
   if (orgKey && provider) {
     return {
       provider,
@@ -95,6 +166,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       model: 'openrouter/free',
       apiKey: openrouterKey,
       label: 'OpenRouter Free (auto-routing)',
+      byokFailure,
     }
   }
 
@@ -106,6 +178,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       model: resolvedModel,
       apiKey: groqKey,
       label: 'Groq Llama 3.3 (free)',
+      byokFailure,
     }
   }
 
@@ -118,6 +191,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       model: resolvedModel,
       apiKey: openaiKey,
       label: 'OpenAI (platform fallback)',
+      byokFailure,
     }
   }
 
@@ -168,6 +242,33 @@ export async function createChatStream(
   throw new Error(`Unsupported provider: ${config.provider}`)
 }
 
+/** Prefix a BYOK-fallback notice onto a stream (SSE event the client renders as a banner). */
+function withByokNotice(
+  stream: ReadableStream<Uint8Array>,
+  config: AIConfig,
+  encoder: TextEncoder,
+): ReadableStream<Uint8Array> {
+  if (!config.byokFailure) return stream
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ notice: config.byokFailure })}\n\n`))
+      const reader = stream.getReader()
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          controller.enqueue(value)
+        }
+        controller.close()
+      } catch (err) {
+        try { controller.error(err) } catch { /* no-op */ }
+      } finally {
+        reader.releaseLock()
+      }
+    },
+  })
+}
+
 async function createGroqStream(
   config: AIConfig,
   messages: ChatMessage[],
@@ -183,7 +284,7 @@ async function createGroqStream(
     temperature: 0.7,
   })
 
-  return new ReadableStream({
+  const base = new ReadableStream({
     async start(controller) {
       try {
         for await (const chunk of stream) {
@@ -195,12 +296,14 @@ async function createGroqStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Groq stream error'
+        const msg = friendlyProviderError('groq', err, config.byokFailure)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
     },
   })
+
+  return withByokNotice(base, config, encoder)
 }
 
 async function createOpenAIStream(
@@ -218,7 +321,7 @@ async function createOpenAIStream(
     temperature: 0.7,
   })
 
-  return new ReadableStream({
+  const base = new ReadableStream({
     async start(controller) {
       try {
         for await (const chunk of stream) {
@@ -230,12 +333,14 @@ async function createOpenAIStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'OpenAI stream error'
+        const msg = friendlyProviderError('openai', err, config.byokFailure)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
     },
   })
+
+  return withByokNotice(base, config, encoder)
 }
 
 async function createAnthropicStream(
@@ -260,7 +365,7 @@ async function createAnthropicStream(
     temperature: 0.7,
   })
 
-  return new ReadableStream({
+  const base = new ReadableStream({
     async start(controller) {
       try {
         for await (const chunk of stream) {
@@ -272,12 +377,14 @@ async function createAnthropicStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Anthropic stream error'
+        const msg = friendlyProviderError('anthropic', err, config.byokFailure)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
     },
   })
+
+  return withByokNotice(base, config, encoder)
 }
 
 async function createOpenRouterStream(
@@ -302,7 +409,7 @@ async function createOpenRouterStream(
     temperature: 0.7,
   })
 
-  return new ReadableStream({
+  const base = new ReadableStream({
     async start(controller) {
       try {
         for await (const chunk of stream) {
@@ -314,10 +421,12 @@ async function createOpenRouterStream(
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'OpenRouter stream error'
+        const msg = friendlyProviderError('openrouter', err, config.byokFailure)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
     },
   })
+
+  return withByokNotice(base, config, encoder)
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrgContext } from '@/lib/request-context'
-import { resolveAIConfig, createChatStream } from '@/lib/ai-providers'
+import { resolveAIConfig, createChatStream, friendlyProviderError } from '@/lib/ai-providers'
 
 const SYSTEM_PROMPT = `You are an elite AI client assistant built into King CRM — the client pipeline for freelancers and one-person businesses. Your job is to help the user win more clients, qualify leads faster, write high-converting outreach, and make smarter pipeline decisions.
 
@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('AI chat error:', error)
-    const msg = error instanceof Error ? error.message : 'Failed to process chat request'
+    // Never pass raw SDK/provider text (e.g. "401 Missing Authentication header")
+    // to the client — map to a friendly, actionable message instead.
+    const msg = friendlyProviderError('openai', error)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
