@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, ExternalLink, TrendingUp, Wand2, Zap } from 'lucide-react'
+import { ArrowRight, ExternalLink, TrendingUp, Wand2, Zap, CheckCircle2 } from 'lucide-react'
 import type { Metadata } from 'next'
 
 // `/` is rewritten to this page for visitors; declare `/` as the canonical
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     absolute: 'King CRM Hub — The Client Pipeline for One-Person Businesses',
   },
   description:
-    'Run your client pipeline like a one-person agency. See who to follow up with, what to say, and when to send it.',
+    'See who to follow up with, what to say, and when to send it. Built for freelancers and solo operators, not sales teams.',
   alternates: { canonical: '/' },
 }
 
@@ -23,13 +23,21 @@ const INK = '#0C111B'
 const PAPER = '#F4F0E6'
 const TEAL = '#18B897'
 
+const PROOF_POINTS = [
+  'Made for one-person businesses',
+  'Pipeline from first contact → paid',
+  'Automations in every plan, no upsell games',
+  'Free for AI Prompt Arsenal & Freelancer OS buyers',
+]
+
 export default function PublicLandingPage() {
   return (
-    <main data-deploy-marker="public-landing-v1" className="min-h-screen px-6 py-10" style={{ background: INK }}>
+    <main data-deploy-marker="public-landing-v2" className="min-h-screen px-6 py-10" style={{ background: INK }}>
       <div
         className="mx-auto max-w-6xl rounded-[32px] border p-8 md:p-14"
         style={{ background: INK, borderColor: 'rgba(244,240,230,0.14)' }}
       >
+        {/* HERO */}
         <div
           className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
           style={{ borderColor: `${TEAL}55`, background: `${TEAL}14`, color: TEAL }}
@@ -45,13 +53,56 @@ export default function PublicLandingPage() {
         </h1>
 
         <p className="mt-6 max-w-3xl text-lg leading-8" style={{ color: 'rgba(244,240,230,0.72)' }}>
-          See who to follow up with, what to say, and when to send it — then make the next move.
+          See who to follow up with, what to say, and when to send it. Built for freelancers and solo
+          operators, not sales teams.
         </p>
 
-        <p className="mt-3 max-w-3xl text-base font-medium leading-7" style={{ color: PAPER }}>
-          Built for freelancers and solo operators. Not designed for sales teams. Free for AI Prompt Arsenal &amp; Freelancer OS buyers.
+        <div className="mt-10 flex flex-wrap items-center gap-4">
+          <Link
+            href="/claim"
+            className="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-semibold"
+            style={{ background: TEAL, color: INK }}
+          >
+            Bought the prompts? Claim your free account <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+          <Link
+            href="/pricing"
+            className="inline-flex items-center rounded-2xl border px-6 py-3 text-sm font-semibold"
+            style={{ borderColor: 'rgba(244,240,230,0.25)', background: 'transparent', color: PAPER }}
+          >
+            View pricing
+          </Link>
+        </div>
+        <p className="mt-4 max-w-3xl text-sm font-medium" style={{ color: 'rgba(244,240,230,0.62)' }}>
+          No per-seat fees. Automations included on every plan.
         </p>
 
+        {/* PROOF STRIP */}
+        <div
+          className="mt-12 rounded-3xl border p-6 md:p-8"
+          style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}
+        >
+          <p className="text-base font-semibold" style={{ color: PAPER }}>
+            Built for people who sell their own work.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {PROOF_POINTS.map((point) => (
+              <div
+                key={point}
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium"
+                style={{ borderColor: 'rgba(244,240,230,0.16)', background: 'rgba(244,240,230,0.05)', color: PAPER }}
+              >
+                <CheckCircle2 className="h-4 w-4" style={{ color: TEAL }} />
+                {point}
+              </div>
+            ))}
+          </div>
+          <p className="mt-5 text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
+            New product. Early freelancers get founder pricing and a direct line to Brady.
+          </p>
+        </div>
+
+        {/* FEATURE CARDS */}
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {[
             { icon: TrendingUp, title: 'Client pipeline command center', desc: 'Every client and project tracked from first contact to paid — no spreadsheet chaos.' },
@@ -75,29 +126,57 @@ export default function PublicLandingPage() {
           ))}
         </div>
 
+        {/* SEE THE WORKSPACE — real product screenshots only (no mockups rule).
+            Images are actual captures of the built UI: pipeline kanban, lead
+            detail with AI follow-up guidance, and automation rules. */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-semibold tracking-[-0.02em]" style={{ color: PAPER }}>
+            See the workspace
+          </h2>
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                caption: 'Client pipeline command center',
+                alt: 'King CRM Hub pipeline view for freelancers',
+                src: '/screenshots/pipeline.png',
+              },
+              {
+                caption: 'Follow-up guidance',
+                alt: 'Follow-up guidance with custom AI prompts',
+                src: '/screenshots/follow-up-guidance.png',
+              },
+              {
+                caption: 'Automations from day one',
+                alt: 'Automation rules included on every plan',
+                src: '/screenshots/automations.png',
+              },
+            ].map((shot) => (
+              <figure key={shot.src} className="rounded-3xl border overflow-hidden" style={{ borderColor: 'rgba(244,240,230,0.14)' }}>
+                <img
+                  src={shot.src}
+                  alt={shot.alt}
+                  loading="lazy"
+                  className="w-full aspect-[16/10] object-cover object-top"
+                  style={{ background: INK }}
+                />
+                <figcaption className="px-4 py-3 text-sm font-medium" style={{ color: PAPER, background: `${TEAL}0F` }}>
+                  {shot.caption}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+          <p className="mt-5 text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
+            Your prompts do the thinking. The CRM handles the follow-up.
+          </p>
+        </div>
+
         <div className="mt-8 rounded-3xl p-5" style={{ background: PAPER }}>
           <p className="text-sm font-semibold" style={{ color: INK }}>
             Automations in every plan. Flat pricing, no per-seat tax.
           </p>
         </div>
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link
-            href="/claim"
-            className="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-semibold"
-            style={{ background: TEAL, color: INK }}
-          >
-            Bought the prompts? Claim your free account <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-          <Link
-            href="/auth"
-            className="inline-flex items-center rounded-2xl border px-6 py-3 text-sm font-semibold"
-            style={{ borderColor: 'rgba(244,240,230,0.25)', background: 'transparent', color: PAPER }}
-          >
-            Sign in
-          </Link>
-        </div>
-
+        {/* GUMROAD PATH */}
         <div
           className="mt-10 rounded-3xl border p-6"
           style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}
@@ -106,7 +185,8 @@ export default function PublicLandingPage() {
             Already own the AI Prompt Arsenal or Freelancer OS?
           </p>
           <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
-            Your prompts do the thinking — let your CRM do the follow-up. Grab the prompt packs and templates that plug straight into this workspace.
+            Your prompts do the thinking — let your CRM do the follow-up. Grab the prompt packs and
+            templates that plug straight into this workspace.
           </p>
           <a
             href="https://bradywave32.gumroad.com"
