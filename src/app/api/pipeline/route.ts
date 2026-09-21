@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { getTasksForStage, hasFeatureAccess, TASK_FEATURES } from '@/lib/tasks'
+import { effectivePlanId } from '@/lib/billing/promos'
 
 const createPipelineItemSchema = z.object({
   stageId: z.string().optional(),
@@ -267,8 +268,11 @@ export async function PATCH(request: NextRequest) {
 
     // Auto-spawn tasks for the new stage (errors logged but don't block the stage move)
     const stageName = item.stage?.name ?? ''
-    const org = await db.organization.findUnique({ where: { id: organizationId }, select: { plan: true } })
-    if (org && hasFeatureAccess(org.plan as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
+    const org = await db.organization.findUnique({
+      where: { id: organizationId },
+      select: { plan: true, promoPlanId: true, promoPlanExpiresAt: true },
+    })
+    if (org && hasFeatureAccess(effectivePlanId(org) ?? 'free' as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
       const taskDefs = getTasksForStage(stageName)
       if (taskDefs.length > 0) {
         // Stage-specific idempotency: only skip if tasks already exist for THIS pipeline item + stage

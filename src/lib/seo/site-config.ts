@@ -15,6 +15,7 @@ export const SITE_TAGLINE = 'The client pipeline for one-person businesses'
  * - /terms        -> noindex while legal copy is still a template
  * - /privacy      -> noindex while legal copy is still a template
  * - /welcome      -> duplicate of / (canonical points to /)
+ * - /claim        -> conversion utility page (pre-signup claim entry) — not an SEO target
  * - /book/[slug]  -> dynamic tenant pages, discovered via links not sitemap
  * - /admin/*      -> authenticated app surface
  */

@@ -4,6 +4,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { getTasksForStage, hasFeatureAccess, TASK_FEATURES } from '@/lib/tasks'
+import { effectivePlanId } from '@/lib/billing/promos'
 
 const autoSpawnSchema = z.object({
   pipelineItemId: z.string(),
@@ -24,15 +25,16 @@ export const POST = (request: NextRequest) =>
     if (!parsed.success) return parsed.response
     const { pipelineItemId } = parsed.data
 
-    // Tier gate: Pro+ required for auto-spawn
+    // Tier gate: Pro+ required for auto-spawn. Effective tier includes an
+    // active Gumroad promo overlay (t_55f06113) — never the stored plan alone.
     const org = await db.organization.findUnique({
       where: { id: organizationId },
-      select: { plan: true },
+      select: { plan: true, promoPlanId: true, promoPlanExpiresAt: true },
     })
 
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
 
-    if (!hasFeatureAccess(org.plan as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
+    if (!hasFeatureAccess(effectivePlanId(org) ?? 'free' as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
       return NextResponse.json(
         { error: 'Auto-spawn requires Starter plan or higher', requiredTier: 'starter' },
         { status: 402 },

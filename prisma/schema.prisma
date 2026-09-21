@@ -31,6 +31,14 @@ model Organization {
   stripeSubscriptionStatus String?
   planUpdatedAt           DateTime?
 
+  // Gumroad promo grant (migration 20260920_add_gumroad_claims). Time-bound
+  // entitlement OVERLAY — does NOT overwrite `plan`. Entitlement reads use
+  // effectivePlanId(promos.ts) which returns the higher of (stored plan,
+  // active promo). promoPlanId stores the INTERNAL id ('pro' = Studio label)
+  // — labels must never be written here (v15 wiring law).
+  promoPlanId        String?
+  promoPlanExpiresAt DateTime?
+
   // Onboarding wizard state — columns added by migration 20260426_add_onboarding_fields
   onboardingCompleted   Boolean   @default(false)
   onboardingCompletedAt DateTime?
@@ -1040,6 +1048,31 @@ model AuditLog {
   @@index([organizationId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+// ============================================
+// GUMROAD CLAIMS (t_55f06113) — promotional account claims
+// ============================================
+// A claim proves a Gumroad prompt purchase (license key verified server-side
+// or via manual allowlist) and reserves a 30-day Studio promo (`planId`
+// 'pro'; the display label is "Studio" — v15 wiring law). Claims are a
+// CROSS-TENANT allowlist and deliberately NOT in prisma/rls.sql's tenant
+// list: they are created pre-signup with organizationId NULL and later
+// claimed by whichever org matches. Do NOT add this table to rls.sql.
+model GumroadClaim {
+  id             String    @id @default(cuid())
+  email          String
+  purchaseRef    String    @unique // gumroad sale id / SALE-1 / allowlist entry — single-use key
+  keyHash        String // sha256 of the license key — raw keys are NEVER stored
+  planId         String    @default("pro") // internal stored id only: pro = Studio label
+  expiresAt      DateTime
+
+  organizationId String? // null until the claim is bound to an org at signup
+  status         String    @default("pending") // pending | granted
+  createdAt      DateTime  @default(now())
+  grantedAt      DateTime?
+
+  @@index([email])
 }
 
 // ============================================

@@ -62,6 +62,17 @@ describe('PWA assets stay public for logged-out visitors', () => {
       expect(response.headers.get('location')).toBeNull()
     },
   )
+
+  it.each(['/claim', '/claim/'])(
+    'passes %s through for logged-out visitors (pre-signup claim entry, t_55f06113)',
+    async (path) => {
+      const request = new NextRequest(`http://localhost:3000${path}`)
+      const response = await middleware(request, undefined as never)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('location')).toBeNull()
+    },
+  )
 })
 
 describe('middleware matcher excludes PWA assets', () => {

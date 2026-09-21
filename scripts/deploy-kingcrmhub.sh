@@ -179,6 +179,9 @@ MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
         *add_stripe_billing*)
           CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('stripeCustomerId', 'stripeSubscriptionId', 'stripeSubscriptionStatus', 'planUpdatedAt')) < 4 THEN RAISE EXCEPTION 'Stripe billing columns missing (need all 4)'; END IF; END \$\$;"
           ;;
+        *add_gumroad_claims*)
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'GumroadClaim') < 1 OR (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('promoPlanId', 'promoPlanExpiresAt')) < 2 THEN RAISE EXCEPTION 'Gumroad claim schema missing (need GumroadClaim + 2 promo columns)'; END IF; END \$\$;"
+          ;;
         *)
           echo "MIGRATE_BASELINE_UNKNOWN_MIGRATION: $name has no schema probe — refusing to baseline blindly (add a probe before deploying this migration)" >&2
           restore_old
@@ -229,7 +232,9 @@ BEGIN
       ('stripeCustomerId', 'text', 'YES', NULL),
       ('stripeSubscriptionId', 'text', 'YES', NULL),
       ('stripeSubscriptionStatus', 'text', 'YES', NULL),
-      ('planUpdatedAt', 'timestamp without time zone', 'YES', NULL)
+      ('planUpdatedAt', 'timestamp without time zone', 'YES', NULL),
+      ('promoPlanId', 'text', 'YES', NULL),
+      ('promoPlanExpiresAt', 'timestamp without time zone', 'YES', NULL)
   ) AS expected(column_name, data_type, is_nullable, column_default)
   LEFT JOIN information_schema.columns AS actual
     ON actual.table_schema = 'public'

@@ -105,9 +105,14 @@ function AuthPageInner() {
     const requested = searchParams.get('mode')
     if (requested === 'signup' || requested === 'forgot') {
       setMode(requested)
+      // Prefill the claim-flow email (t_55f06113): /claim redirects here with
+      // ?email=<receipt email> after a successful license verification.
+      const prefillEmail = searchParams.get('email')
+      if (requested === 'signup' && prefillEmail) setSignupEmail(prefillEmail)
       window.history.replaceState(null, '', (() => {
         const p = new URLSearchParams(searchParams.toString())
         p.delete('mode')
+        p.delete('email')
         const qs = p.toString()
         return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
       })())

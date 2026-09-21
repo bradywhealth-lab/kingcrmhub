@@ -37,6 +37,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'An account with that email already exists.' }, { status: 409 })
     }
 
+    // Pending Gumroad claim (t_55f06113): a visitor who verified a license
+    // key pre-signup gets the Studio promo bound to the org on creation.
+    // Only the SAME email can bind, and the claim must still be pending and
+    // unexpired. GumroadClaim is a cross-tenant allowlist (NOT RLS'd) so
+    // this unscoped read is safe; the claim flip below is atomic
+    // (status=pending in the where) so two signups can never double-bind.
+    const pendingClaim = await db.gumroadClaim.findFirst({
+      where: { email, status: 'pending', expiresAt: { gt: new Date() } },
+      select: { id: true, planId: true, expiresAt: true },
+    })
+
     const slug = await ensureUniqueOrganizationSlug(slugifyOrganizationName(parsed.data.organizationName))
     const passwordHash = hashPassword(parsed.data.password)
 
@@ -48,8 +59,41 @@ export async function POST(request: NextRequest) {
           // Review fix (Cubic P2): landing promises "Claim your free account" —
           // new orgs start on the free plan; upgrades go through billing/checkout.
           plan: 'free',
+          // Studio promo overlay — only ever the internal stored id ('pro'),
+          // never a display label (v15 wiring law).
+          ...(pendingClaim
+            ? { promoPlanId: 'pro', promoPlanExpiresAt: pendingClaim.expiresAt }
+            : {}),
         },
       })
+
+      // Atomically bind the claim to the new org (single-use: the where
+      // clause re-checks status=pending, so a concurrent claim cannot
+      // double-grant). updateMany count 0 = lost the race or already bound.
+      if (pendingClaim) {
+        await tx.gumroadClaim.updateMany({
+          where: { id: pendingClaim.id, status: 'pending' },
+          data: { status: 'granted', organizationId: organization.id, grantedAt: new Date() },
+        })
+
+        // Grant audit — the claim flip is a promotion of record.
+        await tx.auditLog.create({
+          data: {
+            organizationId: organization.id,
+            action: 'grant',
+            entityType: 'organization',
+            entityId: organization.id,
+            actorId: null,
+            actorEmail: email,
+            description: 'Gumroad promo claim granted at signup: Studio free for 1 month',
+            metadata: {
+              claimId: pendingClaim.id,
+              planId: 'pro',
+              expiresAt: pendingClaim.expiresAt.toISOString(),
+            },
+          },
+        })
+      }
 
       const user = await tx.user.create({
         data: {

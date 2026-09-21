@@ -96,6 +96,14 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // Public claim page (/claim) — the pre-signup Gumroad promo entry
+  // (t_55f06113). Visitors need it before any account exists; signed-in users
+  // still see it (they can claim against their own org).
+  if (pathname === '/claim' || pathname.startsWith('/claim/')) {
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Public legal pages — visitors must be able to read terms/privacy before
   // signup (the auth page links to them). Exact paths only: no /terms/* subroutes.
   // Trailing-slash variants are matched too because middleware runs before

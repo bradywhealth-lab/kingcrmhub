@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { withRequestOrgContext } from '@/lib/request-context'
 import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { effectivePlanId, isPromoActive, promoLabel } from '@/lib/billing/promos'
 import { z } from 'zod'
 
 
@@ -31,6 +32,8 @@ export async function GET(request: NextRequest) {
           slug: true,
           logo: true,
           plan: true,
+          promoPlanId: true,
+          promoPlanExpiresAt: true,
           settings: true,
           _count: {
             select: {
@@ -48,10 +51,23 @@ export async function GET(request: NextRequest) {
       const sessionTimeoutMinutes = typeof settings.sessionTimeoutMinutes === 'number' ? settings.sessionTimeoutMinutes : 60
       const twoFactorRequired = settings.twoFactorRequired === true
 
+      // Effective tier + promo status for the in-app nudge (decision record
+      // 2026-09-21: banner only, honest copy). `plan` stays the raw stored id
+      // (existing UI contract); new consumers read effectivePlan/promo.
+      const effectiveTier = effectivePlanId(organization)
+      const hasActivePromo = isPromoActive(organization)
+      const promoLabelText = hasActivePromo ? promoLabel(organization.promoPlanId) : null
+
       return NextResponse.json({
         organization: {
           ...organization,
-
+          effectivePlan: effectiveTier,
+          planDisplay: promoLabel(organization.plan),
+          promo: {
+            active: hasActivePromo,
+            label: promoLabelText,
+            expiresAt: organization.promoPlanExpiresAt,
+          },
           sessionTimeoutMinutes,
           twoFactorRequired,
           usage: {

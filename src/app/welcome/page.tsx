@@ -83,11 +83,11 @@ export default function PublicLandingPage() {
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Link
-            href="/auth?mode=signup"
+            href="/claim"
             className="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-semibold"
             style={{ background: TEAL, color: INK }}
           >
-            Bought the prompts? Claim your free account <ArrowRight className="ml-2 h-4 w-4" />
+            Bought the prompts? Claim your free Studio trial <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
           <Link
             href="/auth"

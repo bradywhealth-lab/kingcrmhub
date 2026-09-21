@@ -65,7 +65,9 @@ function OrganizationSettingsPanel() {
         name: organization?.name || '',
         slug: organization?.slug || '',
         logo: organization?.logo || '',
-        plan: organization?.plan || 'free',
+        // Prefer the effective tier (stored plan + active promo overlay) so
+        // the UI reflects a live Gumroad Studio promo (t_55f06113).
+        plan: organization?.effectivePlan || organization?.plan || 'free',
         sessionTimeoutMinutes: String(organization?.sessionTimeoutMinutes || 60),
         twoFactorRequired: organization?.twoFactorRequired === true,
         usage: organization?.usage || { leadsThisMonth: 0, teamSeatsUsed: 0 },
@@ -544,15 +546,31 @@ function SecuritySettingsPanel() {
 
 function BillingSettingsPanel() {
   const [plan, setPlan] = useState('free')
+  const [promo, setPromo] = useState<{ active: boolean; label: string | null; expiresAt: string | null }>({
+    active: false,
+    label: null,
+    expiresAt: null,
+  })
 
   useEffect(() => {
     void fetch('/api/settings/organization')
       .then((res) => res.json())
       .then((data) => {
         if (!data.error && data.organization?.plan) setPlan(data.organization.plan)
+        if (!data.error && data.organization?.promo) {
+          setPromo({
+            active: data.organization.promo.active === true,
+            label: data.organization.promo.label ?? null,
+            expiresAt: data.organization.promo.expiresAt ?? null,
+          })
+        }
       })
       .catch(() => null)
   }, [])
+
+  const promoExpiryLabel = promo.expiresAt
+    ? new Date(promo.expiresAt).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })
+    : null
 
   return (
     <Card className="bg-white border-[var(--ink-line)] shadow-sm">
@@ -573,6 +591,15 @@ function BillingSettingsPanel() {
             </SelectContent>
           </Select>
         </div>
+        {promo.active && promo.label && (
+          <div className="rounded-lg border border-[var(--teal-deep)]/30 bg-[var(--teal-tint)] p-3 text-sm">
+            <p className="font-medium text-[#0c111b]">{promo.label} — free for 1 month</p>
+            <p className="mt-1 text-xs text-gray-600">
+              Thank-you promo from your prompt purchase. Runs through {promoExpiryLabel ?? 'this month'} — no
+              automatic charges after it ends.
+            </p>
+          </div>
+        )}
         <Button className="btn-gold" onClick={() => { window.location.href = '/pricing' }}>View upgrade options</Button>
       </CardContent>
     </Card>
