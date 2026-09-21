@@ -309,7 +309,8 @@ describe('mergeSavedTask (imported from tasks-view.tsx)', () => {
       lead: { id: 'lead1', firstName: 'Ada', lastName: 'Lovelace', company: 'Analytical' },
       pipelineItem: { id: 'pipe1', title: 'Onboarding flow' },
     })
-    const saved = { ...existing, title: 'Ship onboarding (edited)' } as Partial<typeof existing>
+    // Realistic PATCH payload: only fields the API returns (omits pipelineItem/lead)
+    const saved = { title: 'Ship onboarding (edited)', status: 'done' } as Partial<typeof existing>
     const merged = mergeSavedTask(existing, saved)
     expect(merged.title).toBe('Ship onboarding (edited)')
     expect(merged.pipelineItem).toEqual({ id: 'pipe1', title: 'Onboarding flow' })
