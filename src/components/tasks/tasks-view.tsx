@@ -55,13 +55,14 @@ type AppointmentRecord = {
   attendeeEmail?: string | null
 }
 
-type FilterTab = 'today' | 'week' | 'overdue'
+type FilterTab = 'today' | 'week' | 'overdue' | 'completed'
 type ViewMode = 'list' | 'kanban'
 
-const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[] = [
+export const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[] = [
   { id: 'today', label: 'Today', icon: Clock },
   { id: 'week', label: 'This Week', icon: Calendar },
   { id: 'overdue', label: 'Overdue', icon: AlertTriangle },
+  { id: 'completed', label: 'Completed', icon: CheckSquare },
 ]
 
 const STATUS_COLUMNS = [
@@ -114,6 +115,15 @@ export function isOverdue(d: Date): boolean {
 }
 
 export function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
+  if (tab === 'completed') {
+    return tasks
+      .filter((t) => t.status === 'done')
+      .sort((a, b) => {
+        const ta = a.completedAt ? new Date(a.completedAt).getTime() : -Infinity
+        const tb = b.completedAt ? new Date(b.completedAt).getTime() : -Infinity
+        return tb - ta
+      })
+  }
   return tasks.filter((t) => {
     if (t.status === 'done') return false
     if (!t.dueDate) return tab === 'week' // undated tasks show in week view
@@ -122,14 +132,18 @@ export function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
       case 'today': return isToday(d)
       case 'week': return isThisWeek(d)
       case 'overdue': return isOverdue(d)
+      default: return false
     }
   })
 }
 
 export function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): AppointmentRecord[] {
+  if (tab === 'completed') {
+    return appts.filter((a) => a.status === 'completed')
+  }
   if (tab === 'overdue') return [] // appointments can't be overdue
   return appts.filter((a) => {
-    if (a.status === 'cancelled') return false
+    if (a.status === 'cancelled' || a.status === 'completed') return false
     const d = new Date(a.startTime)
     switch (tab) {
       case 'today': return isToday(d)
@@ -150,7 +164,7 @@ function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; com
   )
 }
 
-function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id: string) => void }) {
+export function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id: string) => void }) {
   const isDone = task.status === 'done'
   return (
     <Card
@@ -177,6 +191,18 @@ function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id:
               <p className="mt-1 text-xs text-[#0c111b]/55 line-clamp-2">{task.description}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
+              {isDone && task.completedAt && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#18b897]">
+                  <Check className="h-3 w-3" />
+                  Completed {new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+              {task.pipelineItem && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#127c66]">
+                  <Building className="h-3 w-3" />
+                  {task.pipelineItem.title}
+                </span>
+              )}
               <LeadBadge lead={task.lead} />
               {task.assignedTo && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-[#0c111b]/50">
@@ -191,7 +217,10 @@ function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id:
               )}
             </div>
           </div>
-          {task.dueDate && (
+          {isDone && (
+            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? 'bg-slate-300'}`} />
+          )}
+          {!isDone && task.dueDate && (
             <span className="shrink-0 text-[11px] tabular-nums text-[#0c111b]/45">
               {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
@@ -236,6 +265,7 @@ function EmptyState({ tab }: { tab: FilterTab }) {
     today: { title: 'Nothing due today', body: 'Tasks due today or appointments scheduled will appear here.' },
     week: { title: 'Clear week ahead', body: 'Tasks and appointments for this week will show up here.' },
     overdue: { title: 'All caught up', body: 'No overdue tasks — nice work.' },
+    completed: { title: 'No completed tasks yet', body: 'Tasks you mark done will appear here.' },
   }
   const m = messages[tab]
   return (
@@ -247,11 +277,19 @@ function EmptyState({ tab }: { tab: FilterTab }) {
   )
 }
 
-export function TasksView() {
-  const [tasks, setTasks] = useState<TaskRecord[]>([])
-  const [appointments, setAppointments] = useState<AppointmentRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<FilterTab>('today')
+export function TasksView({
+  initialTab = 'today',
+  initialTasks,
+  initialAppointments,
+}: {
+  initialTab?: FilterTab
+  initialTasks?: TaskRecord[]
+  initialAppointments?: AppointmentRecord[]
+} = {}) {
+  const [tasks, setTasks] = useState<TaskRecord[]>(initialTasks ?? [])
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>(initialAppointments ?? [])
+  const [loading, setLoading] = useState(initialTasks === undefined || initialAppointments === undefined)
+  const [tab, setTab] = useState<FilterTab>(initialTab)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showCreate, setShowCreate] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
@@ -261,6 +299,7 @@ export function TasksView() {
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    if (initialTasks !== undefined || initialAppointments !== undefined) return
     let cancelled = false
 
     ;(async () => {
@@ -297,7 +336,7 @@ export function TasksView() {
   const filteredAppointments = useMemo(() => filterAppointments(appointments, tab), [appointments, tab])
 
   const kanbanColumns = useMemo(() => {
-    if (viewMode !== 'kanban') return []
+    if (viewMode !== 'kanban' || tab === 'completed') return []
     // Kanban shows ALL tasks (including done) so the Done column isn't empty
     const boardTasks = filterTasks(tasks, tab)
     // Also include any done tasks matching the tab's date range
@@ -447,16 +486,16 @@ export function TasksView() {
             <button
               onClick={() => setViewMode('list')}
               aria-label="List view"
-              aria-pressed={viewMode === 'list'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              aria-pressed={viewMode === 'list' || tab === 'completed'}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <List className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setViewMode('kanban')}
+              onClick={() => { if (tab !== 'completed') setViewMode('kanban') }}
               aria-label="Kanban board view"
-              aria-pressed={viewMode === 'kanban'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              aria-pressed={viewMode === 'kanban' && tab !== 'completed'}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <Columns className="h-4 w-4" />
             </button>
@@ -473,7 +512,7 @@ export function TasksView() {
         </div>
       </div>
 
-      {viewMode === 'kanban' ? (
+      {viewMode === 'kanban' && tab !== 'completed' ? (
         kanbanIsEmpty ? (
           <EmptyState tab={tab} />
         ) : (
