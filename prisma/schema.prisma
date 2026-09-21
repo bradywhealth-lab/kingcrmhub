@@ -66,6 +66,7 @@ model Organization {
   appointments          Appointment[]
   calendarSyncs         CalendarSync[]
   bookingLinks          BookingLink[]
+  claimGrants           ClaimGrant[]
 }
 
 model User {
@@ -1341,4 +1342,32 @@ model BookingLink {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
+}
+
+// ── Claim Grant (promo → 1-month Studio) ──
+// Ledger for "claim free 1-month Studio" purchases (Gumroad License API).
+// Grant mechanics are a DIRECT DB entitlement write — the free month NEVER
+// touches Stripe (STRIPE_LIVE_ACTIVATION=1 zero-charge path by design, spec
+// t_7160ffb5). `organizationId` is nullable until the claim is redeemed on
+// signup; the FK preserves the same ON DELETE SET NULL / ON UPDATE CASCADE
+// integrity as the migration, so schema-driven setup (db push) matches it.
+// Raw license keys are NEVER stored — only `licenseKeyHash` (SHA-256).
+model ClaimGrant {
+  id             String   @id @default(cuid())
+  licenseKeyHash String // SHA-256 of the Gumroad license key (raw key never persisted)
+  orderEmail     String // lowercased buyer email from the License API purchase
+  productId      String // Gumroad product id from env (GUMROAD_PRODUCT_ID_*)
+  source         String   @default("gumroad-license") // gumroad-license | gumroad-webhook | manual
+  organizationId String? // set when the grant is redeemed onto an org
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  plan           String   @default("pro") // stored plan id granted (Studio = pro)
+  grantedAt      DateTime @default(now())
+  expiresAt      DateTime // grantedAt + 30 days
+  redeemedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([licenseKeyHash]) // single-use: one grant per license key
+  @@unique([orderEmail, productId]) // one grant per email + product
+  @@index([organizationId])
+  @@index([expiresAt])
 }

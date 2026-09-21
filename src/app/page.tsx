@@ -50,6 +50,7 @@ import { SettingsView } from "@/components/settings/settings-view"
 import { TasksView } from "@/components/tasks/tasks-view"
 import { AiAssistantView } from "@/components/ai/ai-assistant-view"
 import { PromptsView } from "@/components/prompts/prompts-view"
+import { ClaimBanner } from "@/components/app/claim-banner"
 import { OnboardingWizard, IncompleteSetupBanner, useOnboarding } from "@/components/onboarding/onboarding-wizard"
 import { triggerWinCelebration, triggerSmallCelebration } from "@/lib/celebrations"
 import { toast } from "@/hooks/use-toast"
@@ -2735,6 +2736,9 @@ export default function EliteCRM() {
           <IncompleteSetupBanner onOpenWizard={openWizard} />
         )}
       </AnimatePresence>
+
+      {/* Day-21/31 promo-claim nudge — in-app banner only, no mailer (spec t_7160ffb5 §6) */}
+      <ClaimBanner />
 
       <AnimatePresence mode="wait">
         <motion.div

@@ -68,6 +68,10 @@ function AuthPageInner() {
   const [organizationName, setOrganizationName] = useState('')
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotRequested, setForgotRequested] = useState(false)
+  // Claim-flow carry-over (public /claim → signup): the claimToken envelopes
+  // the already-verified Gumroad license key; signup redeems it as the $0
+  // Studio grant. Keep it out of client-side re-render churn (a ref).
+  const claimTokenRef = useRef<string | null>(null)
   // Concurrency guard for forgot-password (cubic P2, PR #182 round 2): the
   // Enter-key handler bypasses the button's disabled state, so two requests
   // can overlap; a late failure from the OLDER request must not clobber the
@@ -105,9 +109,17 @@ function AuthPageInner() {
     const requested = searchParams.get('mode')
     if (requested === 'signup' || requested === 'forgot') {
       setMode(requested)
+    }
+    const claimedEmail = searchParams.get('email')
+    if (claimedEmail) setSignupEmail(claimedEmail)
+    const claimToken = searchParams.get('claimToken')
+    if (claimToken) claimTokenRef.current = claimToken
+    if (requested === 'signup' || requested === 'forgot' || claimedEmail || claimToken) {
       window.history.replaceState(null, '', (() => {
         const p = new URLSearchParams(searchParams.toString())
         p.delete('mode')
+        p.delete('email')
+        p.delete('claimToken')
         const qs = p.toString()
         return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
       })())
@@ -167,6 +179,7 @@ function AuthPageInner() {
             email: signupEmail,
             password: signupPassword,
             organizationName,
+            ...(claimTokenRef.current ? { claimToken: claimTokenRef.current } : {}),
           }),
         })
         const data = await res.json()

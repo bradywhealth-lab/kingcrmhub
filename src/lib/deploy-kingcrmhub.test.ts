@@ -78,6 +78,7 @@ function createDeployHarness({
   mkdirSync(join(repoDir, 'prisma/migrations/20260909_rename_carrier_to_service_package'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260911_add_tasks_appointments_hub'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260919_add_stripe_billing'), { recursive: true })
+  mkdirSync(join(repoDir, 'prisma/migrations/20260921_add_claim_grant'), { recursive: true })
   writeFileSync(composeFile, 'services: {}\n')
   writeFileSync(deployLog, '')
 
@@ -370,6 +371,7 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('Baselining 20260909_rename_carrier_to_service_package')
     expect(output).toContain('Baselining 20260911_add_tasks_appointments_hub')
     expect(output).toContain('Baselining 20260919_add_stripe_billing')
+    expect(output).toContain('Baselining 20260921_add_claim_grant')
     expect(output).toContain('DEPLOY_V4_DONE')
   })
 

@@ -4,6 +4,7 @@ import { ensureUniqueOrganizationSlug, hashPassword, serializeAuthUser, slugifyO
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { enforceSameOrigin } from '@/lib/security'
 import { parseJsonBody } from '@/lib/validation'
+import { redeemClaimGrantAtSignup, ClaimTokenUnusableError } from '@/lib/claim/redeem-signup'
 import { z } from 'zod'
 
 const signupSchema = z.object({
@@ -11,6 +12,7 @@ const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   organizationName: z.string().min(1).max(120),
+  claimToken: z.string().max(300).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -91,7 +93,30 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      return user
+      // Claim redemption (promo → 1-month Studio): when the signup carries a
+      // claimToken, upgrade the org to the granted tier INSIDE this
+      // transaction. Any failure rejects the whole signup — a verified buyer
+      // never lands on a free org that silently lost their month. (GRANT PATH
+      // — a direct DB entitlement write; Stripe is never touched. The tx
+      // client is explicit so the redeem commits/rolls back atomically with
+      // the org + user creation.)
+      await redeemClaimGrantAtSignup({
+        email,
+        claimToken: parsed.data.claimToken,
+        organizationId: organization.id,
+        tx,
+      })
+
+      // Re-read after redemption so the response reflects the granted tier
+      // (cubic P2 round 1: the pre-redemption user object reported plan free).
+      const refreshedUser = await tx.user.findUnique({
+        where: { id: user.id },
+        include: {
+          organization: { select: { id: true, name: true, slug: true, plan: true } },
+        },
+      })
+
+      return refreshedUser ?? user
     })
 
     return NextResponse.json({
@@ -100,6 +125,21 @@ export async function POST(request: NextRequest) {
       mustChangePassword: false,
     })
   } catch (error) {
+    // User-correctable claim state is a 4xx, not a 500: a mismatched email at
+    // signup vs. verification, a retried signup after the grant was already
+    // redeemed, or an expired grant are all fixable by the buyer (cubic P2
+    // round 1 — never imply infrastructure failure for a state the user can fix).
+    if (error instanceof ClaimTokenUnusableError) {
+      const messages: Record<string, string> = {
+        mismatch: 'The claim did not match. Use the exact email you entered on the claim page.',
+        redeemed: 'This claim has already been used for an account. Sign in instead.',
+        expired: 'This claim has expired after 30 days.',
+      }
+      return NextResponse.json(
+        { error: messages[error.status] ?? 'This claim could not be applied.' },
+        { status: 409 },
+      )
+    }
     console.error('Signup POST error:', error)
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }

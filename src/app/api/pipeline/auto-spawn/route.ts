@@ -4,6 +4,7 @@ import { withRequestOrgContext } from '@/lib/request-context'
 import { z } from 'zod'
 import { parseJsonBody } from '@/lib/validation'
 import { getTasksForStage, hasFeatureAccess, TASK_FEATURES } from '@/lib/tasks'
+import { resolveEffectivePlan } from '@/lib/claim/entitlement-info'
 
 const autoSpawnSchema = z.object({
   pipelineItemId: z.string(),
@@ -24,15 +25,17 @@ export const POST = (request: NextRequest) =>
     if (!parsed.success) return parsed.response
     const { pipelineItemId } = parsed.data
 
-    // Tier gate: Pro+ required for auto-spawn
+    // Tier gate: Pro+ required for auto-spawn. Effective tier resolves the
+    // promo grant so a claim-funded Studio org can auto-spawn during its month
+    // and is blocked again after expiry (spec t_7160ffb5 §5 day-31 policy).
     const org = await db.organization.findUnique({
       where: { id: organizationId },
-      select: { plan: true },
+      select: { plan: true, settings: true, stripeSubscriptionStatus: true },
     })
 
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
 
-    if (!hasFeatureAccess(org.plan as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
+    if (!hasFeatureAccess(resolveEffectivePlan(org).plan as 'free' | 'starter' | 'pro' | 'enterprise', TASK_FEATURES.AUTO_SPAWN)) {
       return NextResponse.json(
         { error: 'Auto-spawn requires Starter plan or higher', requiredTier: 'starter' },
         { status: 402 },

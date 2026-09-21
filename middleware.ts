@@ -84,6 +84,20 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(request, response)
   }
 
+  // Public claim page — the pre-signup entry point for the promo claim flow
+  // (/claim). Visitors must reach it before creating an account; signed-in
+  // users go to the dashboard (a verified pre-signup grant can only redeem on
+  // signup — an authenticated /claim would strand a single-use grant).
+  if (pathname === '/claim' || pathname.startsWith('/claim/')) {
+    if (isAuthenticated) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+    const response = NextResponse.next()
+    return applySecurityHeaders(request, response)
+  }
+
   // Public booking pages (/book/[slug]) — accessible without a session
   if (pathname === '/book' || pathname.startsWith('/book/')) {
     const response = NextResponse.next()
