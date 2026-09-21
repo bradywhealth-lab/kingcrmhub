@@ -126,6 +126,50 @@ export default function PublicLandingPage() {
           ))}
         </div>
 
+        {/* SEE THE WORKSPACE — real product screenshots only (no mockups rule).
+            Images are actual captures of the built UI: pipeline kanban, lead
+            detail with AI follow-up guidance, and automation rules. */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-semibold tracking-[-0.02em]" style={{ color: PAPER }}>
+            See the workspace
+          </h2>
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                caption: 'Client pipeline command center',
+                alt: 'King CRM Hub pipeline view for freelancers',
+                src: '/screenshots/pipeline.png',
+              },
+              {
+                caption: 'Follow-up guidance',
+                alt: 'Follow-up guidance with custom AI prompts',
+                src: '/screenshots/follow-up-guidance.png',
+              },
+              {
+                caption: 'Automations from day one',
+                alt: 'Automation rules included on every plan',
+                src: '/screenshots/automations.png',
+              },
+            ].map((shot) => (
+              <figure key={shot.src} className="rounded-3xl border overflow-hidden" style={{ borderColor: 'rgba(244,240,230,0.14)' }}>
+                <img
+                  src={shot.src}
+                  alt={shot.alt}
+                  loading="lazy"
+                  className="w-full aspect-[16/10] object-cover object-top"
+                  style={{ background: INK }}
+                />
+                <figcaption className="px-4 py-3 text-sm font-medium" style={{ color: PAPER, background: `${TEAL}0F` }}>
+                  {shot.caption}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+          <p className="mt-5 text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
+            Your prompts do the thinking. The CRM handles the follow-up.
+          </p>
+        </div>
+
         <div className="mt-8 rounded-3xl p-5" style={{ background: PAPER }}>
           <p className="text-sm font-semibold" style={{ color: INK }}>
             Automations in every plan. Flat pricing, no per-seat tax.
