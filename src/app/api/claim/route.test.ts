@@ -84,6 +84,7 @@ describe('POST /api/claim', () => {
       }),
     )
     const createCall = mockDb.claimGrant.create.mock.calls[0][0] as { data: Record<string, string> }
+    expect(createCall.data).not.toHaveProperty('licenseKey')
     expect(JSON.stringify(createCall)).not.toContain(VALID_KEY)
   })
 

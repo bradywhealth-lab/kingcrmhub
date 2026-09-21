@@ -107,7 +107,16 @@ export async function POST(request: NextRequest) {
         tx,
       })
 
-      return user
+      // Re-read after redemption so the response reflects the granted tier
+      // (cubic P2 round 1: the pre-redemption user object reported plan free).
+      const refreshedUser = await tx.user.findUnique({
+        where: { id: user.id },
+        include: {
+          organization: { select: { id: true, name: true, slug: true, plan: true } },
+        },
+      })
+
+      return refreshedUser ?? user
     })
 
     return NextResponse.json({

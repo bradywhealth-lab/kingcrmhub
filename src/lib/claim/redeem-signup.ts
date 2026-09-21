@@ -6,13 +6,13 @@ import { redeemClaimGrant } from './grant'
 /**
  * Signup-side redemption hook. The /claim page verified a Gumroad license and
  * minted a pre-signup ClaimGrant; when signup passes `claimToken` (a base64
- * envelope with licenseKey + productId, minted client-side after verification)
- * and the account succeeds, the org is upgraded to the granted tier ('pro'
- * = Studio) atomically inside the SAME transaction.
+ * envelope with the license key, minted client-side after verification) the
+ * org is upgraded to the granted tier ('pro' = Studio) atomically inside the
+ * SAME transaction.
  *
- * Returns null when no claimToken was provided — signup continues as normal.
- * On failure the signup itself is REJECTED (transaction rollback): a buyer
- * who verified a valid license must not end up with a free-tier account that
+ * Returns { applied: false } when no claimToken was provided — signup
+ * continues as normal. A SUPPLIED-but-invalid token THROWS (transaction
+ * rollback): a verified buyer must never end up with a free-tier account that
  * silently lost their month.
  *
  * The envelope contains no secrets beyond what the buyer already holds (their
@@ -20,22 +20,15 @@ import { redeemClaimGrant } from './grant'
  */
 export function decodeClaimToken(
   claimToken: string | undefined,
-): { licenseKey: string; productId: string } | null {
+): { licenseKey: string } | null {
   if (!claimToken) return null
   try {
     const raw = Buffer.from(claimToken, 'base64').toString('utf8')
     const parsed = JSON.parse(raw) as { licenseKey?: unknown; productId?: unknown }
-    if (
-      typeof parsed.licenseKey !== 'string' ||
-      parsed.licenseKey.length < 8 ||
-      parsed.licenseKey.length > 200 ||
-      typeof parsed.productId !== 'string' ||
-      parsed.productId.length === 0 ||
-      parsed.productId.length > 300
-    ) {
+    if (typeof parsed.licenseKey !== 'string' || parsed.licenseKey.length < 8 || parsed.licenseKey.length > 200) {
       return null
     }
-    return { licenseKey: parsed.licenseKey, productId: parsed.productId }
+    return { licenseKey: parsed.licenseKey }
   } catch {
     return null
   }
@@ -48,6 +41,12 @@ export async function redeemClaimGrantAtSignup(params: {
   tx: Prisma.TransactionClient
 }): Promise<{ applied: boolean }> {
   const decoded = decodeClaimToken(params.claimToken)
+  if (params.claimToken && !decoded) {
+    // A supplied-but-invalid token must never look like a plain signup: reject
+    // loudly so a confused buyer retries /claim instead of silently losing the
+    // verified grant (cubic P1 round 1).
+    throw new ClaimTokenUnusableError('mismatch')
+  }
   if (!decoded) return { applied: false }
 
   // Hash the key BEFORE any transaction/read; never store the raw value.
@@ -55,7 +54,6 @@ export async function redeemClaimGrantAtSignup(params: {
     {
       licenseKeyHash: hashLicenseKey(decoded.licenseKey),
       orderEmail: params.email,
-      productId: decoded.productId,
       organizationId: params.organizationId,
     },
     params.tx,

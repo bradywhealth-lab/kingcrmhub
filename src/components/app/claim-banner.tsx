@@ -34,10 +34,12 @@ export function ClaimBanner() {
           setState({ kind: 'hidden' })
           return
         }
-        if (data.grant.active) {
+        if (data.grant.active && data.grant.nudgeAt === 0) {
           setState({ kind: 'active', daysLeft: data.grant.daysLeft, expiresAt: data.grant.expiresAt })
         } else {
-          setState({ kind: 'expired' })
+          // Banner only starts on day 21 of the window (spec §6: nudge at
+          // day-21/31); showing it the moment a claim lands would be noise.
+          setState(data.grant.active ? { kind: 'hidden' } : { kind: 'expired' })
         }
       } catch {
         if (!cancelled) setState({ kind: 'hidden' })

@@ -76,17 +76,19 @@ export async function createClaimGrant(params: {
 export async function redeemClaimGrant(params: {
   licenseKeyHash: string
   orderEmail: string
-  productId: string
+  productId?: string
   organizationId: string
 }, tx?: Prisma.TransactionClient): Promise<RedeemResult> {
   const orderEmail = params.orderEmail.trim().toLowerCase()
   const client: Prisma.TransactionClient = tx ?? (db as unknown as Prisma.TransactionClient)
 
+  // Locate the pre-signup grant by hash + buyer email — the product id is
+  // read from the STORED grant, never trusted from a client envelope.
   const grant = await client.claimGrant.findFirst({
     where: {
       licenseKeyHash: params.licenseKeyHash,
       orderEmail,
-      productId: params.productId,
+      ...(params.productId ? { productId: params.productId } : {}),
     },
   })
 
@@ -125,7 +127,7 @@ export async function redeemClaimGrant(params: {
       entityType: 'organization',
       entityId: params.organizationId,
       description: 'Claimed 1-month Studio (promo)',
-      metadata: { claimGrantId: grant.id, productId: params.productId },
+      metadata: { claimGrantId: grant.id, productId: grant.productId },
     },
   })
 

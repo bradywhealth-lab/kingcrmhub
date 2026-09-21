@@ -59,6 +59,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve the product: explicit eligible id, or the sole configured id.
+    // With multiple configured products the buyer must select — silently
+    // defaulting to product 1 would make Freelancer OS licenses unclaimable.
+    if (candidateIds.length > 1 && !(productId && candidateIds.includes(productId))) {
+      return NextResponse.json({ error: 'Select the product you purchased to continue.' }, { status: 400 })
+    }
     if (productId && !candidateIds.includes(productId)) {
       return NextResponse.json({ error: 'Not an eligible product for this claim.' }, { status: 400 })
     }

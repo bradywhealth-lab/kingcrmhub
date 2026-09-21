@@ -156,9 +156,9 @@ describe('readClaimGrantInfo / resolveEffectivePlan (day-31 policy)', () => {
 })
 
 describe('decodeClaimToken', () => {
-  it('round-trips a valid envelope', () => {
-    const token = Buffer.from(JSON.stringify({ licenseKey: 'KEY-1234', productId: 'pid-1' })).toString('base64')
-    expect(decodeClaimToken(token)).toEqual({ licenseKey: 'KEY-1234', productId: 'pid-1' })
+  it('round-trips a valid envelope (license key only — product comes from the stored grant)', () => {
+    const token = Buffer.from(JSON.stringify({ licenseKey: 'KEY-1234' })).toString('base64')
+    expect(decodeClaimToken(token)).toEqual({ licenseKey: 'KEY-1234' })
   })
 
   it('returns null for empty / garbage / wrong-shape envelopes', () => {
