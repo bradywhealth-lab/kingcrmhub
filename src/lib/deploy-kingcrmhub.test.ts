@@ -152,6 +152,21 @@ if [[ "$args" == *" container inspect "* ]]; then
   if [[ "$KEEP_CONTAINER_AFTER_REMOVE" == "1" ]]; then exit 0; fi
   exit 1
 fi
+if [[ "$args" == *" images --no-trunc --quiet "* ]]; then
+  if [[ -f "$DEPLOY_ROOT/image_built" ]]; then
+    printf 'sha256:new-image'
+  else
+    # Before the build has "completed", the mocked ref resolves to the old ID.
+    printf 'sha256:old-image'
+  fi
+  exit 0
+fi
+if [[ "$args" == *" build kingcrmhub "* ]]; then
+  # Real invocation is docker compose -f COMPOSE_FILE build kingcrmhub;
+  # once the build completes, the service ref resolves to a NEW image id so
+  # the pre-swap image-identity gate passes.
+  touch "$DEPLOY_ROOT/image_built"
+fi
 if [[ "$args" == *" --format {{.Image}} kingcrmhub "* ]]; then
   printf 'sha256:old-image'
   exit 0

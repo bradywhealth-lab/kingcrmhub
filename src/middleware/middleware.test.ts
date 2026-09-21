@@ -25,6 +25,9 @@ describe('PWA assets stay public for logged-out visitors', () => {
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-512-maskable.png',
+    '/screenshots/pipeline.png',
+    '/screenshots/follow-up-guidance.png',
+    '/screenshots/automations.png',
   ])('passes %s through without an auth redirect', async (path) => {
     const request = new NextRequest(`http://localhost:3000${path}`)
     const response = await middleware(request, undefined as never)
@@ -106,6 +109,7 @@ describe('middleware matcher excludes PWA assets', () => {
     '/robots.txt',
     '/sitemap.xml',
     '/logo.svg',
+    '/screenshots/pipeline.png',
   ])('matcher does not match %s (middleware skipped, asset served statically)', (path) => {
     expect(pattern.test(path)).toBe(false)
   })

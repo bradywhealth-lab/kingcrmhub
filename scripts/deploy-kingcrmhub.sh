@@ -129,6 +129,16 @@ echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
 
 echo "=== BUILD (live container remains untouched) ==="
 compose build "$SERVICE"
+# Image-identity gate (deploy defect 2026-09-21): the bake can finish and
+# fail to update the local service tag (observed: deployer-kingcrmhub:latest
+# still resolving to the pre-build image). Abort BEFORE stopping the container
+# when the built ref did not move - never swap onto stale bytes.
+BUILT_IMAGE_ID="$(docker images --no-trunc --quiet "$SERVICE_IMAGE_REF" 2>/dev/null || true)"
+echo "BUILT_IMAGE_ID=${BUILT_IMAGE_ID#sha256:}"
+if [[ -z "$BUILT_IMAGE_ID" || "$BUILT_IMAGE_ID" == "$OLD_IMAGE_ID" ]]; then
+  echo "BUILD_IMAGE_IDENTITY_FAIL: $SERVICE_IMAGE_REF unchanged after build" >&2
+  exit 1
+fi
 
 echo "=== SWAP (original image retained as $ROLLBACK_IMAGE) ==="
 ROLLBACK_ARMED=1

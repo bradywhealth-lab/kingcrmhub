@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
 
   // Static SEO/PWA assets pass through even if the matcher is ever narrowed
   // (mirrors the matcher exclusion below; keep the two lists in sync).
-  if (PUBLIC_STATIC_ASSETS.has(pathname) || pathname.startsWith('/icons/')) {
+  if (PUBLIC_STATIC_ASSETS.has(pathname) || pathname.startsWith('/icons/') || pathname.startsWith('/screenshots/')) {
     const response = NextResponse.next()
     return applySecurityHeaders(request, response)
   }
@@ -132,8 +132,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Escaped dots + directory boundary (icons/) so unrelated paths like
-    // /og-homeXpng or /icons-private can't slip past the middleware.
-    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo\\.svg|og-home\\.png|manifest\\.webmanifest|icons/).*)',
+    // Escaped dots + directory boundary (icons/, screenshots/) so unrelated
+    // paths like /og-homeXpng or /icons-private can't slip past the middleware.
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo\\.svg|og-home\\.png|manifest\\.webmanifest|icons/|screenshots/).*)',
   ],
 }
