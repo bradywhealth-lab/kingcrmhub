@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
 import {
   filterTasks,
   filterAppointments,
   isOverdue,
+  FILTER_TABS,
+  TaskCard,
+  TasksView,
+  optimisticallyUpdateTask,
+  mergeSavedTask,
 } from '@/components/tasks/tasks-view'
 
 /**
@@ -18,6 +24,10 @@ type TaskRecord = {
   status: 'todo' | 'in_progress' | 'done' | 'blocked'
   priority: 'low' | 'normal' | 'high' | 'urgent'
   dueDate?: string | null
+  completedAt?: string | null
+  assignedTo?: { id: string; name: string; email: string } | null
+  lead?: { id: string; firstName: string; lastName: string; company: string } | null
+  pipelineItem?: { id: string; title: string } | null
   createdAt: string
   position: number
 }
@@ -31,7 +41,7 @@ type AppointmentRecord = {
   status: 'scheduled' | 'cancelled' | 'completed'
 }
 
-type FilterTab = 'today' | 'week' | 'overdue'
+type FilterTab = 'today' | 'week' | 'overdue' | 'completed'
 
 function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   return {
@@ -40,6 +50,7 @@ function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
     status: 'todo',
     priority: 'normal',
     dueDate: new Date().toISOString(),
+    completedAt: null,
     createdAt: new Date().toISOString(),
     position: 0,
     ...overrides,
@@ -76,6 +87,30 @@ describe('filterTasks (imported from tasks-view.tsx)', () => {
     expect(filterTasks(tasks, 'today')).toHaveLength(0)
     expect(filterTasks(tasks, 'week')).toHaveLength(0)
     expect(filterTasks(tasks, 'overdue')).toHaveLength(0)
+  })
+
+  it('returns only done tasks in Completed filter', () => {
+    const tasks = [
+      makeTask({ id: 'done1', status: 'done', completedAt: '2026-09-19T10:00:00.000Z' }),
+      makeTask({ id: 'active', status: 'todo' }),
+      makeTask({ id: 'blocked', status: 'blocked' }),
+      makeTask({ id: 'progress', status: 'in_progress' }),
+    ]
+    const result = filterTasks(tasks, 'completed')
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('done1')
+  })
+
+  it('sorts completed tasks newest-first by completedAt, null completedAt last', () => {
+    const older = '2026-09-01T10:00:00.000Z'
+    const newer = '2026-09-10T10:00:00.000Z'
+    const tasks = [
+      makeTask({ id: 'c', status: 'done', completedAt: older }),
+      makeTask({ id: 'a', status: 'done', completedAt: newer }),
+      makeTask({ id: 'b', status: 'done', completedAt: null }),
+    ]
+    const result = filterTasks(tasks, 'completed')
+    expect(result.map((t) => t.id)).toEqual(['a', 'c', 'b'])
   })
 
   it('includes undated tasks in Week filter only', () => {
@@ -125,6 +160,169 @@ describe('filterAppointments (imported from tasks-view.tsx)', () => {
     future.setDate(future.getDate() + 3)
     const appts = [makeAppointment({ startTime: future.toISOString() })]
     expect(filterAppointments(appts, 'today')).toHaveLength(0)
+  })
+
+  it('returns only completed appointments in Completed filter', () => {
+    const appts = [
+      makeAppointment({ id: 'a1', status: 'completed' }),
+      makeAppointment({ id: 'a2', status: 'scheduled' }),
+      makeAppointment({ id: 'a3', status: 'cancelled' }),
+    ]
+    const result = filterAppointments(appts, 'completed')
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('a1')
+  })
+
+  it('excludes completed appointments from Today/Week filters (no double-count)', () => {
+    const appts = [makeAppointment({ status: 'completed' })]
+    expect(filterAppointments(appts, 'today')).toHaveLength(0)
+    expect(filterAppointments(appts, 'week')).toHaveLength(0)
+  })
+})
+
+describe('Completed tab UI (render coverage)', () => {
+  it('includes a Completed tab in the filter tab bar', () => {
+    const labels = FILTER_TABS.map((t) => t.label)
+    expect(labels).toContain('Completed')
+  })
+
+  it('TaskCard renders completedAt date, priority dot, and pipeline reference for done tasks', () => {
+    const html = renderToStaticMarkup(
+      <TaskCard
+        task={{
+          id: 'done1',
+          title: 'Ship onboarding',
+          status: 'done',
+          priority: 'urgent',
+          completedAt: '2026-09-19T10:00:00.000Z',
+          createdAt: '2026-09-01T10:00:00.000Z',
+          position: 0,
+          lead: { id: 'lead1', firstName: 'Ada', lastName: 'Lovelace', company: 'Analytical' },
+          pipelineItem: { id: 'pipe1', title: 'Onboarding flow' },
+          assignedTo: { id: 'u1', name: 'Sam', email: 'sam@example.com' },
+        }}
+        onToggleDone={() => {}}
+        onOpenPipelineItem={() => {}}
+      />
+    )
+    expect(html).toContain('Ship onboarding')
+    expect(html).toContain('Completed')
+    // priority dot present for urgent
+    expect(html).toContain('bg-red-500')
+    // lead + pipeline button + assignee rendered
+    expect(html).toContain('Ada Lovelace')
+    expect(html).toContain('aria-label="Open pipeline item Onboarding flow"')
+    expect(html).toContain('Sam')
+  })
+
+  it('does not render pipeline reference or completion date on active task cards', () => {
+    const html = renderToStaticMarkup(
+      <TaskCard
+        task={{
+          id: 'active1',
+          title: 'Active task',
+          status: 'in_progress',
+          priority: 'normal',
+          createdAt: '2026-09-01T10:00:00.000Z',
+          position: 0,
+          pipelineItem: { id: 'pipe1', title: 'Onboarding flow' },
+        }}
+        onToggleDone={() => {}}
+      />
+    )
+    expect(html).toContain('Active task')
+    expect(html).not.toContain('Completed')
+    expect(html).not.toContain('aria-label="Open pipeline item')
+  })
+
+  it('renders completed tasks in list view when Completed tab selected', () => {
+    const html = renderToStaticMarkup(
+      <TasksView
+        initialTab="completed"
+        initialTasks={[
+          {
+            id: 'done1',
+            title: 'Archived task',
+            status: 'done',
+            priority: 'normal',
+            completedAt: '2026-09-19T10:00:00.000Z',
+            createdAt: '2026-09-01T10:00:00.000Z',
+            position: 0,
+          },
+        ]}
+        initialAppointments={[]}
+      />
+    )
+    expect(html).toContain('Archived task')
+    expect(html).toContain('Completed')
+    // active tabs remain available
+    expect(html).toContain('Today')
+    expect(html).toContain('This Week')
+    expect(html).toContain('Overdue')
+  })
+
+  it('empty state message for the Completed tab', () => {
+    const html = renderToStaticMarkup(
+      <TasksView initialTab="completed" initialTasks={[]} initialAppointments={[]} />
+    )
+    expect(html).toContain('No completed tasks yet')
+  })
+
+  it('disables the Kanban view control while Completed tab is active', () => {
+    const html = renderToStaticMarkup(
+      <TasksView initialTab="completed" initialTasks={[]} initialAppointments={[]} />
+    )
+    expect(html).toContain('aria-disabled="true"')
+  })
+})
+
+describe('optimisticallyUpdateTask (imported from tasks-view.tsx)', () => {
+  it('sets completedAt when marking a task done', () => {
+    const task = makeTask({ id: 't1', status: 'todo', completedAt: null })
+    const updated = optimisticallyUpdateTask(task, 'done')
+    expect(updated.status).toBe('done')
+    expect(updated.completedAt).not.toBeNull()
+  })
+
+  it('clears completedAt when reopening a done task', () => {
+    const task = makeTask({ id: 't1', status: 'done', completedAt: '2026-09-19T10:00:00.000Z' })
+    const updated = optimisticallyUpdateTask(task, 'todo')
+    expect(updated.status).toBe('todo')
+    expect(updated.completedAt).toBeNull()
+  })
+
+  it('leaves completedAt unchanged for non-status changes', () => {
+    const task = makeTask({ id: 't1', status: 'done', completedAt: '2026-09-19T10:00:00.000Z' })
+    const updated = optimisticallyUpdateTask(task, 'done')
+    expect(updated.completedAt).toBe('2026-09-19T10:00:00.000Z')
+  })
+})
+
+describe('mergeSavedTask (imported from tasks-view.tsx)', () => {
+  it('preserves pipelineItem and lead when PATCH response omits them', () => {
+    const existing = makeTask({
+      id: 't1',
+      status: 'done',
+      priority: 'high',
+      title: 'Ship onboarding',
+      completedAt: '2026-09-19T10:00:00.000Z',
+      lead: { id: 'lead1', firstName: 'Ada', lastName: 'Lovelace', company: 'Analytical' },
+      pipelineItem: { id: 'pipe1', title: 'Onboarding flow' },
+    })
+    // Realistic PATCH payload: only fields the API returns (omits pipelineItem/lead)
+    const saved = { title: 'Ship onboarding (edited)', status: 'done' } as Partial<typeof existing>
+    const merged = mergeSavedTask(existing, saved)
+    expect(merged.title).toBe('Ship onboarding (edited)')
+    expect(merged.pipelineItem).toEqual({ id: 'pipe1', title: 'Onboarding flow' })
+    expect(merged.lead).toEqual({ id: 'lead1', firstName: 'Ada', lastName: 'Lovelace', company: 'Analytical' })
+  })
+
+  it('applies completedAt from the server response', () => {
+    const existing = makeTask({ id: 't1', status: 'todo', completedAt: null })
+    const saved = { ...existing, status: 'done', completedAt: '2026-09-20T12:00:00.000Z' } as Partial<typeof existing>
+    const merged = mergeSavedTask(existing, saved)
+    expect(merged.status).toBe('done')
+    expect(merged.completedAt).toBe('2026-09-20T12:00:00.000Z')
   })
 })
 

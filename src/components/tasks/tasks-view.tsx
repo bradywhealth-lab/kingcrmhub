@@ -55,13 +55,14 @@ type AppointmentRecord = {
   attendeeEmail?: string | null
 }
 
-type FilterTab = 'today' | 'week' | 'overdue'
+type FilterTab = 'today' | 'week' | 'overdue' | 'completed'
 type ViewMode = 'list' | 'kanban'
 
-const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[] = [
+export const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[] = [
   { id: 'today', label: 'Today', icon: Clock },
   { id: 'week', label: 'This Week', icon: Calendar },
   { id: 'overdue', label: 'Overdue', icon: AlertTriangle },
+  { id: 'completed', label: 'Completed', icon: CheckSquare },
 ]
 
 const STATUS_COLUMNS = [
@@ -114,6 +115,15 @@ export function isOverdue(d: Date): boolean {
 }
 
 export function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
+  if (tab === 'completed') {
+    return tasks
+      .filter((t) => t.status === 'done')
+      .sort((a, b) => {
+        const ta = a.completedAt ? new Date(a.completedAt).getTime() : -Infinity
+        const tb = b.completedAt ? new Date(b.completedAt).getTime() : -Infinity
+        return tb - ta
+      })
+  }
   return tasks.filter((t) => {
     if (t.status === 'done') return false
     if (!t.dueDate) return tab === 'week' // undated tasks show in week view
@@ -122,14 +132,18 @@ export function filterTasks(tasks: TaskRecord[], tab: FilterTab): TaskRecord[] {
       case 'today': return isToday(d)
       case 'week': return isThisWeek(d)
       case 'overdue': return isOverdue(d)
+      default: return false
     }
   })
 }
 
 export function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): AppointmentRecord[] {
+  if (tab === 'completed') {
+    return appts.filter((a) => a.status === 'completed')
+  }
   if (tab === 'overdue') return [] // appointments can't be overdue
   return appts.filter((a) => {
-    if (a.status === 'cancelled') return false
+    if (a.status === 'cancelled' || a.status === 'completed') return false
     const d = new Date(a.startTime)
     switch (tab) {
       case 'today': return isToday(d)
@@ -150,7 +164,7 @@ function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; com
   )
 }
 
-function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id: string) => void }) {
+export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: TaskRecord; onToggleDone: (id: string) => void; onOpenPipelineItem?: (pipelineItemId: string) => void }) {
   const isDone = task.status === 'done'
   return (
     <Card
@@ -177,6 +191,23 @@ function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id:
               <p className="mt-1 text-xs text-[#0c111b]/55 line-clamp-2">{task.description}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
+              {isDone && task.completedAt && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#18b897]">
+                  <Check className="h-3 w-3" />
+                  Completed {new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+              {task.pipelineItem && isDone && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onOpenPipelineItem?.(task.pipelineItem!.id) }}
+                  aria-label={`Open pipeline item ${task.pipelineItem.title}`}
+                  className="inline-flex items-center gap-1 text-[11px] text-[#127c66] hover:text-[#0c111b] hover:underline"
+                >
+                  <Building className="h-3 w-3" />
+                  {task.pipelineItem.title}
+                </button>
+              )}
               <LeadBadge lead={task.lead} />
               {task.assignedTo && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-[#0c111b]/50">
@@ -191,7 +222,10 @@ function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id:
               )}
             </div>
           </div>
-          {task.dueDate && (
+          {isDone && (
+            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? 'bg-slate-300'}`} />
+          )}
+          {!isDone && task.dueDate && (
             <span className="shrink-0 text-[11px] tabular-nums text-[#0c111b]/45">
               {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
@@ -236,6 +270,7 @@ function EmptyState({ tab }: { tab: FilterTab }) {
     today: { title: 'Nothing due today', body: 'Tasks due today or appointments scheduled will appear here.' },
     week: { title: 'Clear week ahead', body: 'Tasks and appointments for this week will show up here.' },
     overdue: { title: 'All caught up', body: 'No overdue tasks — nice work.' },
+    completed: { title: 'No completed tasks yet', body: 'Tasks you mark done will appear here.' },
   }
   const m = messages[tab]
   return (
@@ -247,11 +282,38 @@ function EmptyState({ tab }: { tab: FilterTab }) {
   )
 }
 
-export function TasksView() {
-  const [tasks, setTasks] = useState<TaskRecord[]>([])
-  const [appointments, setAppointments] = useState<AppointmentRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<FilterTab>('today')
+export function optimisticallyUpdateTask(task: TaskRecord, newStatus: TaskRecord['status']): TaskRecord {
+  if (newStatus === task.status) return task
+  const completedAt = newStatus === 'done' ? new Date().toISOString() : null
+  return { ...task, status: newStatus, completedAt }
+}
+
+/**
+ * Merge a PATCH response task back into local state without dropping fields the
+ * response omits (pipelineItem, dueDate, description, source). Server wins on
+ * fields it actually returns; existing local fields survive otherwise.
+ */
+export function mergeSavedTask(existing: TaskRecord, saved: Partial<TaskRecord>): TaskRecord {
+  return { ...existing, ...saved }
+}
+
+export function TasksView({
+  initialTab = 'today',
+  initialTasks,
+  initialAppointments,
+  onOpenPipelineItem,
+}: {
+  initialTab?: FilterTab
+  initialTasks?: TaskRecord[]
+  initialAppointments?: AppointmentRecord[]
+  onOpenPipelineItem?: (pipelineItemId: string) => void
+} = {}) {
+  // Controlled mode (all props provided) is used by render tests — skip fetching entirely.
+  const isControlled = initialTasks !== undefined && initialAppointments !== undefined
+  const [tasks, setTasks] = useState<TaskRecord[]>(initialTasks ?? [])
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>(initialAppointments ?? [])
+  const [loading, setLoading] = useState(!isControlled)
+  const [tab, setTab] = useState<FilterTab>(initialTab)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showCreate, setShowCreate] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
@@ -261,22 +323,23 @@ export function TasksView() {
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    if (isControlled) return
     let cancelled = false
 
     ;(async () => {
       try {
         const [tRes, aRes] = await Promise.all([
-          fetch(buildApiPath('/api/tasks'), { cache: 'no-store' }),
-          fetch(buildApiPath('/api/appointments'), { cache: 'no-store' }),
+          initialTasks === undefined ? fetch(buildApiPath('/api/tasks'), { cache: 'no-store' }) : null,
+          initialAppointments === undefined ? fetch(buildApiPath('/api/appointments'), { cache: 'no-store' }) : null,
         ])
 
         if (!cancelled) {
-          if (tRes.status === 401 || aRes.status === 401) { window.location.href = buildApiPath('/auth'); return }
-          if (tRes.ok) {
+          if ((tRes?.status === 401) || (aRes?.status === 401)) { window.location.href = buildApiPath('/auth'); return }
+          if (tRes?.ok) {
             const tData = await tRes.json() as { tasks?: TaskRecord[] }
             setTasks(Array.isArray(tData.tasks) ? tData.tasks : [])
           }
-          if (aRes.ok) {
+          if (aRes?.ok) {
             const aData = await aRes.json() as { appointments?: AppointmentRecord[] }
             setAppointments(Array.isArray(aData.appointments) ? aData.appointments : [])
           }
@@ -291,13 +354,13 @@ export function TasksView() {
     })()
 
     return () => { cancelled = true }
-  }, [])
+  }, [isControlled, initialTasks, initialAppointments])
 
   const filteredTasks = useMemo(() => filterTasks(tasks, tab), [tasks, tab])
   const filteredAppointments = useMemo(() => filterAppointments(appointments, tab), [appointments, tab])
 
   const kanbanColumns = useMemo(() => {
-    if (viewMode !== 'kanban') return []
+    if (viewMode !== 'kanban' || tab === 'completed') return []
     // Kanban shows ALL tasks (including done) so the Done column isn't empty
     const boardTasks = filterTasks(tasks, tab)
     // Also include any done tasks matching the tab's date range
@@ -329,8 +392,8 @@ export function TasksView() {
     if (pendingToggles.has(taskId)) return
     setPendingToggles((prev) => new Set(prev).add(taskId))
     const newStatus = task.status === 'done' ? 'todo' : 'done'
-    // Optimistic update
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatus } : t))
+    // Optimistic update (also sets/clears completedAt so Completed sorts immediately)
+    setTasks((prev) => prev.map((t) => t.id === taskId ? optimisticallyUpdateTask(t, newStatus) : t))
     try {
       const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
         method: 'PATCH',
@@ -338,6 +401,11 @@ export function TasksView() {
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Failed')
+      // Server is source of truth — merge its completedAt/status into local state
+      const { task: saved } = await res.json() as { task?: TaskRecord }
+      if (saved) {
+        setTasks((prev) => prev.map((t) => t.id === saved.id ? mergeSavedTask(t, saved) : t))
+      }
     } catch {
       // Revert on failure
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: task.status } : t))
@@ -387,7 +455,8 @@ export function TasksView() {
     setPendingToggles((prev) => new Set(prev).add(taskId))
     const oldStatus = task.status
     const newStatusTyped = newStatus as TaskRecord['status']
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatusTyped } : t))
+    // Optimistic update (also sets/clears completedAt when moving to/from Done)
+    setTasks((prev) => prev.map((t) => t.id === taskId ? optimisticallyUpdateTask(t, newStatusTyped) : t))
     try {
       const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
         method: 'PATCH',
@@ -395,6 +464,11 @@ export function TasksView() {
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Failed')
+      // Server is source of truth — merge its completedAt/status into local state
+      const { task: saved } = await res.json() as { task?: TaskRecord }
+      if (saved) {
+        setTasks((prev) => prev.map((t) => t.id === saved.id ? mergeSavedTask(t, saved) : t))
+      }
     } catch {
       const oldStatusTyped = oldStatus as TaskRecord['status']
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: oldStatusTyped } : t))
@@ -447,16 +521,18 @@ export function TasksView() {
             <button
               onClick={() => setViewMode('list')}
               aria-label="List view"
-              aria-pressed={viewMode === 'list'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              aria-pressed={viewMode === 'list' || tab === 'completed'}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <List className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setViewMode('kanban')}
+              onClick={() => { if (tab !== 'completed') setViewMode('kanban') }}
               aria-label="Kanban board view"
-              aria-pressed={viewMode === 'kanban'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              aria-disabled={tab === 'completed'}
+              disabled={tab === 'completed'}
+              aria-pressed={viewMode === 'kanban' && tab !== 'completed'}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : tab === 'completed' ? 'cursor-not-allowed text-[#0c111b]/25' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <Columns className="h-4 w-4" />
             </button>
@@ -473,7 +549,7 @@ export function TasksView() {
         </div>
       </div>
 
-      {viewMode === 'kanban' ? (
+      {viewMode === 'kanban' && tab !== 'completed' ? (
         kanbanIsEmpty ? (
           <EmptyState tab={tab} />
         ) : (
@@ -496,7 +572,7 @@ export function TasksView() {
                   {col.tasks.length === 0 ? (
                     <p className="py-6 text-center text-xs text-[#0c111b]/25">No tasks</p>
                   ) : (
-                    col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} />)
+                    col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />)
                   )}
                 </div>
               </div>
@@ -524,7 +600,7 @@ export function TasksView() {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Tasks</h2>
               <div className="space-y-3">
                 {filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} />
+                  <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />
                 ))}
               </div>
             </section>
