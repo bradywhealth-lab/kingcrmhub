@@ -36,10 +36,17 @@ export function ClaimBanner() {
         }
         if (data.grant.active && data.grant.nudgeAt === 0) {
           setState({ kind: 'active', daysLeft: data.grant.daysLeft, expiresAt: data.grant.expiresAt })
-        } else {
+        } else if (data.grant.active) {
           // Banner only starts on day 21 of the window (spec §6: nudge at
           // day-21/31); showing it the moment a claim lands would be noise.
-          setState(data.grant.active ? { kind: 'hidden' } : { kind: 'expired' })
+          setState({ kind: 'hidden' })
+        } else if (data.grantExpired && (data.plan === 'pro' || data.plan === 'enterprise')) {
+          // Grant expired but a live Stripe subscription still grants the paid
+          // tier — no nudge to "keep Studio" for someone already paying for it
+          // (cubic P3 round 1: resolveEffectivePlan surfaces this distinction).
+          setState({ kind: 'hidden' })
+        } else {
+          setState({ kind: 'expired' })
         }
       } catch {
         if (!cancelled) setState({ kind: 'hidden' })
@@ -65,12 +72,12 @@ export function ClaimBanner() {
   const label = activeLabel ?? expiredLabel
 
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-[#127c66]/25 bg-[#18b897]/10 px-4 py-3 sm:px-6 lg:px-8">
-      <div className="flex items-start gap-2.5 text-sm text-[#0c111b]">
-        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#127c66]" />
+    <div className="flex items-start justify-between gap-3 border-b border-[color:var(--cobalt-dark)]/25 bg-[color:var(--cobalt)]/10 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="flex items-start gap-2.5 text-sm text-[color:var(--ink)]">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--cobalt-dark)]" />
         <p>
           {label}{' '}
-          <Link href="/pricing" className="font-semibold underline decoration-[#127c66]/40 underline-offset-2">
+          <Link href="/pricing" className="font-semibold underline decoration-[color:var(--cobalt-dark)]/40 underline-offset-2">
             See your options
           </Link>
         </p>
@@ -79,7 +86,7 @@ export function ClaimBanner() {
         type="button"
         aria-label="Dismiss"
         onClick={() => setDismissed(true)}
-        className="shrink-0 rounded-full p-1 text-[#0c111b]/50 hover:bg-[#0c111b]/5 hover:text-[#0c111b]"
+        className="shrink-0 rounded-full p-1 text-[color:var(--ink)]/50 hover:bg-[color:var(--ink)]/5 hover:text-[color:var(--ink)]"
       >
         <X className="h-4 w-4" />
       </button>

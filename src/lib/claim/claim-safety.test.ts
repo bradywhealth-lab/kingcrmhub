@@ -29,10 +29,16 @@ describe('claim grant path stays Stripe-free (zero-charge law)', () => {
   it.each(GRANT_PATH_FILES)('%s imports no Stripe client symbol', (file) => {
     const src = readFileSync(join(repoRoot, file), 'utf8')
     // Ban real value imports/requires of the Stripe SDK — comments may say
-    // "Stripe" (they must), so the symbol-level ban only.
-    expect(src).not.toMatch(/\bfrom ['"]stripe['"]/)
+    // "Stripe" (they must), so the symbol-level ban only. Must cover BOTH
+    // static and dynamic import forms, require(), the constructor, AND any
+    // chained SDK call (`stripe.checkout.sessions.create`) — the chained form
+    // is how the SDK is always invoked (cubic P3: the old /stripe\.\w+\(/
+    // missed chained calls and `await import('stripe')` escaped entirely).
+    expect(src).not.toMatch(/from ['"]stripe['"]/)
     expect(src).not.toMatch(/require\(['"]stripe['"]\)/)
-    expect(src).not.toMatch(/stripe\.\w+\(/ )
+    expect(src).not.toMatch(/import\(['"]stripe['"]\)/)
+    expect(src).not.toMatch(/new Stripe\s*\(/)
+    expect(src).not.toMatch(/stripe\.[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*\s*\(/)
     expect(src).not.toMatch(/trial_period_days|discounts|coupon/i)
   })
 

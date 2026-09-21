@@ -5,12 +5,27 @@ import { parseJsonBody } from '@/lib/validation'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { enforceSameOrigin } from '@/lib/security'
 import {
+  claimProductCatalog,
   eligibleGumroadProductIds,
   hashLicenseKey,
   isEligibleGumroadProduct,
   verifyGumroadLicense,
 } from '@/lib/claim/gumroad'
 import { createClaimGrant } from '@/lib/claim/grant'
+
+/**
+ * GET /api/claim — public catalog used by the /claim form. Server-side source
+ * of truth: only products with a configured GUMROAD_PRODUCT_ID_* are offered,
+ * so a buyer is never sent into a claim that cannot succeed (cubic P2 round 1).
+ * Product ids are NOT secret (Gumroad displays them on product pages).
+ */
+export async function GET() {
+  const products = claimProductCatalog()
+  if (products.length === 0) {
+    return NextResponse.json({ products: [], disabled: true })
+  }
+  return NextResponse.json({ products })
+}
 
 /**
  * POST /api/claim — public claim flow (pre-signup entry).
@@ -135,6 +150,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'License verified. Finish signup to activate your free month of Studio.',
+      // Server-issued opaque grant handle (the ClaimGrant id). The raw license
+      // key is NOT returned and never travels through the browser URL — the
+      // signup route redeems this id inside the same transaction (cubic P2
+      // round 1: base64 key envelopes in URLs leak through referrer/history).
+      claimToken: grant.grantId,
       expiresAt: grant.expiresAt.toISOString(),
     })
   } catch (error) {

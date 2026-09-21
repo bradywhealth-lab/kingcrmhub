@@ -67,28 +67,28 @@ export async function createClaimGrant(params: {
 
 /**
  * Redeem a pre-signup grant onto a newly created org (called from the signup
- * transaction). The org's plan is flipped to the granted tier ('pro' =
- * Studio) and the grant is marked redeemed atomically. `verifyRedeemable`
- * guards the day-31 policy: once a grant has expired the org keeps its data
- * but cannot claim a new grant into the same email+product (it would already
- * exist anyway via the unique constraint).
+ * transaction). `claimToken` is the opaque server-issued ClaimGrant id returned
+ * by POST /api/claim — never the raw license key. The org's plan is flipped to
+ * the granted tier ('pro' = Studio) and the grant is marked redeemed
+ * atomically. `verifyRedeemable` guards the day-31 policy: once a grant has
+ * expired the org keeps its data but cannot claim a new grant into the same
+ * email+product (it would already exist anyway via the unique constraint).
  */
 export async function redeemClaimGrant(params: {
-  licenseKeyHash: string
+  claimToken: string
   orderEmail: string
-  productId?: string
   organizationId: string
 }, tx?: Prisma.TransactionClient): Promise<RedeemResult> {
   const orderEmail = params.orderEmail.trim().toLowerCase()
   const client: Prisma.TransactionClient = tx ?? (db as unknown as Prisma.TransactionClient)
 
-  // Locate the pre-signup grant by hash + buyer email — the product id is
-  // read from the STORED grant, never trusted from a client envelope.
+  // Locate the grant by its server-issued id + buyer email — the id is an
+  // opaque handle, never the key; the email match pins the grant to the
+  // account that verified it.
   const grant = await client.claimGrant.findFirst({
     where: {
-      licenseKeyHash: params.licenseKeyHash,
+      id: params.claimToken.trim(),
       orderEmail,
-      ...(params.productId ? { productId: params.productId } : {}),
     },
   })
 

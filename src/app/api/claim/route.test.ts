@@ -118,6 +118,47 @@ describe('POST /api/claim', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
+  it('tells a verified-but-not-yet-redeemed buyer to finish signup (409, no Gumroad call)', async () => {
+    // Realistic retry path: the buyer verified a key, abandoned signup, and
+    // returns to /claim with the same key+email (cubic P3: the
+    // redeemedAt === null branch was untested).
+    mockDb.claimGrant.findFirst.mockResolvedValue({ id: 'grant-1', redeemedAt: null })
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    const res = await POST(makeRequest({ email: EMAIL, licenseKey: VALID_KEY }))
+    expect(res.status).toBe(409)
+    const data = await res.json()
+    expect(data.error).toContain('already been verified')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('never mints a grant for a disputed purchase', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          purchase: { email: EMAIL, product_id: PRODUCT_ID, product_name: 'AI Prompt Arsenal', refunded: false, disputed: true },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    ))
+    const res = await POST(makeRequest({ email: EMAIL, licenseKey: VALID_KEY }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('no longer eligible')
+    expect(mockDb.claimGrant.create).not.toHaveBeenCalled()
+  })
+
+  it('returns the opaque server-issued grant id as the claim token', async () => {
+    stubValidVerification()
+    mockDb.claimGrant.create.mockResolvedValue({ id: 'cmxxxxxxx000000000000001', expiresAt: new Date(Date.now() + 30 * 86_400_000) })
+    const res = await POST(makeRequest({ email: EMAIL, licenseKey: VALID_KEY }))
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.claimToken).toBe('cmxxxxxxx000000000000001')
+    // The token must never be the raw license key — it is a server-issued id.
+    expect(data.claimToken).not.toContain(VALID_KEY)
+  })
+
   it('rejects an eligible product id that is not configured', async () => {
     const res = await POST(makeRequest({ email: EMAIL, licenseKey: VALID_KEY, productId: 'some-other-product' }))
     expect(res.status).toBe(400)

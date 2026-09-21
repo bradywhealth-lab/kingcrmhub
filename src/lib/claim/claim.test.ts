@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   CLAIM_GRANT_WINDOW_DAYS,
   CLAIM_NUDGE_DAYS,
+  claimProductCatalog,
   eligibleGumroadProductIds,
   hashLicenseKey,
   isEligibleGumroadProduct,
@@ -41,6 +42,22 @@ describe('eligibleGumroadProductIds', () => {
   it('never exposes ids when env is unset', () => {
     expect(eligibleGumroadProductIds({} as NodeJS.ProcessEnv)).toEqual([])
     expect(isEligibleGumroadProduct('abc-123', {} as NodeJS.ProcessEnv)).toBe(false)
+  })
+
+  it('catalogs only configured products (no phantom Freelancer OS)', () => {
+    vi.stubEnv('GUMROAD_PRODUCT_ID_1', 'abc-123')
+    vi.stubEnv('GUMROAD_PRODUCT_ID_2', '')
+    const catalog = claimProductCatalog()
+    expect(catalog).toEqual([{ id: 'abc-123', name: 'AI Prompt Arsenal' }])
+  })
+
+  it('catalogs both eligible products when both ids are configured', () => {
+    vi.stubEnv('GUMROAD_PRODUCT_ID_1', 'abc-123')
+    vi.stubEnv('GUMROAD_PRODUCT_ID_2', 'xyz-789')
+    expect(claimProductCatalog()).toEqual([
+      { id: 'abc-123', name: 'AI Prompt Arsenal' },
+      { id: 'xyz-789', name: 'Freelancer OS' },
+    ])
   })
 })
 
@@ -156,16 +173,21 @@ describe('readClaimGrantInfo / resolveEffectivePlan (day-31 policy)', () => {
 })
 
 describe('decodeClaimToken', () => {
-  it('round-trips a valid envelope (license key only — product comes from the stored grant)', () => {
-    const token = Buffer.from(JSON.stringify({ licenseKey: 'KEY-1234' })).toString('base64')
-    expect(decodeClaimToken(token)).toEqual({ licenseKey: 'KEY-1234' })
+  it('accepts a server-issued grant id (opaque handle, not the key)', () => {
+    const token = 'cmxxxxxxx000000000000001'
+    expect(decodeClaimToken(token)).toBe(token)
   })
 
-  it('returns null for empty / garbage / wrong-shape envelopes', () => {
+  it('returns null for empty / garbage / short / wrong-shape tokens', () => {
     expect(decodeClaimToken(undefined)).toBeNull()
     expect(decodeClaimToken('')).toBeNull()
-    expect(decodeClaimToken('not-base64!!!')).toBeNull()
-    expect(decodeClaimToken(Buffer.from('{}').toString('base64'))).toBeNull()
-    expect(decodeClaimToken(Buffer.from(JSON.stringify({ licenseKey: 'short' })).toString('base64'))).toBeNull()
+    expect(decodeClaimToken('not-a-cuid')).toBeNull()
+    expect(decodeClaimToken('a'.repeat(5))).toBeNull()
+    expect(decodeClaimToken('A1B2C3D4-E5F60718-9ABCDEF0-1234ABCD')).toBeNull()
+    // A base64 key envelope is NO LONGER a valid token — the server-issued id
+    // replaced it, so the raw license key never travels through a URL (cubic
+    // P2 round 1).
+    const oldEnvelope = Buffer.from(JSON.stringify({ licenseKey: 'KEY-1234-5678' })).toString('base64')
+    expect(decodeClaimToken(oldEnvelope)).toBeNull()
   })
 })

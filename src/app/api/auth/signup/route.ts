@@ -4,7 +4,7 @@ import { ensureUniqueOrganizationSlug, hashPassword, serializeAuthUser, slugifyO
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { enforceSameOrigin } from '@/lib/security'
 import { parseJsonBody } from '@/lib/validation'
-import { redeemClaimGrantAtSignup } from '@/lib/claim/redeem-signup'
+import { redeemClaimGrantAtSignup, ClaimTokenUnusableError } from '@/lib/claim/redeem-signup'
 import { z } from 'zod'
 
 const signupSchema = z.object({
@@ -125,6 +125,21 @@ export async function POST(request: NextRequest) {
       mustChangePassword: false,
     })
   } catch (error) {
+    // User-correctable claim state is a 4xx, not a 500: a mismatched email at
+    // signup vs. verification, a retried signup after the grant was already
+    // redeemed, or an expired grant are all fixable by the buyer (cubic P2
+    // round 1 — never imply infrastructure failure for a state the user can fix).
+    if (error instanceof ClaimTokenUnusableError) {
+      const messages: Record<string, string> = {
+        mismatch: 'The claim did not match. Use the exact email you entered on the claim page.',
+        redeemed: 'This claim has already been used for an account. Sign in instead.',
+        expired: 'This claim has expired after 30 days.',
+      }
+      return NextResponse.json(
+        { error: messages[error.status] ?? 'This claim could not be applied.' },
+        { status: 409 },
+      )
+    }
     console.error('Signup POST error:', error)
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
