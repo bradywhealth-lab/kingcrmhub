@@ -1368,7 +1368,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <AlertDialogHeader>
             <AlertDialogTitle className="text-black">Delete this lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}`.trim() || 'This lead' : 'This lead'} will be permanently removed from your CRM and its timeline and sequence enrollments deleted. This cannot be undone.
+              {selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}`.trim() || 'This lead' : 'This lead'} will be permanently removed from your CRM. Its sequence enrollments will also be deleted, while timeline entries are retained without the lead association. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
