@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -841,6 +842,36 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     }
   }
 
+  const [deletingLead, setDeletingLead] = useState(false)
+  const [showDeleteLeadConfirm, setShowDeleteLeadConfirm] = useState(false)
+
+  const deleteLead = async () => {
+    if (!selectedLead) return
+    setDeletingLead(true)
+    try {
+      const res = await fetch(`/api/leads/${selectedLead.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      toast({ title: 'Lead deleted', description: 'Lead removed from your CRM.' })
+      setShowDeleteLeadConfirm(false)
+      setSelectedLead(null)
+      setAssistantPlaybook(null)
+      setAssistantSource(null)
+      setAssistantLoading(false)
+      setAssistantSaving(false)
+      setShowEditLeadDialog(false)
+      await refreshLeads()
+    } catch (error) {
+      toast({
+        title: 'Lead delete failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingLead(false)
+    }
+  }
+
   const openContactLead = () => {
     if (!selectedLead) return
     setContactMessage(selectedLead.aiNextAction ? `Hi ${selectedLead.firstName || ''}, ${selectedLead.aiNextAction}`.trim() : `Hi ${selectedLead.firstName || ''}, just checking in!`.trim())
@@ -1236,6 +1267,15 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               
               <div className="flex justify-end gap-3">
                 <Button
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 mr-auto"
+                  disabled={deletingLead}
+                  onClick={() => setShowDeleteLeadConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+                <Button
                   variant="outline"
                   className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#f4f0e6]"
                   onClick={openEditLead}
@@ -1313,11 +1353,39 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
             </div>
           </div>
           <DialogFooter>
+            <Button variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 mr-auto" disabled={deletingLead} onClick={() => setShowDeleteLeadConfirm(true)}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
             <Button variant="outline" className="border-[rgba(31,42,54,0.08)]" onClick={() => setShowEditLeadDialog(false)}>Cancel</Button>
             <Button className="btn-gold" onClick={() => void saveLeadEdits()}>Save lead</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteLeadConfirm} onOpenChange={setShowDeleteLeadConfirm}>
+        <AlertDialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-black">Delete this lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}`.trim() || 'This lead' : 'This lead'} will be permanently removed from your CRM. Its sequence enrollments will also be deleted, while timeline entries are retained without the lead association. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingLead}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deletingLead}
+              onClick={(e) => {
+                e.preventDefault()
+                void deleteLead()
+              }}
+            >
+              {deletingLead ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={showContactLeadDialog} onOpenChange={setShowContactLeadDialog}>
         <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
