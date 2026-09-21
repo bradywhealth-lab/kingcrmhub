@@ -165,7 +165,7 @@ if [[ "$1" == "exec" ]]; then
   case "$request_path" in
     /api/health) printf '{"status":"ok"}' ;;
     /api/ready) printf '{"ok":true,"ready":true,"database":"ok"}' ;;
-    /) printf '<main data-deploy-marker="public-landing-v1">King CRM Hub</main>' ;;
+    /) printf '<main data-deploy-marker="public-landing-v2">King CRM Hub</main>' ;;
     /sitemap.xml) printf '<urlset />' ;;
   esac
 fi
@@ -418,8 +418,8 @@ describe('KingCRMhub deploy hardening', () => {
     const landingPage = readFileSync(join(repoRoot, 'src/app/welcome/page.tsx'), 'utf8')
     const script = readDeployScript()
 
-    expect(landingPage).toContain('data-deploy-marker="public-landing-v1"')
-    expect(script).toContain('data-deploy-marker="public-landing-v1"')
+    expect(landingPage).toContain('data-deploy-marker="public-landing-v2"')
+    expect(script).toContain('data-deploy-marker="public-landing-v2"')
     expect(script).toContain('AbortSignal.timeout(10_000)')
   })
 
