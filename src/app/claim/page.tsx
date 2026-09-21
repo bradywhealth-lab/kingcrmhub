@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 // Public /claim page — the pre-signup entry point for the promo
 // "claim your free 1-month Studio" flow. Buyer enters the email used on their
 // Gumroad purchase + their license key; the server verifies via the Gumroad
-// License API and returns an OPQUE claim-token (the server-issued ClaimGrant
+// License API and returns an OPAQUE claim-token (the server-issued ClaimGrant
 // id). Signup then redeems that token as a direct $0 entitlement grant (never
 // Stripe). The raw license key NEVER enters a URL — it stays in component
 // memory until the server round-trip finishes (cubic P2 round 1).
