@@ -30,7 +30,7 @@ call:
 
 | Parameter | Value |
 |-----------|-------|
-| ui_mode | `hosted_page` (stripe SDK ^22.6.2 ≥ 21.0.0 — no version caveat needed) |
+| ui_mode | `hosted_page` — accepted only while the pinned API version (`2026-08-26.dahlia` in `src/lib/billing/stripe.ts`) supports it (SDK ^22.6.2 ≥ 21.0.0 covers the types; runtime acceptance is the pin). Verify the pin before any API-version rollback. |
 | mode | `subscription` |
 | billing_address_collection | `auto` |
 | phone_number_collection | `{ enabled: false }` |
@@ -52,7 +52,7 @@ prefix concerns):
 | Variable | Where |
 |----------|-------|
 | `STRIPE_SECRET_KEY` | `src/lib/billing/stripe.ts` |
-| `STRIPE_WEBHOOK_SECRET` | `src/app/api/billing/webhook/route.ts` |
+| `STRIPE_WEBHOOK_SECRET` | `src/lib/billing/stripe.ts` (consumed by the webhook route via `stripeWebhookSecret()`) |
 | `STRIPE_PRICE_PRO_MONTHLY` / `STRIPE_PRICE_STUDIO_MONTHLY` / `STRIPE_PRICE_ELITE_MONTHLY` | `src/lib/billing/plans.ts` price map |
 | `APP_BASE_URL` | checkout success/cancel URL base |
 | `STRIPE_LIVE_ACTIVATION` | Live-mode gate — must stay empty for test mode |
