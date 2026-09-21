@@ -1342,3 +1342,30 @@ model BookingLink {
 
   @@index([organizationId])
 }
+
+// ── Claim Grant (promo → 1-month Studio) ──
+// Ledger for "claim free 1-month Studio" purchases (Gumroad License API).
+// Grant mechanics are a DIRECT DB entitlement write — the free month NEVER
+// touches Stripe (STRIPE_LIVE_ACTIVATION=1 zero-charge path by design, spec
+// t_7160ffb5). `organizationId` is nullable until the claim is redeemed on
+// signup; the FK is declared in migration SQL only (no Prisma relation) so
+// pre-signup rows can exist without a tenant. Raw license keys are NEVER
+// stored — only `licenseKeyHash` (SHA-256).
+model ClaimGrant {
+  id             String   @id @default(cuid())
+  licenseKeyHash String // SHA-256 of the Gumroad license key (raw key never persisted)
+  orderEmail     String // lowercased buyer email from the License API purchase
+  productId      String // Gumroad product id from env (GUMROAD_PRODUCT_ID_*)
+  source         String   @default("gumroad-license") // gumroad-license | gumroad-webhook | manual
+  organizationId String? // set when the grant is redeemed onto an org
+  plan           String   @default("pro") // stored plan id granted (Studio = pro)
+  grantedAt      DateTime @default(now())
+  expiresAt      DateTime // grantedAt + 30 days
+  redeemedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([licenseKeyHash]) // single-use: one grant per license key
+  @@unique([orderEmail, productId]) // one grant per email + product
+  @@index([organizationId])
+  @@index([expiresAt])
+}

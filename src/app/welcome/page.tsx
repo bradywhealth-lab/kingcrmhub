@@ -83,7 +83,7 @@ export default function PublicLandingPage() {
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Link
-            href="/auth?mode=signup"
+            href="/claim"
             className="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-semibold"
             style={{ background: TEAL, color: INK }}
           >

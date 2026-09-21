@@ -179,6 +179,9 @@ MIG_OUT="$(compose exec -T "$SERVICE" npx prisma migrate deploy 2>&1)" || {
         *add_stripe_billing*)
           CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Organization' AND column_name IN ('stripeCustomerId', 'stripeSubscriptionId', 'stripeSubscriptionStatus', 'planUpdatedAt')) < 4 THEN RAISE EXCEPTION 'Stripe billing columns missing (need all 4)'; END IF; END \$\$;"
           ;;
+        *add_claim_grant*)
+          CHECK_SQL="DO \$\$ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('ClaimGrant')) < 1 THEN RAISE EXCEPTION 'ClaimGrant table missing'; END IF; IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'ClaimGrant' AND column_name IN ('licenseKeyHash', 'orderEmail', 'productId', 'organizationId', 'plan', 'grantedAt', 'expiresAt', 'redeemedAt', 'createdAt')) < 9 THEN RAISE EXCEPTION 'ClaimGrant columns missing (need all 9)'; END IF; END \$\$;"
+          ;;
         *)
           echo "MIGRATE_BASELINE_UNKNOWN_MIGRATION: $name has no schema probe — refusing to baseline blindly (add a probe before deploying this migration)" >&2
           restore_old

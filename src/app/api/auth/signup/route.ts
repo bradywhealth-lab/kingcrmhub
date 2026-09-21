@@ -4,6 +4,7 @@ import { ensureUniqueOrganizationSlug, hashPassword, serializeAuthUser, slugifyO
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { enforceSameOrigin } from '@/lib/security'
 import { parseJsonBody } from '@/lib/validation'
+import { redeemClaimGrantAtSignup } from '@/lib/claim/redeem-signup'
 import { z } from 'zod'
 
 const signupSchema = z.object({
@@ -11,6 +12,7 @@ const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   organizationName: z.string().min(1).max(120),
+  claimToken: z.string().max(300).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -89,6 +91,20 @@ export async function POST(request: NextRequest) {
             plan: organization.plan,
           },
         },
+      })
+
+      // Claim redemption (promo → 1-month Studio): when the signup carries a
+      // claimToken, upgrade the org to the granted tier INSIDE this
+      // transaction. Any failure rejects the whole signup — a verified buyer
+      // never lands on a free org that silently lost their month. (GRANT PATH
+      // — a direct DB entitlement write; Stripe is never touched. The tx
+      // client is explicit so the redeem commits/rolls back atomically with
+      // the org + user creation.)
+      await redeemClaimGrantAtSignup({
+        email,
+        claimToken: parsed.data.claimToken,
+        organizationId: organization.id,
+        tx,
       })
 
       return user
