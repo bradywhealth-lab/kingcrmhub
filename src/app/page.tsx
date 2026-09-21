@@ -841,6 +841,25 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
     }
   }
 
+  const deleteLead = async () => {
+    if (!selectedLead) return
+    try {
+      const res = await fetch(`/api/leads/${selectedLead.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      toast({ title: 'Lead deleted', description: 'Lead removed from your CRM.' })
+      setSelectedLead(null)
+      setShowEditLeadDialog(false)
+      await refreshLeads()
+    } catch (error) {
+      toast({
+        title: 'Lead delete failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const openContactLead = () => {
     if (!selectedLead) return
     setContactMessage(selectedLead.aiNextAction ? `Hi ${selectedLead.firstName || ''}, ${selectedLead.aiNextAction}`.trim() : `Hi ${selectedLead.firstName || ''}, just checking in!`.trim())
@@ -1236,6 +1255,14 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               
               <div className="flex justify-end gap-3">
                 <Button
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 mr-auto"
+                  onClick={() => void deleteLead()}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+                <Button
                   variant="outline"
                   className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#f4f0e6]"
                   onClick={openEditLead}
@@ -1313,6 +1340,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
             </div>
           </div>
           <DialogFooter>
+            <Button variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 mr-auto" onClick={() => void deleteLead()}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
             <Button variant="outline" className="border-[rgba(31,42,54,0.08)]" onClick={() => setShowEditLeadDialog(false)}>Cancel</Button>
             <Button className="btn-gold" onClick={() => void saveLeadEdits()}>Save lead</Button>
           </DialogFooter>
