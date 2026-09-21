@@ -164,7 +164,7 @@ function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; com
   )
 }
 
-export function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDone: (id: string) => void }) {
+export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: TaskRecord; onToggleDone: (id: string) => void; onOpenPipelineItem?: (pipelineItemId: string) => void }) {
   const isDone = task.status === 'done'
   return (
     <Card
@@ -197,11 +197,16 @@ export function TaskCard({ task, onToggleDone }: { task: TaskRecord; onToggleDon
                   Completed {new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               )}
-              {task.pipelineItem && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[#127c66]">
+              {task.pipelineItem && isDone && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onOpenPipelineItem?.(task.pipelineItem!.id) }}
+                  aria-label={`Open pipeline item ${task.pipelineItem.title}`}
+                  className="inline-flex items-center gap-1 text-[11px] text-[#127c66] hover:text-[#0c111b] hover:underline"
+                >
                   <Building className="h-3 w-3" />
                   {task.pipelineItem.title}
-                </span>
+                </button>
               )}
               <LeadBadge lead={task.lead} />
               {task.assignedTo && (
@@ -277,18 +282,28 @@ function EmptyState({ tab }: { tab: FilterTab }) {
   )
 }
 
+export function optimisticallyUpdateTask(task: TaskRecord, newStatus: TaskRecord['status']): TaskRecord {
+  if (newStatus === task.status) return task
+  const completedAt = newStatus === 'done' ? new Date().toISOString() : null
+  return { ...task, status: newStatus, completedAt }
+}
+
 export function TasksView({
   initialTab = 'today',
   initialTasks,
   initialAppointments,
+  onOpenPipelineItem,
 }: {
   initialTab?: FilterTab
   initialTasks?: TaskRecord[]
   initialAppointments?: AppointmentRecord[]
+  onOpenPipelineItem?: (pipelineItemId: string) => void
 } = {}) {
+  // Controlled mode (all props provided) is used by render tests — skip fetching entirely.
+  const isControlled = initialTasks !== undefined && initialAppointments !== undefined
   const [tasks, setTasks] = useState<TaskRecord[]>(initialTasks ?? [])
   const [appointments, setAppointments] = useState<AppointmentRecord[]>(initialAppointments ?? [])
-  const [loading, setLoading] = useState(initialTasks === undefined || initialAppointments === undefined)
+  const [loading, setLoading] = useState(!isControlled)
   const [tab, setTab] = useState<FilterTab>(initialTab)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showCreate, setShowCreate] = useState(false)
@@ -299,23 +314,23 @@ export function TasksView({
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (initialTasks !== undefined || initialAppointments !== undefined) return
+    if (isControlled) return
     let cancelled = false
 
     ;(async () => {
       try {
         const [tRes, aRes] = await Promise.all([
-          fetch(buildApiPath('/api/tasks'), { cache: 'no-store' }),
-          fetch(buildApiPath('/api/appointments'), { cache: 'no-store' }),
+          initialTasks === undefined ? fetch(buildApiPath('/api/tasks'), { cache: 'no-store' }) : null,
+          initialAppointments === undefined ? fetch(buildApiPath('/api/appointments'), { cache: 'no-store' }) : null,
         ])
 
         if (!cancelled) {
-          if (tRes.status === 401 || aRes.status === 401) { window.location.href = buildApiPath('/auth'); return }
-          if (tRes.ok) {
+          if (tRes && (tRes.status === 401 || aRes?.status === 401)) { window.location.href = buildApiPath('/auth'); return }
+          if (tRes?.ok) {
             const tData = await tRes.json() as { tasks?: TaskRecord[] }
             setTasks(Array.isArray(tData.tasks) ? tData.tasks : [])
           }
-          if (aRes.ok) {
+          if (aRes?.ok) {
             const aData = await aRes.json() as { appointments?: AppointmentRecord[] }
             setAppointments(Array.isArray(aData.appointments) ? aData.appointments : [])
           }
@@ -330,7 +345,7 @@ export function TasksView({
     })()
 
     return () => { cancelled = true }
-  }, [])
+  }, [isControlled, initialTasks, initialAppointments])
 
   const filteredTasks = useMemo(() => filterTasks(tasks, tab), [tasks, tab])
   const filteredAppointments = useMemo(() => filterAppointments(appointments, tab), [appointments, tab])
@@ -368,8 +383,8 @@ export function TasksView({
     if (pendingToggles.has(taskId)) return
     setPendingToggles((prev) => new Set(prev).add(taskId))
     const newStatus = task.status === 'done' ? 'todo' : 'done'
-    // Optimistic update
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatus } : t))
+    // Optimistic update (also sets/clears completedAt so Completed sorts immediately)
+    setTasks((prev) => prev.map((t) => t.id === taskId ? optimisticallyUpdateTask(t, newStatus) : t))
     try {
       const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
         method: 'PATCH',
@@ -377,6 +392,11 @@ export function TasksView({
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Failed')
+      // Server is source of truth — apply its completedAt/status to local state
+      const { task: saved } = await res.json() as { task?: TaskRecord }
+      if (saved) {
+        setTasks((prev) => prev.map((t) => t.id === saved.id ? saved : t))
+      }
     } catch {
       // Revert on failure
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: task.status } : t))
@@ -426,7 +446,8 @@ export function TasksView({
     setPendingToggles((prev) => new Set(prev).add(taskId))
     const oldStatus = task.status
     const newStatusTyped = newStatus as TaskRecord['status']
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatusTyped } : t))
+    // Optimistic update (also sets/clears completedAt when moving to/from Done)
+    setTasks((prev) => prev.map((t) => t.id === taskId ? optimisticallyUpdateTask(t, newStatusTyped) : t))
     try {
       const res = await fetch(buildApiPath(`/api/tasks/${taskId}`), {
         method: 'PATCH',
@@ -434,6 +455,11 @@ export function TasksView({
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Failed')
+      // Server is source of truth — apply its completedAt/status to local state
+      const { task: saved } = await res.json() as { task?: TaskRecord }
+      if (saved) {
+        setTasks((prev) => prev.map((t) => t.id === saved.id ? saved : t))
+      }
     } catch {
       const oldStatusTyped = oldStatus as TaskRecord['status']
       setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: oldStatusTyped } : t))
@@ -494,8 +520,10 @@ export function TasksView({
             <button
               onClick={() => { if (tab !== 'completed') setViewMode('kanban') }}
               aria-label="Kanban board view"
+              aria-disabled={tab === 'completed'}
+              disabled={tab === 'completed'}
               aria-pressed={viewMode === 'kanban' && tab !== 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : tab === 'completed' ? 'cursor-not-allowed text-[#0c111b]/25' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
             >
               <Columns className="h-4 w-4" />
             </button>
@@ -535,7 +563,7 @@ export function TasksView({
                   {col.tasks.length === 0 ? (
                     <p className="py-6 text-center text-xs text-[#0c111b]/25">No tasks</p>
                   ) : (
-                    col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} />)
+                    col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />)
                   )}
                 </div>
               </div>
@@ -563,7 +591,7 @@ export function TasksView({
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Tasks</h2>
               <div className="space-y-3">
                 {filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} />
+                  <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />
                 ))}
               </div>
             </section>

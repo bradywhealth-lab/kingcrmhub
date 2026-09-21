@@ -7,6 +7,7 @@ import {
   FILTER_TABS,
   TaskCard,
   TasksView,
+  optimisticallyUpdateTask,
 } from '@/components/tasks/tasks-view'
 
 /**
@@ -200,16 +201,38 @@ describe('Completed tab UI (render coverage)', () => {
           assignedTo: { id: 'u1', name: 'Sam', email: 'sam@example.com' },
         }}
         onToggleDone={() => {}}
+        onOpenPipelineItem={() => {}}
       />
     )
     expect(html).toContain('Ship onboarding')
     expect(html).toContain('Completed')
     // priority dot present for urgent
     expect(html).toContain('bg-red-500')
-    // lead + pipeline link + assignee rendered
+    // lead + pipeline button + assignee rendered
     expect(html).toContain('Ada Lovelace')
     expect(html).toContain('Onboarding flow')
+    expect(html).toContain('<button')
     expect(html).toContain('Sam')
+  })
+
+  it('does not render pipeline reference or completion date on active task cards', () => {
+    const html = renderToStaticMarkup(
+      <TaskCard
+        task={{
+          id: 'active1',
+          title: 'Active task',
+          status: 'in_progress',
+          priority: 'normal',
+          createdAt: '2026-09-01T10:00:00.000Z',
+          position: 0,
+          pipelineItem: { id: 'pipe1', title: 'Onboarding flow' },
+        }}
+        onToggleDone={() => {}}
+      />
+    )
+    expect(html).toContain('Active task')
+    expect(html).not.toContain('Completed')
+    expect(html).not.toContain('Onboarding flow')
   })
 
   it('renders completed tasks in list view when Completed tab selected', () => {
@@ -243,6 +266,35 @@ describe('Completed tab UI (render coverage)', () => {
       <TasksView initialTab="completed" initialTasks={[]} initialAppointments={[]} />
     )
     expect(html).toContain('No completed tasks yet')
+  })
+
+  it('disables the Kanban view control while Completed tab is active', () => {
+    const html = renderToStaticMarkup(
+      <TasksView initialTab="completed" initialTasks={[]} initialAppointments={[]} />
+    )
+    expect(html).toContain('aria-disabled="true"')
+  })
+})
+
+describe('optimisticallyUpdateTask (imported from tasks-view.tsx)', () => {
+  it('sets completedAt when marking a task done', () => {
+    const task = makeTask({ id: 't1', status: 'todo', completedAt: null })
+    const updated = optimisticallyUpdateTask(task, 'done')
+    expect(updated.status).toBe('done')
+    expect(updated.completedAt).not.toBeNull()
+  })
+
+  it('clears completedAt when reopening a done task', () => {
+    const task = makeTask({ id: 't1', status: 'done', completedAt: '2026-09-19T10:00:00.000Z' })
+    const updated = optimisticallyUpdateTask(task, 'todo')
+    expect(updated.status).toBe('todo')
+    expect(updated.completedAt).toBeNull()
+  })
+
+  it('leaves completedAt unchanged for non-status changes', () => {
+    const task = makeTask({ id: 't1', status: 'done', completedAt: '2026-09-19T10:00:00.000Z' })
+    const updated = optimisticallyUpdateTask(task, 'done')
+    expect(updated.completedAt).toBe('2026-09-19T10:00:00.000Z')
   })
 })
 

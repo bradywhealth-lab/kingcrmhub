@@ -2625,7 +2625,7 @@ export default function EliteCRM() {
       case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
       case "social": return <SocialMediaView />
       case "settings": return <SettingsView initialTab={settingsInitialTab ?? undefined} />
-      case "tasks": return <TasksView />
+      case "tasks": return <TasksView onOpenPipelineItem={() => handleNavigate("pipeline")} />
       default: return <DashboardView />
     }
   }
