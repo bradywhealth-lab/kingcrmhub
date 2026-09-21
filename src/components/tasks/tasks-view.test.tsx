@@ -8,6 +8,7 @@ import {
   TaskCard,
   TasksView,
   optimisticallyUpdateTask,
+  mergeSavedTask,
 } from '@/components/tasks/tasks-view'
 
 /**
@@ -210,8 +211,7 @@ describe('Completed tab UI (render coverage)', () => {
     expect(html).toContain('bg-red-500')
     // lead + pipeline button + assignee rendered
     expect(html).toContain('Ada Lovelace')
-    expect(html).toContain('Onboarding flow')
-    expect(html).toContain('<button')
+    expect(html).toContain('aria-label="Open pipeline item Onboarding flow"')
     expect(html).toContain('Sam')
   })
 
@@ -232,7 +232,7 @@ describe('Completed tab UI (render coverage)', () => {
     )
     expect(html).toContain('Active task')
     expect(html).not.toContain('Completed')
-    expect(html).not.toContain('Onboarding flow')
+    expect(html).not.toContain('aria-label="Open pipeline item')
   })
 
   it('renders completed tasks in list view when Completed tab selected', () => {
@@ -295,6 +295,33 @@ describe('optimisticallyUpdateTask (imported from tasks-view.tsx)', () => {
     const task = makeTask({ id: 't1', status: 'done', completedAt: '2026-09-19T10:00:00.000Z' })
     const updated = optimisticallyUpdateTask(task, 'done')
     expect(updated.completedAt).toBe('2026-09-19T10:00:00.000Z')
+  })
+})
+
+describe('mergeSavedTask (imported from tasks-view.tsx)', () => {
+  it('preserves pipelineItem and lead when PATCH response omits them', () => {
+    const existing = makeTask({
+      id: 't1',
+      status: 'done',
+      priority: 'high',
+      title: 'Ship onboarding',
+      completedAt: '2026-09-19T10:00:00.000Z',
+      lead: { id: 'lead1', firstName: 'Ada', lastName: 'Lovelace', company: 'Analytical' },
+      pipelineItem: { id: 'pipe1', title: 'Onboarding flow' },
+    })
+    const saved = { ...existing, title: 'Ship onboarding (edited)' } as Partial<typeof existing>
+    const merged = mergeSavedTask(existing, saved)
+    expect(merged.title).toBe('Ship onboarding (edited)')
+    expect(merged.pipelineItem).toEqual({ id: 'pipe1', title: 'Onboarding flow' })
+    expect(merged.lead).toEqual({ id: 'lead1', firstName: 'Ada', lastName: 'Lovelace', company: 'Analytical' })
+  })
+
+  it('applies completedAt from the server response', () => {
+    const existing = makeTask({ id: 't1', status: 'todo', completedAt: null })
+    const saved = { ...existing, status: 'done', completedAt: '2026-09-20T12:00:00.000Z' } as Partial<typeof existing>
+    const merged = mergeSavedTask(existing, saved)
+    expect(merged.status).toBe('done')
+    expect(merged.completedAt).toBe('2026-09-20T12:00:00.000Z')
   })
 })
 

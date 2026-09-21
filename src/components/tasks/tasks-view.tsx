@@ -288,6 +288,15 @@ export function optimisticallyUpdateTask(task: TaskRecord, newStatus: TaskRecord
   return { ...task, status: newStatus, completedAt }
 }
 
+/**
+ * Merge a PATCH response task back into local state without dropping fields the
+ * response omits (pipelineItem, dueDate, description, source). Server wins on
+ * fields it actually returns; existing local fields survive otherwise.
+ */
+export function mergeSavedTask(existing: TaskRecord, saved: Partial<TaskRecord>): TaskRecord {
+  return { ...existing, ...saved }
+}
+
 export function TasksView({
   initialTab = 'today',
   initialTasks,
@@ -325,7 +334,7 @@ export function TasksView({
         ])
 
         if (!cancelled) {
-          if (tRes && (tRes.status === 401 || aRes?.status === 401)) { window.location.href = buildApiPath('/auth'); return }
+          if ((tRes?.status === 401) || (aRes?.status === 401)) { window.location.href = buildApiPath('/auth'); return }
           if (tRes?.ok) {
             const tData = await tRes.json() as { tasks?: TaskRecord[] }
             setTasks(Array.isArray(tData.tasks) ? tData.tasks : [])
@@ -392,10 +401,10 @@ export function TasksView({
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Failed')
-      // Server is source of truth — apply its completedAt/status to local state
+      // Server is source of truth — merge its completedAt/status into local state
       const { task: saved } = await res.json() as { task?: TaskRecord }
       if (saved) {
-        setTasks((prev) => prev.map((t) => t.id === saved.id ? saved : t))
+        setTasks((prev) => prev.map((t) => t.id === saved.id ? mergeSavedTask(t, saved) : t))
       }
     } catch {
       // Revert on failure
@@ -455,10 +464,10 @@ export function TasksView({
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Failed')
-      // Server is source of truth — apply its completedAt/status to local state
+      // Server is source of truth — merge its completedAt/status into local state
       const { task: saved } = await res.json() as { task?: TaskRecord }
       if (saved) {
-        setTasks((prev) => prev.map((t) => t.id === saved.id ? saved : t))
+        setTasks((prev) => prev.map((t) => t.id === saved.id ? mergeSavedTask(t, saved) : t))
       }
     } catch {
       const oldStatusTyped = oldStatus as TaskRecord['status']
