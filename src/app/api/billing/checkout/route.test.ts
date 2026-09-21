@@ -197,6 +197,19 @@ describe('/api/billing/checkout — honest gate + real checkout when configured'
     const subData = sessionArgs.subscription_data as Record<string, unknown>
     expect(subData.metadata).toMatchObject({ organizationId: 'org_1', planId: 'pro' })
 
+    // Checkout Studio parameter sync (STRIPE_INTEGRATION_TODO.md): every
+    // ui-configured value must stay exact, so a future edit that drifts the
+    // checkout contract turns RED immediately.
+    expect(sessionArgs.ui_mode).toBe('hosted_page')
+    expect(sessionArgs.billing_address_collection).toBe('auto')
+    expect(sessionArgs.phone_number_collection).toEqual({ enabled: false })
+    expect(sessionArgs.automatic_tax).toEqual({ enabled: false })
+    expect(sessionArgs.allow_promotion_codes).toBe(false)
+    expect(sessionArgs.payment_method_collection).toBe('always')
+    expect(sessionArgs.submit_type).toBe('auto')
+    expect(sessionArgs.integration_identifier).toBe('hosted_web_0001')
+    expect(sessionArgs.origin_context).toBe('web')
+
     expect(customersCreate).toHaveBeenCalledTimes(1)
     expect(customersCreate).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'a@b.co', metadata: { organizationId: 'org_1' } }),
