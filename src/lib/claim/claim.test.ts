@@ -59,6 +59,20 @@ describe('eligibleGumroadProductIds', () => {
       { id: 'xyz-789', name: 'Freelancer OS' },
     ])
   })
+
+  it('maps names by env SLOT number, never compacted array position', () => {
+    // Blank slot 1 + configured slot 2 must NOT relabel id2 as "AI Prompt
+    // Arsenal" (cubic P2 round 2 — the old compacted-array mapping did).
+    vi.stubEnv('GUMROAD_PRODUCT_ID_1', '')
+    vi.stubEnv('GUMROAD_PRODUCT_ID_2', 'xyz-789')
+    expect(claimProductCatalog()).toEqual([{ id: 'xyz-789', name: 'Freelancer OS' }])
+    // Blank middle slot keeps slot 3's fallback label from drifting.
+    vi.stubEnv('GUMROAD_PRODUCT_ID_2', '')
+    vi.stubEnv('GUMROAD_PRODUCT_ID_3', 'qrs-000')
+    expect(claimProductCatalog()).toEqual([
+      { id: 'qrs-000', name: 'Product 3' },
+    ])
+  })
 })
 
 describe('verifyGumroadLicense (fetch stub)', () => {

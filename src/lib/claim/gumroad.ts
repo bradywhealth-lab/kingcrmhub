@@ -113,14 +113,19 @@ export function isEligibleGumroadProduct(
 /**
  * Public catalog of claimable products, config-gated: only products with a
  * non-blank GUMROAD_PRODUCT_ID_* env value are offered (GUMROAD_PRODUCT_ID_2
- * may be empty = prompts-only). Product id 1 = AI Prompt Arsenal, id 2 =
- * Freelancer OS — the only two eligible products per the spec decision
- * (t_7160ffb5 Q2: "AI Prompt Arsenal + Freelancer OS only"). The ids are not
- * secret (Gumroad shows them on product pages), so this is safe for the
- * public /claim page to render and select.
+ * may be empty = prompts-only). The env SLOT number is the documented binding
+ * (id 1 = AI Prompt Arsenal, id 2 = Freelancer OS — spec t_7160ffb5 Q2); the
+ * name is mapped from the slot number, never the compacted array position, so
+ * a blank slot 1 cannot mislabel slot 2's product (cubic P2 round 2). The ids
+ * are not secret (Gumroad shows them on product pages), so this is safe for
+ * the public /claim page to render and select.
  */
 export function claimProductCatalog(env: NodeJS.ProcessEnv = process.env): { id: string; name: string }[] {
-  const ids = eligibleGumroadProductIds(env)
-  const names = ['AI Prompt Arsenal', 'Freelancer OS']
-  return ids.map((id, index) => ({ id, name: names[index] ?? `Product ${index + 1}` }))
+  const names: Record<number, string> = { 1: 'AI Prompt Arsenal', 2: 'Freelancer OS' }
+  const catalog: { id: string; name: string }[] = []
+  for (let slot = 1; slot <= 4; slot += 1) {
+    const id = env[`GUMROAD_PRODUCT_ID_${slot}`]?.trim()
+    if (id) catalog.push({ id, name: names[slot] ?? `Product ${slot}` })
+  }
+  return catalog
 }
