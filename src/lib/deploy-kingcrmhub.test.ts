@@ -586,6 +586,25 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).not.toContain('DEPLOY_V4_DONE')
   })
 
+  it('fails the deploy when the vendored static source directory is missing', deployTimeout, () => {
+    const missingDir = join(tmpdir(), 'missing-static-dir-' + Date.now())
+    const harness = createDeployHarness({ staticSrcDir: missingDir })
+    // The harness pre-creates the source dir like the real repo would; the
+    // failure mode happens when a deploy of an old checkout lacks it, so
+    // physically remove it before running the script.
+    rmSync(missingDir, { recursive: true, force: true })
+    const result = spawnSync('bash', [deployScriptPath], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: harness.env as NodeJS.ProcessEnv,
+    })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('STATIC_SRC_MISSING')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
   it('fails the deploy when the vendored static source directory is empty', deployTimeout, () => {
     const emptyDir = join(tmpdir(), 'empty-static-dir-' + Date.now())
     const harness = createDeployHarness({ staticSrcDir: emptyDir })
