@@ -152,6 +152,51 @@ if ! wait_for_health "$CONTAINER"; then
   exit 1
 fi
 
+echo "=== SYNC STATIC /books SITE (reproducible from repo deploy/static) ==="
+STATIC_SRC_DIR="${STATIC_SRC_DIR:-${REPO_DIR}/deploy/static/bradys-books}"
+STATIC_DST_DIR="${STATIC_DST_DIR:-/var/lib/docker/volumes/deployer_caddy-data/_data/sites/bradys-books}"
+if [[ ! -d "$STATIC_SRC_DIR" ]]; then
+  echo "STATIC_SRC_MISSING: $STATIC_SRC_DIR" >&2
+  restore_old
+  exit 1
+fi
+mkdir -p "$STATIC_DST_DIR"
+cp -R "$STATIC_SRC_DIR"/. "$STATIC_DST_DIR"/
+STATIC_FILES=(index.html planner_page.jpg sample_p013.jpg sample_p041.jpg sample_p083.jpg Big_Lines_Sample_Pack_FREE_3pages.pdf)
+for asset in "${STATIC_FILES[@]}"; do
+  if [[ ! -f "$STATIC_DST_DIR/$asset" ]]; then
+    echo "STATIC_SYNC_MISSING: $asset" >&2
+    restore_old
+    exit 1
+  fi
+done
+echo "STATIC_SYNC_OK"
+
+echo "=== SYNC CADDY CONFIG (repo deploy/Caddyfile.apps is source of truth) ==="
+cp "$REPO_DIR/deploy/Caddyfile.apps" "$DEPLOY_ROOT/Caddyfile.apps"
+echo "CADDY_CONFIG_SYNC_OK"
+
+echo "=== CADDY VALIDATE + RELOAD (non-disruptive) ==="
+if ! docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+  echo "CADDY_VALIDATE_FAIL" >&2
+  restore_old
+  exit 1
+fi
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1
+echo "CADDY_RELOAD_OK"
+
+echo "=== VERIFY /books STATIC ASSETS PUBLIC 200 ==="
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://kingcrmhub.net}"
+for asset in "${STATIC_FILES[@]}"; do
+  HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' "$PUBLIC_BASE_URL/books/$asset" || true)"
+  if [[ "$HTTP_CODE" != "200" ]]; then
+    echo "STATIC_VERIFY_FAIL: /books/$asset -> $HTTP_CODE" >&2
+    restore_old
+    exit 1
+  fi
+done
+echo "STATIC_VERIFY_OK"
+
 echo "=== APPLY ALL PENDING MIGRATIONS (idempotent) ==="
 # prisma migrate deploy applies every pending migration tracked in
 # _prisma_migrations — new migrations no longer need a manual per-file step

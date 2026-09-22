@@ -1,0 +1,27 @@
+kingcrmhub.net {
+    redir /books /books/ permanent
+    handle_path /books* {
+        root * /data/sites/bradys-books
+        file_server
+    }
+    handle {
+        reverse_proxy kingcrmhub:3003
+    }
+}
+
+viralengineviews.com {
+    reverse_proxy viral-engine:3001
+}
+
+trading.clawhaven.cloud {
+    reverse_proxy trading-dashboard:3004
+}
+
+claw.clawhaven.cloud {
+    reverse_proxy openclaw:18789
+}
+
+www.kingcrmhub.net {
+    header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    redir https://kingcrmhub.net{uri} permanent
+}

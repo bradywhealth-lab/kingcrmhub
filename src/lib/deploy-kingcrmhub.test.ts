@@ -41,6 +41,8 @@ interface DeployHarnessOptions {
   keepContainerAfterRemove?: boolean
   failMigrateDeploy?: 'P3005' | 'generic'
   failMigrateResolve?: boolean
+  staticSrcDir?: string
+  staticAssetCode?: number
 }
 
 interface DeployHarness {
@@ -62,6 +64,8 @@ function createDeployHarness({
   keepContainerAfterRemove = false,
   failMigrateDeploy,
   failMigrateResolve = false,
+  staticSrcDir,
+  staticAssetCode = 200,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -73,6 +77,26 @@ function createDeployHarness({
   const lockFile = join(root, 'deploy.lock')
   mkdirSync(binDir)
   mkdirSync(join(repoDir, '.git'), { recursive: true })
+  // The deploy script reads the static /books site from repo deploy/static;
+  // unit-test harness must provide the same 6 files the script verifies.
+  const staticDir = staticSrcDir ?? join(repoDir, 'deploy', 'static', 'bradys-books')
+  mkdirSync(staticDir, { recursive: true })
+  // The deploy script copies deploy/Caddyfile.apps onto the host as the
+  // Caddy source of truth; the harness must ship the vendored config.
+  const caddyDeployDir = join(repoDir, 'deploy')
+  mkdirSync(caddyDeployDir, { recursive: true })
+  writeFileSync(join(caddyDeployDir, 'Caddyfile.apps'), 'kingcrmhub.net { handle_path /books* { root * /data/sites/bradys-books file_server } }\n')
+  const staticFiles = [
+    'index.html',
+    'planner_page.jpg',
+    'sample_p013.jpg',
+    'sample_p041.jpg',
+    'sample_p083.jpg',
+    'Big_Lines_Sample_Pack_FREE_3pages.pdf',
+  ]
+  for (const asset of staticFiles) {
+    writeFileSync(join(staticDir, asset), 'book-asset')
+  }
   mkdirSync(join(repoDir, 'prisma/migrations/20260320_enable_pgvector'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260426_add_onboarding_fields'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260909_rename_carrier_to_service_package'), { recursive: true })
@@ -95,6 +119,16 @@ exit 0
   writeExecutable(
     join(binDir, 'sleep'),
     `#!/usr/bin/env bash
+exit 0
+`,
+  )
+
+  // curl is used only for the post-swap /books asset verification. Real
+  // network in unit tests is forbidden: the shim emits the configured code.
+  writeExecutable(
+    join(binDir, 'curl'),
+    `#!/usr/bin/env bash
+printf '%s' "\${STATIC_ASSET_CODE:-200}"
 exit 0
 `,
   )
@@ -200,6 +234,9 @@ exit 0
     FAIL_MIGRATE_RESOLVE: failMigrateResolve ? '1' : '0',
     PATH: `${binDir}:${process.env.PATH ?? ''}`,
     REPO_DIR: repoDir,
+    STATIC_SRC_DIR: staticDir,
+    STATIC_DST_DIR: join(root, 'sites', 'bradys-books'),
+    STATIC_ASSET_CODE: String(staticAssetCode),
   }
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === 'string' && !(key in env)) env[key] = value
@@ -449,5 +486,53 @@ describe('KingCRMhub deploy hardening', () => {
     expect(packageJson.dependencies.dotenv).toBe('^16.6.1')
     expect(prismaConfig).toContain('seed: "npx tsx prisma/seed.ts"')
     expect(prismaConfig).not.toContain('seed: "bun prisma/seed.ts"')
+  })
+
+  it('syncs the vendored /books static site and Caddy config, then verifies all assets 200', deployTimeout, () => {
+    const { deployLog, result } = runMockDeploy()
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status, output).toBe(0)
+    expect(output).toContain('STATIC_SYNC_OK')
+    expect(output).toContain('CADDY_CONFIG_SYNC_OK')
+    expect(output).not.toContain('CADDY_VALIDATE_FAIL')
+    expect(output).toContain('CADDY_RELOAD_OK')
+    expect(output).toContain('STATIC_VERIFY_OK')
+    expect(output).toContain('DEPLOY_V4_DONE')
+
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+    // The caddy reload must happen through docker exec so the unit test
+    // harness can shim it; never a bare host caddy binary.
+    expect(dockerCalls).toContain('exec caddy caddy validate')
+    expect(dockerCalls).toContain('exec caddy caddy reload')
+  })
+
+  it('fails the deploy when a /books asset verification returns non-200', deployTimeout, () => {
+    const { result } = runMockDeploy({ staticAssetCode: 307 })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('STATIC_VERIFY_FAIL')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('fails the deploy when the vendored static source directory is missing', deployTimeout, () => {
+    const missingDir = join(tmpdir(), 'missing-static-dir-' + Date.now())
+    const harness = createDeployHarness({ staticSrcDir: missingDir })
+    // The harness pre-creates the source dir like the real repo would; the
+    // failure mode happens when a deploy of an old checkout lacks it, so
+    // physically remove it before running the script.
+    rmSync(missingDir, { recursive: true, force: true })
+    const result = spawnSync('bash', [deployScriptPath], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: harness.env as NodeJS.ProcessEnv,
+    })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('STATIC_SRC_MISSING')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
   })
 })
