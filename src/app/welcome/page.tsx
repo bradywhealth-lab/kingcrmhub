@@ -45,7 +45,7 @@ export default function PublicLandingPage() {
           >
             <Wand2 className="h-3.5 w-3.5" /> King CRM Hub
           </div>
-          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
+          <nav aria-label="Primary navigation" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
             <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
             <Link href="/claim" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Claim</Link>
             <a
@@ -230,7 +230,7 @@ export default function PublicLandingPage() {
         </div>
 
         <footer className="mt-12 flex flex-col items-center gap-3">
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium">
+          <nav aria-label="Footer navigation" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium">
             <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
             <Link href="/claim" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Claim</Link>
             <Link href="/terms" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Terms</Link>
