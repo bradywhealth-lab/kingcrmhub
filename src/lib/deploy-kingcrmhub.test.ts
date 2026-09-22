@@ -105,6 +105,14 @@ function createDeployHarness({
   for (const asset of staticFiles) {
     writeFileSync(join(staticDir, asset), 'book-asset')
   }
+  // Seed pre-existing external artifacts so the rollback restore paths are
+  // observable (cubic P1): a stale volume file + live Caddy config that a
+  // post-swap failure must restore. STATIC_DST_DIR in the deploy script
+  // defaults to join(root, 'sites', 'bradys-books') in the harness env.
+  const seedStaticDst = join(root, 'sites', 'bradys-books')
+  mkdirSync(seedStaticDst, { recursive: true })
+  writeFileSync(join(seedStaticDst, 'stale_extras.txt'), 'stale')
+  writeFileSync(join(root, 'Caddyfile.apps'), 'old-caddy-config\n')
   mkdirSync(join(repoDir, 'prisma/migrations/20260320_enable_pgvector'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260426_add_onboarding_fields'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260909_rename_carrier_to_service_package'), { recursive: true })
@@ -283,7 +291,7 @@ function runMockDeploy(options: DeployHarnessOptions = {}) {
     encoding: 'utf8',
     env: harness.env,
   })
-  return { deployLog: harness.deployLog, result, curlLog: harness.curlLog }
+  return { deployLog: harness.deployLog, result, curlLog: harness.curlLog, root: harness.root }
 }
 
 describe('KingCRMhub deploy hardening', () => {
@@ -554,14 +562,25 @@ describe('KingCRMhub deploy hardening', () => {
     }
   })
 
-  it('fails the deploy when a /books asset verification returns non-200', deployTimeout, () => {
-    const { result } = runMockDeploy({ staticAssetCode: 307 })
+  it('fails the deploy and rolls back when a /books asset verification returns non-200', deployTimeout, () => {
+    const { deployLog, result, root: rootPath } = runMockDeploy({ staticAssetCode: 307 })
     const output = `${result.stdout}\n${result.stderr}`
 
     expect(result.status).toBe(1)
     expect(output).toContain('STATIC_VERIFY_FAIL')
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
+
+    // External artifacts must be restored on rollback so a failed deploy
+    // never serves a mixed deployment (cubic P1): stale volume file restored,
+    // old Caddy config restored + reloaded (reload appears again in rollback,
+    // so the docker log holds 2 reload invocations).
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+    const reloadCount = (dockerCalls.match(/exec caddy caddy reload/g) ?? []).length
+    expect(reloadCount).toBeGreaterThanOrEqual(2)
+    const restoredVol = readFileSync(join(rootPath, 'sites', 'bradys-books', 'stale_extras.txt'), 'utf8')
+    expect(restoredVol).toBe('stale')
+    expect(readFileSync(join(rootPath, 'Caddyfile.apps'), 'utf8')).toBe('old-caddy-config\n')
   })
 
   it('fails the deploy and rolls back when Caddy validate fails', deployTimeout, () => {
@@ -607,6 +626,7 @@ describe('KingCRMhub deploy hardening', () => {
 
   it('fails the deploy when the vendored static source directory is empty', deployTimeout, () => {
     const emptyDir = join(tmpdir(), 'empty-static-dir-' + Date.now())
+    tempDirs.push(emptyDir)
     const harness = createDeployHarness({ staticSrcDir: emptyDir })
     // Physically empty the source dir so the script fails closed instead of
     // syncing nothing while reporting STATIC_SYNC_OK.
@@ -643,8 +663,10 @@ describe('KingCRMhub deploy hardening', () => {
     }
 
     const script = readDeployScript()
-    expect(script).toContain('STATIC_SRC_FILES=("$STATIC_SRC_DIR"/*)')
+    expect(script).toContain('find "$STATIC_SRC_DIR" -type f -print0')
     expect(script).not.toContain('STATIC_FILES=(index.html')
+    expect(script).toContain('STATIC_PHASE_DONE=1')
+    expect(script).toContain('CADDY_CONFIG_BACKUP')
 
     // Caddy surface pins (cubic P2/P3): HSTS must be on the apex host that
     // serves the /books static block (www only redirects away), and the
