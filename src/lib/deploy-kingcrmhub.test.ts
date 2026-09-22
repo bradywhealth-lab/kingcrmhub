@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -78,7 +78,9 @@ function createDeployHarness({
   mkdirSync(binDir)
   mkdirSync(join(repoDir, '.git'), { recursive: true })
   // The deploy script reads the static /books site from repo deploy/static;
-  // unit-test harness must provide the same 6 files the script verifies.
+  // unit-test harness must provide the same 9 files the script verifies
+  // (index + 8 assets — covers included: the deploy derives its asset list
+  // from the tree, so a fixture missing a vendored file would mask drift).
   const staticDir = staticSrcDir ?? join(repoDir, 'deploy', 'static', 'bradys-books')
   mkdirSync(staticDir, { recursive: true })
   // The deploy script copies deploy/Caddyfile.apps onto the host as the
@@ -88,7 +90,10 @@ function createDeployHarness({
   writeFileSync(join(caddyDeployDir, 'Caddyfile.apps'), 'kingcrmhub.net { handle_path /books* { root * /data/sites/bradys-books file_server } }\n')
   const staticFiles = [
     'index.html',
+    'planner_cover.jpg',
     'planner_page.jpg',
+    'book1_cover.jpg',
+    'book2_cover.jpg',
     'sample_p013.jpg',
     'sample_p041.jpg',
     'sample_p083.jpg',
@@ -517,13 +522,13 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).not.toContain('DEPLOY_V4_DONE')
   })
 
-  it('fails the deploy when the vendored static source directory is missing', deployTimeout, () => {
-    const missingDir = join(tmpdir(), 'missing-static-dir-' + Date.now())
-    const harness = createDeployHarness({ staticSrcDir: missingDir })
-    // The harness pre-creates the source dir like the real repo would; the
-    // failure mode happens when a deploy of an old checkout lacks it, so
-    // physically remove it before running the script.
-    rmSync(missingDir, { recursive: true, force: true })
+  it('fails the deploy when the vendored static source directory is empty', deployTimeout, () => {
+    const emptyDir = join(tmpdir(), 'empty-static-dir-' + Date.now())
+    const harness = createDeployHarness({ staticSrcDir: emptyDir })
+    // Physically empty the source dir so the script fails closed instead of
+    // syncing nothing while reporting STATIC_SYNC_OK.
+    rmSync(emptyDir, { recursive: true, force: true })
+    mkdirSync(emptyDir, { recursive: true })
     const result = spawnSync('bash', [deployScriptPath], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -532,7 +537,30 @@ describe('KingCRMhub deploy hardening', () => {
     const output = `${result.stdout}\n${result.stderr}`
 
     expect(result.status).toBe(1)
-    expect(output).toContain('STATIC_SRC_MISSING')
+    expect(output).toContain('STATIC_SRC_EMPTY')
     expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('vendors every asset the /books index.html references in the deploy tree (drift guard)', deployTimeout, () => {
+    // Regression for cubic P2 on PR #216: index.html referenced
+    // planner_cover.jpg / book1_cover.jpg / book2_cover.jpg but the deploy
+    // tree shipped only 6 files and the hand-maintained STATIC_FILES list
+    // omitted the covers — a fresh Caddy volume 404'd them while the deploy
+    // reported STATIC_*_OK. Every src= / href= file must exist in
+    // deploy/static/bradys-books, and the script must derive its sync list
+    // from the tree rather than a hand-maintained allowlist.
+    const indexHtml = readFileSync(join(repoRoot, 'deploy', 'static', 'bradys-books', 'index.html'), 'utf8')
+    const staticDir = join(repoRoot, 'deploy', 'static', 'bradys-books')
+    const assets = [...indexHtml.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]).filter((ref) => /\.(?:jpg|jpeg|png|pdf)$/i.test(ref))
+    expect(assets.length).toBeGreaterThan(0)
+
+    const onDisk = new Set(readdirSync(staticDir).filter((f) => !f.startsWith('.')))
+    for (const asset of assets) {
+      expect(onDisk.has(asset), `index.html references ${asset} but deploy/static/bradys-books does not contain it`).toBe(true)
+    }
+
+    const script = readDeployScript()
+    expect(script).toContain('STATIC_SRC_FILES=("$STATIC_SRC_DIR"/*)')
+    expect(script).not.toContain('STATIC_FILES=(index.html')
   })
 })

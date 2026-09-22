@@ -162,7 +162,27 @@ if [[ ! -d "$STATIC_SRC_DIR" ]]; then
 fi
 mkdir -p "$STATIC_DST_DIR"
 cp -R "$STATIC_SRC_DIR"/. "$STATIC_DST_DIR"/
-STATIC_FILES=(index.html planner_page.jpg sample_p013.jpg sample_p041.jpg sample_p083.jpg Big_Lines_Sample_Pack_FREE_3pages.pdf)
+# Derive the asset set from the source tree instead of a hand-maintained
+# allowlist. Allowlists drifted (cover images shipped in index.html without
+# ever being synced or verified) and hid missing vendored assets behind a
+# fake STATIC_*_OK. Fail closed on an empty source dir, and any future file
+# added to deploy/static/bradys-books is automatically synced and verified.
+shopt -s nullglob
+STATIC_SRC_FILES=("$STATIC_SRC_DIR"/*)
+shopt -u nullglob
+STATIC_FILES=()
+# The ${arr[@]+...} guard is required under `set -u` on bash 3.2 (macOS and
+# many containers): expanding an empty array hits "unbound variable" and
+# aborts before the fail-closed check below can run. This is the canonical
+# set -u-safe array expansion idiom.
+for _static_src in "${STATIC_SRC_FILES[@]+"${STATIC_SRC_FILES[@]}"}"; do
+  [[ -f "$_static_src" ]] && STATIC_FILES+=("${_static_src##*/}")
+done
+if [[ ${#STATIC_FILES[@]} -eq 0 ]]; then
+  echo "STATIC_SRC_EMPTY: $STATIC_SRC_DIR" >&2
+  restore_old
+  exit 1
+fi
 for asset in "${STATIC_FILES[@]}"; do
   if [[ ! -f "$STATIC_DST_DIR/$asset" ]]; then
     echo "STATIC_SYNC_MISSING: $asset" >&2
