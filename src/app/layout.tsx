@@ -1,6 +1,32 @@
 import type { Metadata } from "next";
+import { Space_Grotesk, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+
+// Brand type system (design overhaul): a distinctive pairing that replaces the
+// generic Helvetica/Arial system stack. Space Grotesk carries display/headline
+// authority; Hanken Grotesk is the calm, highly legible UI/body face; JetBrains
+// Mono gives tabular figures for money and metrics. All self-hosted via next/font.
+const fontDisplay = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-space",
+  display: "swap",
+});
+
+const fontSans = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-hanken",
+  display: "swap",
+});
+
+const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
 import { initSentry } from "@/lib/observability/sentry";
 import { rootJsonLdGraph } from "@/lib/seo/jsonld";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo/site-config";
@@ -53,7 +79,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
+    >
       <body className="antialiased bg-background text-foreground">
         <script
           type="application/ld+json"

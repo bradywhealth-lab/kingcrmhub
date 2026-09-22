@@ -6,8 +6,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  /* Brand type system — see src/app/layout.tsx (next/font). Falls back to the
+     legacy Helvetica/Arial stack only if the webfont fails to load. */
+  --font-sans: var(--font-hanken), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: var(--font-space), var(--font-hanken), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -62,11 +65,19 @@
   --cobalt-subtle: rgba(24, 184, 151, 0.12);
   --cobalt-strong: rgba(24, 184, 151, 0.28);
   
-  /* Cream Background System */
-  --cream: #fcf8ec;
-  --cream-light: #fcfcfc;
-  --cream-warm: #f5f0e6;
-  --cream-border: rgba(12, 17, 27, 0.08);
+  /* Canvas system — calmed from the old high-chroma cream (#fcf8ec) to a quiet
+     warm paper. Cards go pure white for scannable density; the canvas carries a
+     faint warmth so the brand stays warm without the "brochure" cast. */
+  --cream: #f6f5f1;
+  --cream-light: #ffffff;
+  --cream-warm: #efeee8;
+  --cream-border: rgba(12, 17, 27, 0.07);
+
+  /* Restrained elevation scale — replaces ad-hoc glow/heavy shadows. */
+  --shadow-xs: 0 1px 2px rgba(12, 17, 27, 0.05);
+  --shadow-sm: 0 1px 3px rgba(12, 17, 27, 0.06), 0 1px 2px rgba(12, 17, 27, 0.04);
+  --shadow-md: 0 8px 24px rgba(12, 17, 27, 0.08);
+  --shadow-lg: 0 20px 44px rgba(12, 17, 27, 0.10);
   
   /* Text Colors */
   --navy: #0c111b; /* canon ink — name frozen */
@@ -83,11 +94,11 @@
   --info: #127c66; /* teal-deep: AA text on light */
   
   /* Base Theme */
-  --background: #fcf8ec;
+  --background: #f6f5f1;
   --foreground: #0c111b;
-  --card: #fcfcfc;
+  --card: #ffffff;
   --card-foreground: #0c111b;
-  --popover: #fcfcfc;
+  --popover: #ffffff;
   --popover-foreground: #0c111b;
   
   /* Primary - Cobalt */
@@ -98,8 +109,8 @@
   --secondary: #0c111b;
   --secondary-foreground: #ffffff;
   
-  /* Muted - Cream tones */
-  --muted: #f5f0e6;
+  /* Muted - quiet paper tones */
+  --muted: #f0efe9;
   --muted-foreground: rgba(12, 17, 27, 0.55);
   --accent: rgba(24, 184, 151, 0.08);
   --accent-foreground: #0c111b;
@@ -169,9 +180,28 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Gate v3 canon: cream→paper wash with a teal tint (was the old cobalt drift). */
-    background-image: radial-gradient(circle at top right, rgba(24, 184, 151, 0.08), transparent 30%), linear-gradient(180deg, #fcf8ec 0%, #f4f0e6 48%, #fcf8ec 100%);
+    /* Calm paper wash — dropped the teal "glow" radial and the high-chroma cream
+       for a quiet, near-flat warm canvas that lets dense content read cleanly. */
+    background-image: linear-gradient(180deg, #f7f6f2 0%, #f2f1ec 100%);
+    background-attachment: fixed;
     min-height: 100vh;
+  }
+
+  /* Brand display face for headlines across marketing + app. Tight optical
+     tracking is part of the "confident authority" direction. */
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Tabular, lining figures for money + metrics so numbers align in tables,
+     KPIs and pipeline totals (a core "clarity" signature). */
+  .tabular-nums,
+  .kpi-tile,
+  .stat-card,
+  .table-elite td,
+  .kanban-card {
+    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
@@ -205,19 +235,19 @@
    BUTTONS - Primary cobalt gradient
    ============================================ */
 .btn-primary {
-  background: linear-gradient(135deg, var(--teal), var(--teal-hover));
+  background: var(--teal);
   color: var(--ink);
   font-weight: 600;
   border: none;
   border-radius: 0.75rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(24, 184, 151, 0.35);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #1fd0aa, #18b897);
+  background: var(--teal-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(24, 184, 151, 0.45);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:active {
@@ -282,8 +312,8 @@
   font-weight: 600;
   border: none;
   border-radius: 0.75rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(24, 184, 151, 0.28);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-gold:hover,
@@ -291,7 +321,7 @@
   background: var(--teal-hover);
   color: var(--ink);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(24, 184, 151, 0.38);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-gold:active,
@@ -320,7 +350,7 @@
 
 .card-elite:hover {
   border-color: rgba(24, 184, 151, 0.3);
-  box-shadow: 0 8px 24px rgba(12, 17, 27, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .card-premium {
@@ -331,14 +361,10 @@
   overflow: hidden;
 }
 
-.card-premium::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #18b897, #1fd0aa, #18b897);
+/* Removed the decorative gradient top-bar (a card-in-card anti-pattern). A
+   premium card now reads through hairline borders + restrained elevation. */
+.card-premium {
+  box-shadow: var(--shadow-sm);
 }
 
 /* ============================================
@@ -381,14 +407,16 @@
 .badge-lost { background: var(--destructive); color: white; }
 
 /* ============================================
-   AI GLOW EFFECTS
+   AI EMPHASIS (glow removed — quiet ring instead)
+   The old neon glow was a generic-AI cliché. Emphasis now reads as a calm
+   1px brand ring plus restrained elevation.
    ============================================ */
 .ai-glow {
-  box-shadow: 0 0 20px rgba(24, 184, 151, 0.35), 0 0 40px rgba(24, 184, 151, 0.15);
+  box-shadow: 0 0 0 1px rgba(24, 184, 151, 0.45), var(--shadow-sm);
 }
 
 .ai-glow-success {
-  box-shadow: 0 0 20px rgba(22, 163, 74, 0.35), 0 0 40px rgba(22, 163, 74, 0.15);
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.45), var(--shadow-sm);
 }
 
 /* ============================================
@@ -426,8 +454,8 @@
 }
 
 @keyframes pulse-cobalt {
-  0%, 100% { box-shadow: 0 0 20px rgba(24, 184, 151, 0.35); }
-  50% { box-shadow: 0 0 30px rgba(24, 184, 151, 0.5); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(24, 184, 151, 0.28); }
+  50% { box-shadow: 0 0 0 4px rgba(24, 184, 151, 0.14); }
 }
 
 .animate-pulse-cobalt {
@@ -452,8 +480,8 @@
 
 .kanban-card:hover {
   border-color: rgba(24, 184, 151, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(12, 17, 27, 0.08);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 /* ============================================
@@ -561,7 +589,7 @@
 
 .stat-card:hover {
   border-color: rgba(24, 184, 151, 0.25);
-  box-shadow: 0 4px 16px rgba(12, 17, 27, 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -613,7 +641,7 @@
   background: var(--cream-light);
   border: 1px solid var(--cream-border);
   border-radius: 1rem;
-  box-shadow: 0 24px 48px rgba(12, 17, 27, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 /* ============================================
@@ -655,9 +683,9 @@
 }
 
 .panel-surface {
-  background: rgba(252, 252, 252, 0.92);
-  border: 1px solid rgba(12, 17, 27, 0.08);
-  box-shadow: 0 18px 48px rgba(12, 17, 27, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(12, 17, 27, 0.07);
+  box-shadow: var(--shadow-md);
 }
 
 .panel-soft {
@@ -670,7 +698,22 @@
 }
 
 .kpi-tile {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
-  border: 1px solid rgba(12, 17, 27, 0.08);
-  box-shadow: 0 12px 32px rgba(12, 17, 27, 0.06);
+  background: #ffffff;
+  border: 1px solid rgba(12, 17, 27, 0.07);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   REDUCED MOTION — honor the OS accessibility setting. Purposeful motion is a
+   design signature, but it must never be forced on users who opt out.
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
