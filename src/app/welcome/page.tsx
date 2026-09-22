@@ -55,7 +55,7 @@ export default function PublicLandingPage() {
               className="transition-opacity hover:opacity-80"
               style={{ color: 'rgba(244,240,230,0.72)' }}
             >
-              Amazon Planner
+              Amazon Planner <ExternalLink className="ml-1 h-3.5 w-3.5" />
             </a>
             <Link href="/auth" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Log in</Link>
             <Link
