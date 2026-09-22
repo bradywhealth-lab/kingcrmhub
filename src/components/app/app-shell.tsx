@@ -75,7 +75,7 @@ export function AppShell({
   }, [isDesktop, sidebarOpen])
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_48%,#fcf8ec_100%)] text-[#0c111b]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f7f6f2_0%,#f2f1ec_100%)] text-[#0c111b]">
       {/* Mobile backdrop — closes the drawer when the sidebar is open on small screens */}
       {sidebarOpen && (
         <div
@@ -89,7 +89,7 @@ export function AppShell({
         animate={{ width: sidebarOpen ? 288 : 88 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0c111b] shadow-[24px_0_60px_rgba(15,23,42,0.16)]",
+          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0c111b] shadow-[8px_0_24px_rgba(12,17,27,0.10)]",
           // Off-canvas drawer below lg: the app shell leaves no left margin on mobile (overflow fix)
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -98,7 +98,7 @@ export function AppShell({
           <AnimatePresence mode="wait">
             {sidebarOpen && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_10px_30px_rgba(24,184,151,0.35)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)]">
                   <Bot className="h-5 w-5 text-[var(--ink)]" />
                 </div>
                 <div>
@@ -157,7 +157,7 @@ export function AppShell({
               className={cn(
                 "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
                 activeView === item.id
-                  ? "bg-[linear-gradient(90deg,rgba(24,184,151,0.24),rgba(24,184,151,0.08))] text-white shadow-[0_12px_28px_rgba(24,184,151,0.15)]"
+                  ? "bg-white/[0.07] text-white shadow-[inset_2px_0_0_var(--teal)]"
                   : "text-white/62 hover:bg-white/6 hover:text-white"
               )}
             >
@@ -211,7 +211,7 @@ export function AppShell({
               </div>
               <div className="relative ml-auto w-full min-w-0 max-w-xl">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0c111b]/35" />
-                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 w-full rounded-2xl border-[rgba(31,42,54,0.08)] bg-white pl-11 shadow-[0_8px_24px_rgba(31,42,54,0.05)] focus-visible:ring-[#18b897]/30" />
+                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 w-full rounded-2xl border-[rgba(31,42,54,0.1)] bg-white pl-11 shadow-[var(--shadow-xs)] focus-visible:ring-[#18b897]/30" />
               </div>
             </div>
 
@@ -242,7 +242,7 @@ export function AppShell({
               <Button
                 onClick={onAddLead}
                 aria-label="Add lead"
-                className="h-12 shrink-0 rounded-2xl bg-[var(--teal)] px-3 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95 sm:px-5"
+                className="h-12 shrink-0 rounded-2xl bg-[var(--teal)] px-3 font-semibold text-[var(--ink)] shadow-[var(--shadow-xs)] transition-colors hover:bg-[var(--teal-hover)] sm:px-5"
               >
                 <Plus className={cn("h-4 w-4", "lg:mr-2")} />
                 <span className="hidden lg:inline">Add lead</span>

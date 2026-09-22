@@ -394,7 +394,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-[#f4f0e6] p-4 text-sm text-[#0c111b]/65">
+      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-[#f1f0ea] p-4 text-sm text-[#0c111b]/65">
         You can add more offers and upload service documents in{" "}
         <span className="font-semibold text-[var(--teal-deep)]">Settings → Offers</span> at any time.
       </div>
