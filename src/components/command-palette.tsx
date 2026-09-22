@@ -271,10 +271,10 @@ export function CommandPalette({
             placeholder="Type a command or search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-black placeholder:text-gray-400 outline-none text-lg"
+            className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-lg"
             autoFocus
           />
-          <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-400 bg-[#F8F4E8] rounded border border-[#E8E4D9]">
+          <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground bg-[#F8F4E8] rounded border border-[#E8E4D9]">
             esc
           </kbd>
         </div>
@@ -285,7 +285,7 @@ export function CommandPalette({
             {Object.entries(groupedCommands).map(([category, cmds], catIdx) => (
               <div key={category}>
                 {catIdx > 0 && <Separator className="my-2 bg-[#E8E4D9]" />}
-                <div className="px-2 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {category}
                 </div>
                 {cmds.map((cmd, idx) => {
@@ -315,9 +315,9 @@ export function CommandPalette({
                       </div>
                       
                       <div className="flex-1 text-left">
-                        <p className="text-sm font-medium text-black">{cmd.title}</p>
+                        <p className="text-sm font-medium text-foreground">{cmd.title}</p>
                         {cmd.description && (
-                          <p className="text-xs text-gray-500">{cmd.description}</p>
+                          <p className="text-xs text-muted-foreground">{cmd.description}</p>
                         )}
                       </div>
                       
@@ -326,7 +326,7 @@ export function CommandPalette({
                           {cmd.shortcut.map((key, i) => (
                             <kbd
                               key={i}
-                              className="px-1.5 py-0.5 text-xs font-medium text-gray-500 bg-[#F8F4E8] rounded border border-[#E8E4D9]"
+                              className="px-1.5 py-0.5 text-xs font-medium text-muted-foreground bg-[#F8F4E8] rounded border border-[#E8E4D9]"
                             >
                               {key}
                             </kbd>
@@ -344,7 +344,7 @@ export function CommandPalette({
             ))}
             
             {filteredCommands.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                 <Search className="w-8 h-8 mb-2" />
                 <p className="text-sm">No commands found for "{search}"</p>
               </div>
@@ -353,7 +353,7 @@ export function CommandPalette({
         </ScrollArea>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#F8F4E8] border-t border-[#E8E4D9] text-xs text-gray-500">
+        <div className="flex items-center justify-between px-4 py-2 bg-[#F8F4E8] border-t border-[#E8E4D9] text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-white rounded border border-[#E8E4D9]">↑↓</kbd>

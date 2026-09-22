@@ -13,7 +13,7 @@ export default function PasswordSetupPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[var(--paper)] flex items-center justify-center text-gray-500">
+        <main className="min-h-screen bg-[var(--paper)] flex items-center justify-center text-muted-foreground">
           Loading password setup…
         </main>
       }
@@ -105,7 +105,7 @@ function PasswordSetupPageInner() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[var(--paper)] flex items-center justify-center text-gray-500">
+      <main className="min-h-screen bg-[var(--paper)] flex items-center justify-center text-muted-foreground">
         Loading password setup…
       </main>
     )
@@ -116,7 +116,7 @@ function PasswordSetupPageInner() {
       <div className="mx-auto flex min-h-screen max-w-xl items-center justify-center px-6 py-16">
         <Card className="w-full border-[var(--ink-line)] bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-black">Set Your Password</CardTitle>
+            <CardTitle className="text-2xl font-semibold text-foreground">Set Your Password</CardTitle>
             <CardDescription>Finish account setup by replacing the temporary password.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

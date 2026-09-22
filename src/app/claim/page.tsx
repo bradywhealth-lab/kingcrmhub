@@ -107,7 +107,7 @@ function ClaimPageInner() {
 
   const INK = '#0C111B'
   const PAPER = '#F4F0E6'
-  const TEAL = '#18B897'
+  const TEAL = '#2f6bff'
   // Truthful window copy: the 30-day clock starts at VERIFICATION (the server
   // mints expiresAt = verification + 30d — cubic P2 round 1). We never promise
   // a date that assumes signup-day start; buyers who delay lose days, not the
@@ -175,12 +175,12 @@ function ClaimPageInner() {
                       className={cn(
                         'flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-medium transition',
                         productId === product.id
-                          ? 'border-[#18b897] bg-[#18b897]/15 text-[#f4f0e6]'
+                          ? 'border-[#2f6bff] bg-[#2f6bff]/15 text-[#f4f0e6]'
                           : 'border-white/15 bg-white/5 text-[#f4f0e6]/80 hover:border-white/30',
                       )}
                     >
                       <span>{product.name}</span>
-                      {productId === product.id && <CheckCircle2 className="h-4 w-4 text-[#18b897]" />}
+                      {productId === product.id && <CheckCircle2 className="h-4 w-4 text-[#2f6bff]" />}
                     </button>
                   ))}
                 </div>

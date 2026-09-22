@@ -116,33 +116,33 @@ function OrganizationSettingsPanel() {
   }
 
   if (loading) {
-    return <Card className="bg-white border-[var(--ink-line)] shadow-sm"><CardContent className="p-6 text-sm text-gray-500">Loading organization…</CardContent></Card>
+    return <Card className="bg-white border-[var(--ink-line)] shadow-sm"><CardContent className="p-6 text-sm text-muted-foreground">Loading organization…</CardContent></Card>
   }
 
   return (
     <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
-        <CardTitle className="text-black">Organization profile</CardTitle>
+        <CardTitle className="text-foreground">Organization profile</CardTitle>
         <CardDescription>Your workspace identity, plan, and session policy</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-gray-600">Organization name</Label>
+            <Label className="text-muted-foreground">Organization name</Label>
             <Input className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
           </div>
           <div>
-            <Label className="text-gray-600">URL slug</Label>
+            <Label className="text-muted-foreground">URL slug</Label>
             <Input className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.slug} onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))} />
           </div>
         </div>
         <div>
-          <Label className="text-gray-600">Logo URL</Label>
+          <Label className="text-muted-foreground">Logo URL</Label>
           <Input className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.logo} onChange={(e) => setForm((prev) => ({ ...prev, logo: e.target.value }))} placeholder="https://..." />
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-gray-600">Plan</Label>
+            <Label className="text-muted-foreground">Plan</Label>
             <Select value={form.plan} disabled>
               <SelectTrigger className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -154,25 +154,25 @@ function OrganizationSettingsPanel() {
             </Select>
           </div>
           <div>
-            <Label className="text-gray-600">Session timeout (minutes)</Label>
+            <Label className="text-muted-foreground">Session timeout (minutes)</Label>
             <Input type="number" className="mt-1 bg-[var(--paper)] border-[var(--ink-line)]" value={form.sessionTimeoutMinutes} onChange={(e) => setForm((prev) => ({ ...prev, sessionTimeoutMinutes: e.target.value }))} />
           </div>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-3">
           <div>
-            <p className="font-medium text-black">Require two-factor authentication</p>
-            <p className="text-sm text-gray-500">Applies to all workspace admins and owners</p>
+            <p className="font-medium text-foreground">Require two-factor authentication</p>
+            <p className="text-sm text-muted-foreground">Applies to all workspace admins and owners</p>
           </div>
           <Switch checked={form.twoFactorRequired} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, twoFactorRequired: checked }))} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-lg bg-[var(--paper)] p-4">
-            <p className="text-sm text-gray-500">Leads in workspace</p>
-            <p className="text-2xl font-bold text-black">{form.usage.leadsThisMonth}</p>
+            <p className="text-sm text-muted-foreground">Leads in workspace</p>
+            <p className="text-2xl font-bold text-foreground">{form.usage.leadsThisMonth}</p>
           </div>
           <div className="rounded-lg bg-[var(--paper)] p-4">
-            <p className="text-sm text-gray-500">Team seats used</p>
-            <p className="text-2xl font-bold text-black">{form.usage.teamSeatsUsed}</p>
+            <p className="text-sm text-muted-foreground">Team seats used</p>
+            <p className="text-2xl font-bold text-foreground">{form.usage.teamSeatsUsed}</p>
           </div>
         </div>
         <Button className="btn-gold" onClick={() => void saveOrganization()} disabled={saving}>
@@ -266,7 +266,7 @@ function TeamSettingsPanel() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-black">Team members</CardTitle>
+              <CardTitle className="text-foreground">Team members</CardTitle>
               <CardDescription>Invite users into this workspace and manage their role</CardDescription>
             </div>
             <Button className="btn-gold gap-2" size="sm" onClick={() => setShowInvite(true)}>
@@ -283,18 +283,18 @@ function TeamSettingsPanel() {
             </div>
           ) : null}
           {loading ? (
-            <div className="text-sm text-gray-500">Loading team…</div>
+            <div className="text-sm text-muted-foreground">Loading team…</div>
           ) : (
             <div className="space-y-3">
               {members.map((m) => (
                 <div key={m.id} className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-[var(--teal)] text-sm text-black">{(m.name || m.email).split(' ').map((n) => n[0]).join('').slice(0, 2)}</AvatarFallback>
+                      <AvatarFallback className="bg-[var(--teal)] text-sm text-foreground">{(m.name || m.email).split(' ').map((n) => n[0]).join('').slice(0, 2)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium text-black">{m.name || 'Unnamed user'}</p>
-                      <p className="text-xs text-gray-500">{m.email}</p>
+                      <p className="text-sm font-medium text-foreground">{m.name || 'Unnamed user'}</p>
+                      <p className="text-xs text-muted-foreground">{m.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -319,20 +319,20 @@ function TeamSettingsPanel() {
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
         <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
-            <DialogTitle className="text-black">Invite team member</DialogTitle>
+            <DialogTitle className="text-foreground">Invite team member</DialogTitle>
             <DialogDescription>Create a team account inside this organization.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Name</Label>
+              <Label className="text-muted-foreground">Name</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={inviteForm.name} onChange={(e) => setInviteForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Email</Label>
+              <Label className="text-muted-foreground">Email</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" type="email" value={inviteForm.email} onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Role</Label>
+              <Label className="text-muted-foreground">Role</Label>
               <Select value={inviteForm.role} onValueChange={(value) => setInviteForm((prev) => ({ ...prev, role: value }))}>
                 <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -446,7 +446,7 @@ function SecuritySettingsPanel() {
     <>
       <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
-          <CardTitle className="text-black">Security</CardTitle>
+          <CardTitle className="text-foreground">Security</CardTitle>
           <CardDescription>2FA policy, API keys, and session governance</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -454,8 +454,8 @@ function SecuritySettingsPanel() {
             <div className="flex items-center gap-3">
               <Shield className="h-5 w-5 text-[var(--teal-deep)]" />
               <div>
-                <p className="font-medium text-black">Two-factor enforcement</p>
-                <p className="text-xs text-gray-500">Managed from Organization settings</p>
+                <p className="font-medium text-foreground">Two-factor enforcement</p>
+                <p className="text-xs text-muted-foreground">Managed from Organization settings</p>
               </div>
             </div>
             <Badge variant="outline" className="border-[var(--ink-line)]">Org policy</Badge>
@@ -464,8 +464,8 @@ function SecuritySettingsPanel() {
             <div className="flex items-center gap-3">
               <Key className="h-5 w-5 text-[var(--teal-deep)]" />
               <div>
-                <p className="font-medium text-black">API keys</p>
-                <p className="text-xs text-gray-500">Generate and revoke workspace keys</p>
+                <p className="font-medium text-foreground">API keys</p>
+                <p className="text-xs text-muted-foreground">Generate and revoke workspace keys</p>
               </div>
             </div>
             <Button variant="outline" size="sm" className="border-[var(--teal-deep)] text-[var(--teal-deep)]" onClick={() => setShowKeys(true)}>Manage</Button>
@@ -474,21 +474,21 @@ function SecuritySettingsPanel() {
             <div className="mb-3 flex items-center gap-3">
               <Shield className="h-5 w-5 text-[var(--teal-deep)]" />
               <div>
-                <p className="font-medium text-black">Active sessions</p>
-                <p className="text-xs text-gray-500">Review devices signed into this account and revoke old sessions.</p>
+                <p className="font-medium text-foreground">Active sessions</p>
+                <p className="text-xs text-muted-foreground">Review devices signed into this account and revoke old sessions.</p>
               </div>
             </div>
             <div className="space-y-2">
               {sessions.length === 0 ? (
-                <p className="text-sm text-gray-500">No active sessions found.</p>
+                <p className="text-sm text-muted-foreground">No active sessions found.</p>
               ) : sessions.map((session) => (
                 <div key={session.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-white p-3">
                   <div>
-                    <p className="text-sm font-medium text-black">
+                    <p className="text-sm font-medium text-foreground">
                       {[session.device, session.browser, session.os].filter(Boolean).join(' • ') || 'Current device'}
                       {session.isCurrent ? ' • Current session' : ''}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Last active {new Date(session.lastActiveAt).toLocaleString()}
                       {session.city || session.country ? ` • ${[session.city, session.country].filter(Boolean).join(', ')}` : ''}
                     </p>
@@ -506,7 +506,7 @@ function SecuritySettingsPanel() {
       <Dialog open={showKeys} onOpenChange={setShowKeys}>
         <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
-            <DialogTitle className="text-black">Workspace API keys</DialogTitle>
+            <DialogTitle className="text-foreground">Workspace API keys</DialogTitle>
             <DialogDescription>Create a key once, then store the raw value securely.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -523,8 +523,8 @@ function SecuritySettingsPanel() {
               {keys.map((key) => (
                 <div key={key.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3">
                   <div>
-                    <p className="text-sm font-medium text-black">{key.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-medium text-foreground">{key.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {key.preview} • {new Date(key.createdAt).toLocaleString()}
                       {key.revokedAt ? ` • revoked ${new Date(key.revokedAt).toLocaleString()}` : ''}
                     </p>
@@ -557,12 +557,12 @@ function BillingSettingsPanel() {
   return (
     <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
-        <CardTitle className="text-black">Billing & plan</CardTitle>
+        <CardTitle className="text-foreground">Billing & plan</CardTitle>
         <CardDescription>Persist the active workspace plan inside the CRM</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label className="text-gray-600">Current plan</Label>
+          <Label className="text-muted-foreground">Current plan</Label>
           <Select value={plan} disabled>
             <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -608,18 +608,18 @@ function AuditLogPanel() {
   return (
     <Card className="bg-white border-[var(--ink-line)] shadow-sm">
       <CardHeader>
-        <CardTitle className="text-black">Audit log</CardTitle>
+        <CardTitle className="text-foreground">Audit log</CardTitle>
         <CardDescription>Recent actions across the organization</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="text-sm text-gray-500">Loading audit log…</div>
+          <div className="text-sm text-muted-foreground">Loading audit log…</div>
         ) : (
           <div className="space-y-2">
             {logs.map((e) => (
               <div key={e.id} className="flex items-center justify-between gap-3 border-b border-[var(--ink-line)] py-2 last:border-0">
-                <span className="text-sm text-black">{e.description}</span>
-                <span className="text-right text-xs text-gray-500">{e.action} • {e.entityType} • {new Date(e.createdAt).toLocaleString()}</span>
+                <span className="text-sm text-foreground">{e.description}</span>
+                <span className="text-right text-xs text-muted-foreground">{e.action} • {e.entityType} • {new Date(e.createdAt).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -761,7 +761,7 @@ function CarrierLibrarySettings() {
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
-          <CardTitle className="text-black">Offer Library</CardTitle>
+          <CardTitle className="text-foreground">Offer Library</CardTitle>
           <CardDescription>Store your services, packages, and proposal libraries.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -770,8 +770,8 @@ function CarrierLibrarySettings() {
           <Button className="btn-gold w-full" onClick={() => void createCarrier()} disabled={loading}>Add Offer</Button>
           <Separator />
           <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3">
-            <p className="text-xs font-medium text-black">Freelancer workflow shortcuts</p>
-            <p className="mt-1 text-xs text-gray-500">Store each offer’s brochure, scope guide, and proposal template with version tracking.</p>
+            <p className="text-xs font-medium text-foreground">Freelancer workflow shortcuts</p>
+            <p className="mt-1 text-xs text-muted-foreground">Store each offer’s brochure, scope guide, and proposal template with version tracking.</p>
           </div>
           <div className="max-h-[320px] space-y-2 overflow-auto">
             {carriers.map((carrier) => (
@@ -791,8 +791,8 @@ function CarrierLibrarySettings() {
                   selectedCarrierId === carrier.id ? 'border-[var(--teal-deep)] bg-[var(--teal-tint)]' : 'border-[var(--ink-line)] bg-[var(--paper)]',
                 )}
               >
-                <p className="text-sm font-medium text-black">{carrier.name}</p>
-                <p className="text-xs text-gray-500">{carrier.website || 'No website'} • {carrier._count?.documents || 0} docs</p>
+                <p className="text-sm font-medium text-foreground">{carrier.name}</p>
+                <p className="text-xs text-muted-foreground">{carrier.website || 'No website'} • {carrier._count?.documents || 0} docs</p>
               </button>
             ))}
           </div>
@@ -801,7 +801,7 @@ function CarrierLibrarySettings() {
 
       <Card className="bg-white border-[var(--ink-line)] shadow-sm xl:col-span-2">
         <CardHeader>
-          <CardTitle className="text-black">Offer Document Library</CardTitle>
+          <CardTitle className="text-foreground">Offer Document Library</CardTitle>
           <CardDescription>
             {selectedCarrier ? `Upload brochures and scope guides for ${selectedCarrier.name}.` : 'Select an offer to manage files.'}
           </CardDescription>
@@ -810,11 +810,11 @@ function CarrierLibrarySettings() {
           {selectedCarrier && (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <div className="md:col-span-2">
-                <Label className="text-gray-600">Document name</Label>
+                <Label className="text-muted-foreground">Document name</Label>
                 <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={uploadName} onChange={(e) => setUploadName(e.target.value)} placeholder="2026 Website Redesign Package" />
               </div>
               <div>
-                <Label className="text-gray-600">Type</Label>
+                <Label className="text-muted-foreground">Type</Label>
                 <Select value={uploadType} onValueChange={setUploadType}>
                   <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -825,11 +825,11 @@ function CarrierLibrarySettings() {
                 </Select>
               </div>
               <div>
-                <Label className="text-gray-600">Version</Label>
+                <Label className="text-muted-foreground">Version</Label>
                 <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={uploadVersion} onChange={(e) => setUploadVersion(e.target.value)} placeholder="v1.0" />
               </div>
               <div className="md:col-span-3">
-                <Label className="text-gray-600">File</Label>
+                <Label className="text-muted-foreground">File</Label>
                 <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
               </div>
               <div className="flex items-end">
@@ -841,7 +841,7 @@ function CarrierLibrarySettings() {
           )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <Label className="text-gray-600">Document filter</Label>
+              <Label className="text-muted-foreground">Document filter</Label>
               <Select value={docFilter} onValueChange={setDocFilter}>
                 <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -853,10 +853,10 @@ function CarrierLibrarySettings() {
               </Select>
             </div>
             <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3">
-              <p className="text-xs font-medium text-black">Offer Prep Checklist</p>
+              <p className="text-xs font-medium text-foreground">Offer Prep Checklist</p>
               <div className="mt-1 space-y-1">
                 {offerPrepChecklist.slice(0, 3).map((item) => (
-                  <p key={item} className="text-[11px] text-gray-500">- {item}</p>
+                  <p key={item} className="text-[11px] text-muted-foreground">- {item}</p>
                 ))}
               </div>
             </div>
@@ -864,7 +864,7 @@ function CarrierLibrarySettings() {
           <Separator />
           <div className="space-y-2">
             {filteredDocuments.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[var(--ink-line)] p-5 text-sm text-gray-500">
+              <div className="rounded-lg border border-dashed border-[var(--ink-line)] p-5 text-sm text-muted-foreground">
                 No documents yet. Upload brochures and scope guides here.
               </div>
             ) : filteredDocuments.map((doc) => (
@@ -875,8 +875,8 @@ function CarrierLibrarySettings() {
                 className="flex items-center justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-black">{doc.name}</p>
-                  <p className="text-xs text-gray-500">{offerDocTypeLabel(doc.type)} {doc.version ? `• ${doc.version}` : ''}</p>
+                  <p className="truncate text-sm font-medium text-foreground">{doc.name}</p>
+                  <p className="text-xs text-muted-foreground">{offerDocTypeLabel(doc.type)} {doc.version ? `• ${doc.version}` : ''}</p>
                 </div>
                 <a href={packageDocumentDownloadPath(doc.packageId, doc.id)} target="_blank" rel="noreferrer" className="text-sm text-[var(--teal-deep)] hover:underline">Open</a>
               </motion.div>
@@ -975,14 +975,14 @@ function TwilioIntegrationCard() {
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle className="flex items-center gap-2 text-black">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Phone className="h-5 w-5 text-[var(--teal-deep)]" />
               Twilio SMS
             </CardTitle>
             <CardDescription>Send live SMS and receive delivery/inbound updates.</CardDescription>
           </div>
           <Badge variant="outline" className={cn(
-            isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-gray-500',
+            isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-muted-foreground',
           )}>
             {isActive ? (syncStatus || 'active') : 'inactive'}
           </Badge>
@@ -990,21 +990,21 @@ function TwilioIntegrationCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          <div className="text-sm text-gray-500">Loading Twilio settings…</div>
+          <div className="text-sm text-muted-foreground">Loading Twilio settings…</div>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <Label className="text-gray-600">Account SID</Label>
+                <Label className="text-muted-foreground">Account SID</Label>
                 <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={accountSid} onChange={(e) => setAccountSid(e.target.value)} placeholder="AC..." />
               </div>
               <div>
-                <Label className="text-gray-600">From phone</Label>
+                <Label className="text-muted-foreground">From phone</Label>
                 <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={fromPhone} onChange={(e) => setFromPhone(e.target.value)} placeholder="+15551234567" />
               </div>
             </div>
             <div>
-              <Label className="text-gray-600">Auth token</Label>
+              <Label className="text-muted-foreground">Auth token</Label>
               <Input
                 type="password"
                 className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]"
@@ -1015,8 +1015,8 @@ function TwilioIntegrationCard() {
             </div>
             <div className="flex items-center justify-between rounded-lg bg-[var(--paper)] p-3">
               <div>
-                <p className="text-sm font-medium text-black">Webhook target</p>
-                <p className="break-all text-xs text-gray-500">
+                <p className="text-sm font-medium text-foreground">Webhook target</p>
+                <p className="break-all text-xs text-muted-foreground">
                   {`${typeof window !== 'undefined' ? window.location.origin : process.env.APP_BASE_URL || 'https://your-app.example.com'}/api/webhooks/twilio/<organizationId>`}
                 </p>
               </div>
@@ -1123,12 +1123,12 @@ function SettingsIntegrationsPanel() {
     <>
       <Card className="bg-white border-[var(--ink-line)] shadow-sm">
         <CardHeader>
-          <CardTitle className="text-black">Integrations</CardTitle>
+          <CardTitle className="text-foreground">Integrations</CardTitle>
           <CardDescription>Connect email, calendar, SMS, and more</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="text-sm text-gray-500">Loading integrations…</div>
+            <div className="text-sm text-muted-foreground">Loading integrations…</div>
           ) : integrationDefinitions.map((i) => {
             const item = integrations[i.type]
             const connected = item?.isActive
@@ -1137,13 +1137,13 @@ function SettingsIntegrationsPanel() {
                 <div className="flex items-center gap-3">
                   <i.icon className="h-5 w-5 text-[var(--teal-deep)]" />
                   <div>
-                    <p className="text-sm font-medium text-black">{i.name}</p>
-                    <p className="text-xs text-gray-500">{i.description}</p>
+                    <p className="text-sm font-medium text-foreground">{i.name}</p>
+                    <p className="text-xs text-muted-foreground">{i.description}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={cn(
-                    connected ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-gray-500',
+                    connected ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-muted-foreground',
                   )}>
                     {connected ? (item?.syncStatus || 'connected') : 'disconnected'}
                   </Badge>
@@ -1160,20 +1160,20 @@ function SettingsIntegrationsPanel() {
       <Dialog open={!!selectedType} onOpenChange={(open) => !open && setSelectedType(null)}>
         <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
-            <DialogTitle className="text-black">{configName || 'Configure Integration'}</DialogTitle>
+            <DialogTitle className="text-foreground">{configName || 'Configure Integration'}</DialogTitle>
             <DialogDescription>Save a basic integration record so the app can use and display it.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Display name</Label>
+              <Label className="text-muted-foreground">Display name</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={configName} onChange={(e) => setConfigName(e.target.value)} />
             </div>
             <div>
-              <Label className="text-gray-600">Config field</Label>
+              <Label className="text-muted-foreground">Config field</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={configField} onChange={(e) => setConfigField(e.target.value)} placeholder="calendarId, workspaceId, smtpHost..." />
             </div>
             <div>
-              <Label className="text-gray-600">Config value</Label>
+              <Label className="text-muted-foreground">Config value</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={configValue} onChange={(e) => setConfigValue(e.target.value)} />
             </div>
           </div>
@@ -1280,7 +1280,7 @@ function WebhooksSettingsPanel() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-black">Webhooks</CardTitle>
+              <CardTitle className="text-foreground">Webhooks</CardTitle>
               <CardDescription>Send events to your endpoints</CardDescription>
             </div>
             <Button className="btn-gold gap-2" size="sm" onClick={() => setOpen(true)}>
@@ -1291,9 +1291,9 @@ function WebhooksSettingsPanel() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-sm text-gray-500">Loading webhooks…</div>
+            <div className="text-sm text-muted-foreground">Loading webhooks…</div>
           ) : hooks.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--ink-line)] p-6 text-center text-sm text-gray-500">
+            <div className="rounded-lg border border-dashed border-[var(--ink-line)] p-6 text-center text-sm text-muted-foreground">
               No webhooks yet. Add one to receive lead.created, deal.won, etc.
             </div>
           ) : (
@@ -1301,9 +1301,9 @@ function WebhooksSettingsPanel() {
               {hooks.map((hook) => (
                 <div key={hook.id} className="flex items-start justify-between gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-black">{hook.name}</p>
-                    <p className="break-all text-xs text-gray-500">{hook.url}</p>
-                    <p className="mt-1 text-xs text-gray-500">{hook.events.join(', ')}</p>
+                    <p className="text-sm font-medium text-foreground">{hook.name}</p>
+                    <p className="break-all text-xs text-muted-foreground">{hook.url}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{hook.events.join(', ')}</p>
                   </div>
                   <Button variant="outline" size="sm" className="border-[var(--ink-line)]" onClick={() => void deleteHook(hook.id)}>
                     Delete
@@ -1318,24 +1318,24 @@ function WebhooksSettingsPanel() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="border-[var(--ink-line)] bg-white">
           <DialogHeader>
-            <DialogTitle className="text-black">Add Webhook</DialogTitle>
+            <DialogTitle className="text-foreground">Add Webhook</DialogTitle>
             <DialogDescription>Create a webhook endpoint for CRM events.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Name</Label>
+              <Label className="text-muted-foreground">Name</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">URL</Label>
+              <Label className="text-muted-foreground">URL</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.url} onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Events</Label>
+              <Label className="text-muted-foreground">Events</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.events} onChange={(e) => setForm((prev) => ({ ...prev, events: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Secret</Label>
+              <Label className="text-muted-foreground">Secret</Label>
               <Input className="mt-1 border-[var(--ink-line)] bg-[var(--paper)]" value={form.secret} onChange={(e) => setForm((prev) => ({ ...prev, secret: e.target.value }))} />
             </div>
           </div>
@@ -1357,45 +1357,45 @@ export function SettingsView({ initialTab }: { initialTab?: string } = {}) {
   return (
     <div className="min-h-screen space-y-6 bg-[var(--paper)] p-6">
       <div>
-        <h1 className="text-2xl font-bold text-black">Settings</h1>
-        <p className="text-gray-500">Multi-tenant organization, team, security, and integrations</p>
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+        <p className="text-muted-foreground">Multi-tenant organization, team, security, and integrations</p>
       </div>
 
       <Tabs value={activeSettingsTab} onValueChange={setActiveSettingsTab} className="w-full min-w-0">
         <TabsList className="flex h-auto max-w-full flex-wrap gap-1 border border-[var(--ink-line)] bg-[var(--paper)] p-1">
-          <TabsTrigger value="organization" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="organization" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <Building2 className="h-4 w-4" />
             Organization
           </TabsTrigger>
-          <TabsTrigger value="team" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="team" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <Users className="h-4 w-4" />
             Team & roles
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <Shield className="h-4 w-4" />
             Security
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="integrations" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <Zap className="h-4 w-4" />
             Integrations
           </TabsTrigger>
-          <TabsTrigger value="packages" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="packages" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <FileText className="h-4 w-4" />
             Offers &amp; Docs
           </TabsTrigger>
-          <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <Webhook className="h-4 w-4" />
             Webhooks
           </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="ai" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <Bot className="h-4 w-4" />
             AI
           </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <DollarSign className="h-4 w-4" />
             Billing
           </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-black">
+          <TabsTrigger value="audit" className="gap-2 data-[state=active]:bg-[var(--teal)] data-[state=active]:text-foreground">
             <History className="h-4 w-4" />
             Audit log
           </TabsTrigger>
