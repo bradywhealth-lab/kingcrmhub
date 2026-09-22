@@ -32,17 +32,31 @@ const PROOF_POINTS = [
 
 export default function PublicLandingPage() {
   return (
-    <main data-deploy-marker="public-landing-v2" className="min-h-screen px-6 py-10" style={{ background: INK }}>
+    <main data-deploy-marker="public-landing-v3" className="min-h-screen px-6 py-10" style={{ background: INK }}>
       <div
         className="mx-auto max-w-6xl rounded-[32px] border p-8 md:p-14"
         style={{ background: INK, borderColor: 'rgba(244,240,230,0.14)' }}
       >
-        {/* HERO */}
-        <div
-          className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
-          style={{ borderColor: `${TEAL}55`, background: `${TEAL}14`, color: TEAL }}
-        >
-          <Wand2 className="h-3.5 w-3.5" /> King CRM Hub
+        {/* NAV */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div
+            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ borderColor: `${TEAL}55`, background: `${TEAL}14`, color: TEAL }}
+          >
+            <Wand2 className="h-3.5 w-3.5" /> King CRM Hub
+          </div>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
+            <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
+            <Link href="/claim" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Claim</Link>
+            <Link href="/auth" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Log in</Link>
+            <Link
+              href="/auth?mode=signup"
+              className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold"
+              style={{ background: TEAL, color: INK }}
+            >
+              Start free <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </nav>
         </div>
 
         <h1
@@ -59,11 +73,18 @@ export default function PublicLandingPage() {
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
           <Link
-            href="/claim"
+            href="/auth?mode=signup"
             className="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-semibold"
             style={{ background: TEAL, color: INK }}
           >
-            Bought the prompts? Claim your free account <ArrowRight className="ml-2 h-4 w-4" />
+            Start free <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+          <Link
+            href="/claim"
+            className="inline-flex items-center rounded-2xl border px-6 py-3 text-sm font-semibold"
+            style={{ borderColor: 'rgba(244,240,230,0.25)', background: 'transparent', color: PAPER }}
+          >
+            Bought the prompts? Claim your free account
           </Link>
           <Link
             href="/pricing"
@@ -199,9 +220,18 @@ export default function PublicLandingPage() {
           </a>
         </div>
 
-        <p className="mt-12 text-center text-sm font-semibold" style={{ color: PAPER }}>
-          © 2026 King CRM Hub. Proof. Decision. Next Move.
-        </p>
+        <footer className="mt-12 flex flex-col items-center gap-3">
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium">
+            <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
+            <Link href="/claim" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Claim</Link>
+            <Link href="/terms" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Terms</Link>
+            <Link href="/privacy" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Privacy</Link>
+            <Link href="/auth" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Log in</Link>
+          </nav>
+          <p className="text-center text-sm font-semibold" style={{ color: PAPER }}>
+            © 2026 King CRM Hub. Proof. Decision. Next Move.
+          </p>
+        </footer>
       </div>
     </main>
   )

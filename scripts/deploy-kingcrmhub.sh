@@ -272,7 +272,7 @@ echo
 container_get "$CONTAINER" /api/ready
 echo
 LANDING_HTML="$(container_get "$CONTAINER" /)"
-if [[ "$LANDING_HTML" != *'data-deploy-marker="public-landing-v2"'* ]]; then
+if [[ "$LANDING_HTML" != *'data-deploy-marker="public-landing-v3"'* ]]; then
   echo "LANDING_MARKER_FAIL" >&2
   restore_old
   exit 1
