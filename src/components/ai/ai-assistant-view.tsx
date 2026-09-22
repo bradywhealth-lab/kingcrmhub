@@ -392,7 +392,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
           <Button
             size="icon"
             variant="ghost"
-            className="w-8 h-8 text-gray-400 hover:text-[#127c66] hover:bg-[#f4f0e6]"
+            className="w-8 h-8 text-gray-400 hover:text-[#127c66] hover:bg-[#f1f0ea]"
             onClick={createNewChat}
             title="New chat"
           >
@@ -410,7 +410,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                 className={cn(
                   "w-full group flex items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors",
                   activeChatId === convo.id
-                    ? "bg-[#f4f0e6] text-black"
+                    ? "bg-[#f1f0ea] text-black"
                     : "text-gray-600 hover:bg-[#faf7ee] hover:text-black"
                 )}
               >
@@ -576,7 +576,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
             {/* Input area */}
             <div className="px-6 py-4 border-t border-[var(--ink-line)] bg-white">
               <div className="max-w-3xl mx-auto">
-                <div className="flex items-end gap-3 bg-[#f4f0e6] rounded-2xl border border-[var(--ink-line)] px-4 py-3 focus-within:border-[#127c66] transition-colors">
+                <div className="flex items-end gap-3 bg-[#f1f0ea] rounded-2xl border border-[var(--ink-line)] px-4 py-3 focus-within:border-[#127c66] transition-colors">
                   <Textarea
                     ref={textareaRef}
                     value={input}

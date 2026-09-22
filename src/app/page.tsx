@@ -304,11 +304,11 @@ function DashboardView() {
   const visibleActivities = activities.slice(0, 5)
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-[#f6f5f1] min-h-screen">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm hover:shadow-md transition-shadow card-hover">
+          <Card key={stat.title} className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm hover:shadow-md transition-shadow card-hover">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -343,7 +343,7 @@ function DashboardView() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <Card className="lg:col-span-2 bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="lg:col-span-2 bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <CardTitle className="text-black">Revenue & Leads</CardTitle>
             <CardDescription className="text-gray-500">Monthly performance overview</CardDescription>
@@ -381,7 +381,7 @@ function DashboardView() {
         </Card>
         
         {/* Lead Sources */}
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <CardTitle className="text-black">Lead Sources</CardTitle>
             <CardDescription className="text-gray-500">Distribution by channel</CardDescription>
@@ -422,7 +422,7 @@ function DashboardView() {
       {/* AI Insights & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* AI Insights */}
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#127c66]" />
@@ -478,7 +478,7 @@ function DashboardView() {
         </Card>
         
         {/* Recent Activity */}
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-[#127c66]" />
@@ -515,7 +515,7 @@ function DashboardView() {
       </div>
 
       {myDay && (
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5 text-[#127c66]" />
@@ -528,7 +528,7 @@ function DashboardView() {
               <h4 className="text-sm font-semibold text-black mb-3">Priority Leads to Call</h4>
               <div className="space-y-2">
                 {myDay.leadsToCall.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)]">
+                  <div key={lead.id} className="p-3 bg-[#f1f0ea] rounded-lg border border-[rgba(31,42,54,0.08)]">
                     <p className="text-sm font-medium text-black">{lead.name}</p>
                     <p className="text-xs text-gray-500">{lead.company || 'Unknown company'}</p>
                     <div className="flex items-center justify-between mt-2">
@@ -543,11 +543,11 @@ function DashboardView() {
               <h4 className="text-sm font-semibold text-black mb-3">Upcoming Meetings</h4>
               <div className="space-y-2">
                 {myDay.meetings.length === 0 ? (
-                  <div className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)] text-sm text-gray-500">
+                  <div className="p-3 bg-[#f1f0ea] rounded-lg border border-[rgba(31,42,54,0.08)] text-sm text-gray-500">
                     No meetings queued yet.
                   </div>
                 ) : myDay.meetings.slice(0, 5).map((meeting) => (
-                  <div key={meeting.id} className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)]">
+                  <div key={meeting.id} className="p-3 bg-[#f1f0ea] rounded-lg border border-[rgba(31,42,54,0.08)]">
                     <p className="text-sm font-medium text-black">{meeting.title}</p>
                     <p className="text-xs text-gray-500">{meeting.lead?.name || 'Unassigned lead'}</p>
                     <p className="text-xs text-gray-500 mt-1">{new Date(meeting.time).toLocaleString()}</p>
@@ -905,7 +905,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
   }
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-[#f6f5f1] min-h-screen">
       {/* Header with Add new lead + Import CSV on tab */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -915,7 +915,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            className="border-[#127c66] text-[#0c111b] hover:bg-[#f4f0e6] gap-2"
+            className="border-[#127c66] text-[#0c111b] hover:bg-[#f1f0ea] gap-2"
             onClick={onScrape}
           >
             <Globe className="w-4 h-4" />
@@ -941,10 +941,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-gray-400" />
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[140px] bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+            <SelectTrigger className="w-[140px] bg-white border-[rgba(31,42,54,0.08)]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
-            <SelectContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+            <SelectContent className="bg-white border-[rgba(31,42,54,0.08)]">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="new">New</SelectItem>
               <SelectItem value="qualified">Qualified</SelectItem>
@@ -955,10 +955,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           </Select>
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[140px] bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+          <SelectTrigger className="w-[140px] bg-white border-[rgba(31,42,54,0.08)]">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
-          <SelectContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+          <SelectContent className="bg-white border-[rgba(31,42,54,0.08)]">
             <SelectItem value="score">AI Score</SelectItem>
             <SelectItem value="value">Value</SelectItem>
             <SelectItem value="date">Date Added</SelectItem>
@@ -967,7 +967,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </div>
       
       {/* Leads Table */}
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm overflow-hidden">
+      <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm overflow-hidden">
         {error && (
           <div className="p-4 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">{error}</div>
         )}
@@ -977,7 +977,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#f4f0e6]">
+              <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#f1f0ea]">
                 <th className="text-left p-4 text-sm font-medium text-gray-600">Contact</th>
                 <th className="text-left p-4 text-sm font-medium text-gray-600">Company</th>
                 <th className="text-left p-4 text-sm font-medium text-gray-600">Source</th>
@@ -996,7 +996,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   key={lead.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="border-b border-[rgba(31,42,54,0.08)] hover:bg-[#fcf8ec] transition-colors cursor-pointer"
+                  className="border-b border-[rgba(31,42,54,0.08)] hover:bg-[#f6f5f1] transition-colors cursor-pointer"
                   onClick={() => setSelectedLead(lead)}
                 >
                   <td className="p-4">
@@ -1096,7 +1096,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           setAssistantSaving(false)
         }}
       >
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)] max-w-2xl">
           {selectedLead && (
             <>
               <DialogHeader>
@@ -1151,7 +1151,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                 </div>
               </div>
 
-              <Card className="bg-[#fcf8ec] border-[rgba(31,42,54,0.08)]">
+              <Card className="bg-[#f6f5f1] border-[rgba(31,42,54,0.08)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2 text-black">
                     <Bot className="w-4 h-4 text-[#127c66]" />
@@ -1183,7 +1183,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
 
                     <Button
                       variant="outline"
-                      className="border-[rgba(31,42,54,0.08)] text-gray-700 hover:bg-[#f4f0e6]"
+                      className="border-[rgba(31,42,54,0.08)] text-gray-700 hover:bg-[#f1f0ea]"
                       disabled={!assistantPlaybook || assistantSaving}
                       onClick={() => void savePlaybookToTimeline(selectedLead.id)}
                     >
@@ -1252,7 +1252,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3 space-y-2">
                           <p className="text-xs text-gray-500">Grounding Citations</p>
                           {assistantPlaybook.citations.slice(0, 4).map((c, idx) => (
-                            <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#127c66] bg-[#fcf8ec] p-2">
+                            <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#127c66] bg-[#f6f5f1] p-2">
                               <p className="text-xs font-medium text-black">
                                 {c.packageName} - {c.documentName} (chunk {c.chunkIndex})
                               </p>
@@ -1278,7 +1278,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#f4f0e6]"
+                  className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#f1f0ea]"
                   onClick={openEditLead}
                 >
                   <Edit className="w-4 h-4 mr-2" />
@@ -1295,7 +1295,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </Dialog>
 
       <Dialog open={showEditLeadDialog} onOpenChange={setShowEditLeadDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)] max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-black">Edit Lead</DialogTitle>
             <DialogDescription>Update the lead’s CRM profile and workflow status.</DialogDescription>
@@ -1303,36 +1303,36 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-600">First name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.firstName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, firstName: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.firstName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, firstName: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Last name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.lastName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, lastName: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.lastName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, lastName: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Email</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="email" value={editLeadForm.email} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, email: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" type="email" value={editLeadForm.email} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, email: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Phone</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.phone} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, phone: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.phone} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, phone: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Company</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.company} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, company: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.company} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, company: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.title} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, title: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.title} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, title: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Source</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.source} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, source: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.source} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, source: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Status</Label>
               <Select value={editLeadForm.status} onValueChange={(value) => setEditLeadForm((prev) => ({ ...prev, status: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
@@ -1346,11 +1346,11 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
             </div>
             <div>
               <Label className="text-gray-600">Estimated value</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="number" value={editLeadForm.estimatedValue} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, estimatedValue: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" type="number" value={editLeadForm.estimatedValue} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, estimatedValue: e.target.value }))} />
             </div>
             <div className="md:col-span-2">
               <Label className="text-gray-600">AI next action</Label>
-              <Textarea className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.aiNextAction} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, aiNextAction: e.target.value }))} />
+              <Textarea className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={editLeadForm.aiNextAction} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, aiNextAction: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
@@ -1365,7 +1365,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </Dialog>
 
       <AlertDialog open={showDeleteLeadConfirm} onOpenChange={setShowDeleteLeadConfirm}>
-        <AlertDialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <AlertDialogContent className="bg-white border-[rgba(31,42,54,0.08)]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-black">Delete this lead?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1389,7 +1389,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </AlertDialog>
 
       <Dialog open={showContactLeadDialog} onOpenChange={setShowContactLeadDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)]">
           <DialogHeader>
             <DialogTitle className="text-black">Contact Lead</DialogTitle>
             <DialogDescription>Send or record an SMS follow-up for this lead.</DialogDescription>
@@ -1397,11 +1397,11 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">To</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={selectedLead?.phone || ''} readOnly />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={selectedLead?.phone || ''} readOnly />
             </div>
             <div>
               <Label className="text-gray-600">Message</Label>
-              <Textarea className="mt-1 min-h-28 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} />
+              <Textarea className="mt-1 min-h-28 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -1426,7 +1426,7 @@ function SortableItem({ item }: { item: PipelineItem }) {
   
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] hover:border-[#127c66] cursor-grab active:cursor-grabbing mb-2 shadow-sm">
+      <Card className="bg-white border-[rgba(31,42,54,0.08)] hover:border-[#127c66] cursor-grab active:cursor-grabbing mb-2 shadow-sm">
         <CardContent className="p-3">
           <div className="flex items-start justify-between mb-2">
             <h4 className="text-sm font-medium text-black truncate flex-1">{item.title}</h4>
@@ -1470,7 +1470,7 @@ function PipelineStageColumn({
       ref={setNodeRef}
       className={cn(
         "shrink-0 w-[300px] bg-white rounded-lg border shadow-sm transition-colors",
-        isOver ? "border-[#127c66] bg-[#f4f0e6]" : "border-[rgba(31,42,54,0.08)]"
+        isOver ? "border-[#127c66] bg-[#f1f0ea]" : "border-[rgba(31,42,54,0.08)]"
       )}
     >
       {children}
@@ -1573,7 +1573,7 @@ function PipelineView() {
   )
   
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-[#f6f5f1] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -1581,7 +1581,7 @@ function PipelineView() {
           <p className="text-gray-500">Drag and drop deals through your sales stages</p>
         </div>
         <div className="flex items-center gap-4">
-          <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] px-4 py-2 shadow-sm">
+          <Card className="bg-white border-[rgba(31,42,54,0.08)] px-4 py-2 shadow-sm">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[#127c66]" />
               <span className="text-lg font-semibold text-black">${totalValue.toLocaleString()}</span>
@@ -1614,7 +1614,7 @@ function PipelineView() {
                   >
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-black">{stage.name}</h3>
-                      <Badge variant="secondary" className="bg-[#f4f0e6] text-gray-600">
+                      <Badge variant="secondary" className="bg-[#f1f0ea] text-gray-600">
                         {stage.items.length}
                       </Badge>
                     </div>
@@ -1782,7 +1782,7 @@ function AutomationView() {
   const activeCount = automations.filter((automation) => automation.isActive).length
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-[#f6f5f1] min-h-screen">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-black">AI Automation</h1>
@@ -1803,7 +1803,7 @@ function AutomationView() {
           { title: "Total Automations", value: automations.length, icon: Activity },
           { title: "Runs Logged", value: automations.reduce((total, automation) => total + automation.executionCount, 0), icon: Brain },
         ].map((stat) => (
-          <Card key={stat.title} className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+          <Card key={stat.title} className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-[#18b897]/20 flex items-center justify-center">
@@ -1819,7 +1819,7 @@ function AutomationView() {
         ))}
       </div>
 
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+      <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
         <CardHeader>
           <CardTitle className="text-black">Automation Library</CardTitle>
           <CardDescription>Lead-triggered workflows that run inside your CRM organization.</CardDescription>
@@ -1834,7 +1834,7 @@ function AutomationView() {
           ) : (
             <div className="space-y-3">
               {automations.map((automation) => (
-                <div key={automation.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f4f0e6] p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div key={automation.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f1f0ea] p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-black">{automation.name}</p>
@@ -1865,7 +1865,7 @@ function AutomationView() {
       </Card>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)]">
           <DialogHeader>
             <DialogTitle className="text-black">Create Automation</DialogTitle>
             <DialogDescription>Set a trigger and default action for your team workflow.</DialogDescription>
@@ -1873,16 +1873,16 @@ function AutomationView() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Description</Label>
-              <Textarea className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
+              <Textarea className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Trigger</Label>
               <Select value={form.trigger} onValueChange={(value) => setForm((prev) => ({ ...prev, trigger: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lead_created">Lead created</SelectItem>
                   <SelectItem value="lead_scored">Lead scored</SelectItem>
@@ -1894,7 +1894,7 @@ function AutomationView() {
             <div>
               <Label className="text-gray-600">Action type</Label>
               <Select value={form.actionType} onValueChange={(value) => setForm((prev) => ({ ...prev, actionType: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="create_task">Create task</SelectItem>
                   <SelectItem value="send_sms">Send SMS</SelectItem>
@@ -1905,7 +1905,7 @@ function AutomationView() {
             </div>
             <div>
               <Label className="text-gray-600">Action target</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.actionTarget} onChange={(e) => setForm((prev) => ({ ...prev, actionTarget: e.target.value }))} placeholder="Task text, phone, owner email, issue title..." />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={form.actionTarget} onChange={(e) => setForm((prev) => ({ ...prev, actionTarget: e.target.value }))} placeholder="Task text, phone, owner email, issue title..." />
             </div>
           </div>
           <DialogFooter>
@@ -2245,7 +2245,7 @@ function SocialMediaView() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-[#f6f5f1] min-h-screen">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-black">Social Media</h1>
@@ -2270,7 +2270,7 @@ function SocialMediaView() {
             whileTap={{ scale: 0.99 }}
             type="button"
             onClick={() => applyCampaignPack(pack)}
-            className="text-left p-4 bg-[#fcfcfc] border border-[rgba(31,42,54,0.08)] rounded-xl shadow-sm hover:shadow-md transition-shadow"
+            className="text-left p-4 bg-white border border-[rgba(31,42,54,0.08)] rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
             <p className="text-sm font-semibold text-black">{pack.label}</p>
             <p className="text-xs text-gray-500 mt-1">{pack.topic}</p>
@@ -2279,7 +2279,7 @@ function SocialMediaView() {
         ))}
       </div>
 
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+      <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -2300,7 +2300,7 @@ function SocialMediaView() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {socialAccounts.map((account) => (
-                <div key={account.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f4f0e6] p-4 space-y-3">
+                <div key={account.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f1f0ea] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-black capitalize">{account.platform}</p>
@@ -2328,7 +2328,7 @@ function SocialMediaView() {
       </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-1">
+        <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-black text-lg">Manual Composer</CardTitle>
             <CardDescription>Create, draft, and schedule premium brand posts.</CardDescription>
@@ -2337,7 +2337,7 @@ function SocialMediaView() {
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={composerPlatform} onValueChange={setComposerPlatform}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter/X</SelectItem>
@@ -2348,15 +2348,15 @@ function SocialMediaView() {
             </div>
             <div>
               <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerTitle} onChange={(e) => setComposerTitle(e.target.value)} placeholder="Post title (optional)" />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={composerTitle} onChange={(e) => setComposerTitle(e.target.value)} placeholder="Post title (optional)" />
             </div>
             <div>
               <Label className="text-gray-600">Post content</Label>
-              <Textarea className="mt-1 min-h-28 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerContent} onChange={(e) => setComposerContent(e.target.value)} placeholder="Write a high-converting post..." />
+              <Textarea className="mt-1 min-h-28 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={composerContent} onChange={(e) => setComposerContent(e.target.value)} placeholder="Write a high-converting post..." />
             </div>
             <div>
               <Label className="text-gray-600">Schedule (optional)</Label>
-              <Input type="datetime-local" className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerScheduleAt} onChange={(e) => setComposerScheduleAt(e.target.value)} />
+              <Input type="datetime-local" className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={composerScheduleAt} onChange={(e) => setComposerScheduleAt(e.target.value)} />
             </div>
             <div className="flex gap-2">
               <Button
@@ -2378,7 +2378,7 @@ function SocialMediaView() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-2">
+        <Card className="bg-white border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -2386,7 +2386,7 @@ function SocialMediaView() {
                 <CardDescription>Manage drafts, scheduled posts, and published content.</CardDescription>
               </div>
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-[180px] bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px] bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All platforms</SelectItem>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
@@ -2410,7 +2410,7 @@ function SocialMediaView() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ y: -1 }}
-                className="p-4 bg-[#f4f0e6] border border-[rgba(31,42,54,0.08)] rounded-lg"
+                className="p-4 bg-[#f1f0ea] border border-[rgba(31,42,54,0.08)] rounded-lg"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -2456,7 +2456,7 @@ function SocialMediaView() {
       </div>
 
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)] max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-black flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#127c66]" />Generate Social Content</DialogTitle>
             <DialogDescription>Create premium content with AI and save directly to queue.</DialogDescription>
@@ -2464,12 +2464,12 @@ function SocialMediaView() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-3">
               <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
             </div>
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={platform} onValueChange={setPlatform}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter/X</SelectItem>
@@ -2481,7 +2481,7 @@ function SocialMediaView() {
             <div>
               <Label className="text-gray-600">Tone</Label>
               <Select value={tone} onValueChange={setTone}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="professional">Professional</SelectItem>
                   <SelectItem value="authoritative">Authoritative</SelectItem>
@@ -2500,11 +2500,11 @@ function SocialMediaView() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Generated title</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={generatedTitle} onChange={(e) => setGeneratedTitle(e.target.value)} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={generatedTitle} onChange={(e) => setGeneratedTitle(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">Generated content</Label>
-              <Textarea className="mt-1 min-h-32 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={generatedContent} onChange={(e) => setGeneratedContent(e.target.value)} />
+              <Textarea className="mt-1 min-h-32 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={generatedContent} onChange={(e) => setGeneratedContent(e.target.value)} />
             </div>
             <div className="flex flex-wrap gap-2">
               {generatedHashtags.map((h) => (
@@ -2534,7 +2534,7 @@ function SocialMediaView() {
       </Dialog>
 
       <Dialog open={showMediaDialog} onOpenChange={setShowMediaDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-xl">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)] max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-black flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[#127c66]" />Generate Media Prompt</DialogTitle>
             <DialogDescription>Create image prompts and caption/CTA for high-performing visuals.</DialogDescription>
@@ -2542,12 +2542,12 @@ function SocialMediaView() {
           <div className="space-y-3">
             <div>
               <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
             </div>
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={mediaPlatform} onValueChange={setMediaPlatform}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="instagram">Instagram</SelectItem>
@@ -2561,15 +2561,15 @@ function SocialMediaView() {
             </Button>
             <div>
               <Label className="text-gray-600">Image prompt</Label>
-              <Textarea className="mt-1 min-h-24 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaPrompt} onChange={(e) => setMediaPrompt(e.target.value)} />
+              <Textarea className="mt-1 min-h-24 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={mediaPrompt} onChange={(e) => setMediaPrompt(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">Caption</Label>
-              <Textarea className="mt-1 min-h-16 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaCaption} onChange={(e) => setMediaCaption(e.target.value)} />
+              <Textarea className="mt-1 min-h-16 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={mediaCaption} onChange={(e) => setMediaCaption(e.target.value)} />
             </div>
             <div>
               <Label className="text-gray-600">CTA</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaCta} onChange={(e) => setMediaCta(e.target.value)} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={mediaCta} onChange={(e) => setMediaCta(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -2591,7 +2591,7 @@ function SocialMediaView() {
       </Dialog>
 
       <Dialog open={showSocialAccountDialog} onOpenChange={setShowSocialAccountDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <DialogContent className="bg-white border-[rgba(31,42,54,0.08)]">
           <DialogHeader>
             <DialogTitle className="text-black">Connect Social Account</DialogTitle>
             <DialogDescription>Store the platform account details this workspace should publish through.</DialogDescription>
@@ -2600,7 +2600,7 @@ function SocialMediaView() {
             <div>
               <Label className="text-gray-600">Platform</Label>
               <Select value={socialForm.platform} onValueChange={(value) => setSocialForm((prev) => ({ ...prev, platform: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter / X</SelectItem>
@@ -2611,15 +2611,15 @@ function SocialMediaView() {
             </div>
             <div>
               <Label className="text-gray-600">Account ID / page ID</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={socialForm.accountId} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountId: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={socialForm.accountId} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountId: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Display name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={socialForm.accountName} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountName: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" value={socialForm.accountName} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountName: e.target.value }))} />
             </div>
             <div>
               <Label className="text-gray-600">Access token</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="password" value={socialForm.accessToken} onChange={(e) => setSocialForm((prev) => ({ ...prev, accessToken: e.target.value }))} />
+              <Input className="mt-1 bg-[#f1f0ea] border-[rgba(31,42,54,0.08)]" type="password" value={socialForm.accessToken} onChange={(e) => setSocialForm((prev) => ({ ...prev, accessToken: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
@@ -2701,7 +2701,7 @@ export default function EliteCRM() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#fcf8ec] flex items-center justify-center text-gray-500">
+      <div className="min-h-screen bg-[#f6f5f1] flex items-center justify-center text-gray-500">
         <RefreshCw className="w-5 h-5 animate-spin mr-2" />
         Loading workspace…
       </div>

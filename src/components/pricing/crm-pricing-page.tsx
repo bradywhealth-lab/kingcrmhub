@@ -279,7 +279,7 @@ export function CrmPricingPage() {
                     </span>
                   </div>
                 )}
-                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#18b897]" : "bg-[#f4f0e6]"}`}>
+                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#18b897]" : "bg-[#f1f0ea]"}`}>
                   <Icon className={`h-5 w-5 ${plan.popular ? "text-[var(--ink)]" : "text-[#127c66]"}`} />
                 </div>
                 <h3 className="text-lg font-bold text-[#0c111b]">{plan.name}</h3>
@@ -339,7 +339,7 @@ export function CrmPricingPage() {
         <div className="overflow-hidden rounded-3xl border border-[var(--ink-line)] bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--ink-line)] bg-[#f4f0e6]">
+              <tr className="border-b border-[var(--ink-line)] bg-[#f1f0ea]">
                 <th className="py-4 pl-6 text-left font-semibold text-[#545961]">Feature</th>
                 {PLANS.map((p) => (
                   <th key={p.id} className={`py-4 text-center font-bold ${p.popular ? "text-[#127c66]" : "text-[#0c111b]"}`}>
@@ -350,7 +350,7 @@ export function CrmPricingPage() {
             </thead>
             <tbody>
               {COMPARE_FEATURES.map((feature, i) => (
-                <tr key={feature} className={i % 2 === 0 ? "bg-white" : "bg-[#f4f0e6]"}>
+                <tr key={feature} className={i % 2 === 0 ? "bg-white" : "bg-[#f1f0ea]"}>
                   <td className="py-3.5 pl-6 text-[#0c111b]">{feature}</td>
                   {(["free", "starter", "pro", "enterprise"] as PlanId[]).map((planId) => {
                     const val = FEATURE_MAP[planId][i];
@@ -391,7 +391,7 @@ export function CrmPricingPage() {
             <div key={i} className="overflow-hidden rounded-2xl border border-[var(--ink-line)] bg-white">
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-semibold text-[#0c111b] hover:bg-[#f4f0e6]"
+                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-semibold text-[#0c111b] hover:bg-[#f1f0ea]"
               >
                 {item.q}
                 <ChevronDown className={`h-4 w-4 shrink-0 text-[#545961] transition-transform ${openFaq === i ? "rotate-180" : ""}`} />

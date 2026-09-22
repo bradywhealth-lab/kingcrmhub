@@ -111,7 +111,7 @@ export function WorkspaceOverlays({
                 disabled={uploading}
               />
             </div>
-            <div className="space-y-2 rounded-lg bg-[#f4f0e6] p-4">
+            <div className="space-y-2 rounded-lg bg-[#f1f0ea] p-4">
               <h4 className="text-sm font-medium text-black">CSV Format Requirements:</h4>
               <ul className="space-y-1 text-xs text-gray-600">
                 <li>• First row must contain headers</li>
@@ -145,7 +145,7 @@ export function WorkspaceOverlays({
             <div>
               <Label className="text-gray-600">Target URL</Label>
               <Input
-                className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"
+                className="mt-1 border-[var(--ink-line)] bg-[#f1f0ea]"
                 placeholder="https://example.com/directory"
                 value={scrapeForm.url}
                 onChange={(event) => setScrapeForm((current) => ({ ...current, url: event.target.value }))}
@@ -155,7 +155,7 @@ export function WorkspaceOverlays({
               <div>
                 <Label className="text-gray-600">Type</Label>
                 <Select value={scrapeForm.type} onValueChange={(value) => setScrapeForm((current) => ({ ...current, type: value }))}>
-                  <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f1f0ea]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="website">Website</SelectItem>
                     <SelectItem value="directory">Directory</SelectItem>
@@ -169,26 +169,26 @@ export function WorkspaceOverlays({
                   type="number"
                   min={1}
                   max={100}
-                  className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"
+                  className="mt-1 border-[var(--ink-line)] bg-[#f1f0ea]"
                   value={scrapeForm.maxPages}
                   onChange={(event) => setScrapeForm((current) => ({ ...current, maxPages: Number(event.target.value) || 15 }))}
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-gray-600">Options</Label>
-                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f4f0e6] p-2">
+                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f1f0ea] p-2">
                   <span className="text-xs text-gray-600">Follow links</span>
                   <Switch checked={scrapeForm.followLinks} onCheckedChange={(value) => setScrapeForm((current) => ({ ...current, followLinks: value }))} />
                 </div>
-                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f4f0e6] p-2">
+                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f1f0ea] p-2">
                   <span className="text-xs text-gray-600">Use headless/JS</span>
                   <Switch checked={scrapeForm.useHeadless} onCheckedChange={(value) => setScrapeForm((current) => ({ ...current, useHeadless: value }))} />
                 </div>
-                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f4f0e6] p-2">
+                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f1f0ea] p-2">
                   <span className="text-xs text-gray-600">Rotate user agent</span>
                   <Switch checked={scrapeForm.rotateUserAgent} onCheckedChange={(value) => setScrapeForm((current) => ({ ...current, rotateUserAgent: value }))} />
                 </div>
-                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f4f0e6] p-2">
+                <div className="flex items-center justify-between rounded border border-[var(--ink-line)] bg-[#f1f0ea] p-2">
                   <span className="text-xs text-gray-600">Respect robots.txt</span>
                   <Switch checked={scrapeForm.respectRobots} onCheckedChange={(value) => setScrapeForm((current) => ({ ...current, respectRobots: value }))} />
                 </div>
@@ -201,13 +201,13 @@ export function WorkspaceOverlays({
                   type="number"
                   min={0}
                   max={10000}
-                  className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"
+                  className="mt-1 border-[var(--ink-line)] bg-[#f1f0ea]"
                   value={scrapeForm.delayMs}
                   onChange={(event) => setScrapeForm((current) => ({ ...current, delayMs: Number(event.target.value) || 0 }))}
                 />
               </div>
               <div className="flex items-end">
-                <div className="flex w-full items-center justify-between rounded border border-[var(--ink-line)] bg-[#f4f0e6] p-2">
+                <div className="flex w-full items-center justify-between rounded border border-[var(--ink-line)] bg-[#f1f0ea] p-2">
                   <span className="text-xs text-gray-600">Enable proxy provider</span>
                   <Switch checked={scrapeForm.proxyEnabled} onCheckedChange={(value) => setScrapeForm((current) => ({ ...current, proxyEnabled: value }))} />
                 </div>
@@ -215,7 +215,7 @@ export function WorkspaceOverlays({
               <div>
                 <Label className="text-gray-600">Proxy provider</Label>
                 <Select value={scrapeForm.proxyProvider} onValueChange={(value) => setScrapeForm((current) => ({ ...current, proxyProvider: value }))}>
-                  <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 border-[var(--ink-line)] bg-[#f1f0ea]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     <SelectItem value="scrapingbee">ScrapingBee</SelectItem>
@@ -228,7 +228,7 @@ export function WorkspaceOverlays({
               <div>
                 <Label className="text-gray-600">Proxy template URL</Label>
                 <Input
-                  className="mt-1 border-[var(--ink-line)] bg-[#f4f0e6]"
+                  className="mt-1 border-[var(--ink-line)] bg-[#f1f0ea]"
                   placeholder="https://my-proxy.example.com?url={url}"
                   value={scrapeForm.proxyUrlTemplate}
                   onChange={(event) => setScrapeForm((current) => ({ ...current, proxyUrlTemplate: event.target.value }))}
@@ -250,7 +250,7 @@ export function WorkspaceOverlays({
                 {scrapeJobs.length === 0 ? (
                   <p className="text-xs text-gray-500">No jobs yet.</p>
                 ) : scrapeJobs.map((job) => (
-                  <div key={job.id} className="flex items-center justify-between gap-3 rounded border border-[var(--ink-line)] bg-[#f4f0e6] p-2">
+                  <div key={job.id} className="flex items-center justify-between gap-3 rounded border border-[var(--ink-line)] bg-[#f1f0ea] p-2">
                     <div className="min-w-0">
                       <p className="truncate text-xs text-black">{job.sourceUrl}</p>
                       <p className="text-[11px] text-gray-500">{new Date(job.createdAt).toLocaleString()}</p>

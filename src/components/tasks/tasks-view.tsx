@@ -561,7 +561,7 @@ export function TasksView({
               key={col.key}
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
               onDrop={(e) => { e.preventDefault(); const taskId = e.dataTransfer.getData('text/plain'); if (taskId) handleMoveTask(taskId, col.key) }}
-              className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4 min-h-[120px]">
+              className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#f6f5f1]/60 p-4 min-h-[120px]">
                 <div className="mb-3 flex items-center justify-between">
                   <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
                     {col.label}
