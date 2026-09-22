@@ -14,6 +14,10 @@ CONTAINER="${KINGCRM_CONTAINER:-kingcrmhub}"
 ROLLBACK_IMAGE="kingcrmhub-rollback:$(date +%Y%m%d%H%M%S)-$$"
 SERVICE_IMAGE_REF=""
 ROLLBACK_ARMED=0
+# External-artifact rollback state (set when the static phase begins). Must
+# be initialized at top level because restore_old may be called earlier
+# (e.g. NEW_HEALTH_FAIL) under `set -u`.
+STATIC_PHASE_DONE=0
 DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-${DEPLOY_ROOT}/kingcrmhub-deploy.lock}"
 
 # Serialize deployments: only one deploy process may hold this lock.
@@ -89,6 +93,20 @@ restore_old() {
   fi
   container_get "$CONTAINER" /api/ready
   echo
+  # External artifacts (static volume + Caddy config) are NOT rolled back by
+  # the image swap. restore_old is called from the static sync phase onward;
+  # restore the pre-sync snapshot and reload the previous Caddy config so a
+  # failed deploy never serves a mixed deployment (cubic P1).
+  if [[ "$STATIC_PHASE_DONE" == "1" ]]; then
+    if [[ -d "$STATIC_BACKUP_DIR" ]]; then
+      find "$STATIC_DST_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+      cp -R "$STATIC_BACKUP_DIR"/. "$STATIC_DST_DIR"/
+    fi
+    if [[ -f "$CADDY_CONFIG_BACKUP" ]]; then
+      cp -f "$CADDY_CONFIG_BACKUP" "$DEPLOY_ROOT/Caddyfile.apps"
+      docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || true
+    fi
+  fi
   echo "ROLLED_BACK_TO_ORIGINAL"
 }
 
@@ -151,6 +169,91 @@ if ! wait_for_health "$CONTAINER"; then
   restore_old
   exit 1
 fi
+
+echo "=== SYNC STATIC /books SITE (reproducible from repo deploy/static) ==="
+STATIC_SRC_DIR="${STATIC_SRC_DIR:-${REPO_DIR}/deploy/static/bradys-books}"
+STATIC_DST_DIR="${STATIC_DST_DIR:-/var/lib/docker/volumes/deployer_caddy-data/_data/sites/bradys-books}"
+# Snapshot pre-sync state so rollback can restore external artifacts;
+# otherwise a failed later gate would report ROLLED_BACK_TO_ORIGINAL while
+# serving a mixed deployment (cubic P1).
+STATIC_BACKUP_DIR="${STATIC_DST_DIR}.bak-$$"
+CADDY_CONFIG_BACKUP="${DEPLOY_ROOT}/Caddyfile.apps.bak-$$"
+if [[ -d "$STATIC_DST_DIR" ]]; then
+  cp -R "$STATIC_DST_DIR" "$STATIC_BACKUP_DIR" 2>/dev/null || true
+fi
+if [[ -f "$DEPLOY_ROOT/Caddyfile.apps" ]]; then
+  cp -f "$DEPLOY_ROOT/Caddyfile.apps" "$CADDY_CONFIG_BACKUP" 2>/dev/null || true
+fi
+if [[ ! -d "$STATIC_SRC_DIR" ]]; then
+  echo "STATIC_SRC_MISSING: $STATIC_SRC_DIR" >&2
+  restore_old
+  exit 1
+fi
+mkdir -p "$STATIC_DST_DIR"
+# Reproducible volume: clear destination before copying so files removed
+# from the repo never linger as stale volume extras (cubic P2). Only ever
+# touches the dedicated /books static volume.
+find "$STATIC_DST_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+cp -R "$STATIC_SRC_DIR"/. "$STATIC_DST_DIR"/
+# Derive the asset set from the source tree instead of a hand-maintained
+# allowlist. Allowlists drifted (cover images shipped in index.html without
+# ever being synced or verified) and hid missing vendored assets behind a
+# fake STATIC_*_OK. Recursively enumerate regular files so nested asset dirs
+# sync and verify too (cubic P2); fail closed on an empty source dir, and any
+# future file added to deploy/static/bradys-books is automatically synced.
+STATIC_FILES=()
+while IFS= read -r -d '' _static_src; do
+  _static_rel="${_static_src#"$STATIC_SRC_DIR"/}"
+  STATIC_FILES+=("$_static_rel")
+done < <(find "$STATIC_SRC_DIR" -type f -print0)
+if [[ ${#STATIC_FILES[@]} -eq 0 ]]; then
+  echo "STATIC_SRC_EMPTY: $STATIC_SRC_DIR" >&2
+  restore_old
+  exit 1
+fi
+for asset in "${STATIC_FILES[@]}"; do
+  if [[ ! -f "$STATIC_DST_DIR/$asset" ]]; then
+    echo "STATIC_SYNC_MISSING: $asset" >&2
+    restore_old
+    exit 1
+  fi
+done
+echo "STATIC_SYNC_OK"
+STATIC_PHASE_DONE=1
+
+echo "=== SYNC CADDY CONFIG (repo deploy/Caddyfile.apps is source of truth) ==="
+cp "$REPO_DIR/deploy/Caddyfile.apps" "$DEPLOY_ROOT/Caddyfile.apps"
+echo "CADDY_CONFIG_SYNC_OK"
+
+echo "=== CADDY VALIDATE + RELOAD (non-disruptive) ==="
+if ! docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+  echo "CADDY_VALIDATE_FAIL" >&2
+  restore_old
+  exit 1
+fi
+echo "CADDY_VALIDATE_OK"
+# Reload failure must fail the deploy too — a config that validates but fails
+# to reload would silently leave the old config active (cubic P2).
+if ! docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+  echo "CADDY_RELOAD_FAIL" >&2
+  restore_old
+  exit 1
+fi
+echo "CADDY_RELOAD_OK"
+
+echo "=== VERIFY /books STATIC ASSETS PUBLIC 200 ==="
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://kingcrmhub.net}"
+# Bound the public probe: a stalled endpoint must fail closed, not hang the
+# deploy (cubic P2).
+for asset in "${STATIC_FILES[@]}"; do
+  HTTP_CODE="$(curl --connect-timeout 5 --max-time 15 -s -o /dev/null -w '%{http_code}' "$PUBLIC_BASE_URL/books/$asset" || true)"
+  if [[ "$HTTP_CODE" != "200" ]]; then
+    echo "STATIC_VERIFY_FAIL: /books/$asset -> $HTTP_CODE" >&2
+    restore_old
+    exit 1
+  fi
+done
+echo "STATIC_VERIFY_OK"
 
 echo "=== APPLY ALL PENDING MIGRATIONS (idempotent) ==="
 # prisma migrate deploy applies every pending migration tracked in

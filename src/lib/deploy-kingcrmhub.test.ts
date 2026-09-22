@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -41,6 +41,9 @@ interface DeployHarnessOptions {
   keepContainerAfterRemove?: boolean
   failMigrateDeploy?: 'P3005' | 'generic'
   failMigrateResolve?: boolean
+  staticSrcDir?: string
+  staticAssetCode?: number
+  failCaddyCmd?: 'validate' | 'reload'
 }
 
 interface DeployHarness {
@@ -48,6 +51,7 @@ interface DeployHarness {
   env: Record<string, string>
   lockFile: string
   root: string
+  curlLog: string
 }
 
 /**
@@ -62,6 +66,9 @@ function createDeployHarness({
   keepContainerAfterRemove = false,
   failMigrateDeploy,
   failMigrateResolve = false,
+  staticSrcDir,
+  staticAssetCode = 200,
+  failCaddyCmd,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -73,6 +80,39 @@ function createDeployHarness({
   const lockFile = join(root, 'deploy.lock')
   mkdirSync(binDir)
   mkdirSync(join(repoDir, '.git'), { recursive: true })
+  // The deploy script reads the static /books site from repo deploy/static;
+  // unit-test harness must provide the same 9 files the script verifies
+  // (index + 8 assets — covers included: the deploy derives its asset list
+  // from the tree, so a fixture missing a vendored file would mask drift).
+  const staticDir = staticSrcDir ?? join(repoDir, 'deploy', 'static', 'bradys-books')
+  mkdirSync(staticDir, { recursive: true })
+  // The deploy script copies deploy/Caddyfile.apps onto the host as the
+  // Caddy source of truth; the harness must ship the vendored config.
+  const caddyDeployDir = join(repoDir, 'deploy')
+  mkdirSync(caddyDeployDir, { recursive: true })
+  writeFileSync(join(caddyDeployDir, 'Caddyfile.apps'), 'kingcrmhub.net { handle_path /books* { root * /data/sites/bradys-books file_server } }\n')
+  const staticFiles = [
+    'index.html',
+    'planner_cover.jpg',
+    'planner_page.jpg',
+    'book1_cover.jpg',
+    'book2_cover.jpg',
+    'sample_p013.jpg',
+    'sample_p041.jpg',
+    'sample_p083.jpg',
+    'Big_Lines_Sample_Pack_FREE_3pages.pdf',
+  ]
+  for (const asset of staticFiles) {
+    writeFileSync(join(staticDir, asset), 'book-asset')
+  }
+  // Seed pre-existing external artifacts so the rollback restore paths are
+  // observable (cubic P1): a stale volume file + live Caddy config that a
+  // post-swap failure must restore. STATIC_DST_DIR in the deploy script
+  // defaults to join(root, 'sites', 'bradys-books') in the harness env.
+  const seedStaticDst = join(root, 'sites', 'bradys-books')
+  mkdirSync(seedStaticDst, { recursive: true })
+  writeFileSync(join(seedStaticDst, 'stale_extras.txt'), 'stale')
+  writeFileSync(join(root, 'Caddyfile.apps'), 'old-caddy-config\n')
   mkdirSync(join(repoDir, 'prisma/migrations/20260320_enable_pgvector'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260426_add_onboarding_fields'), { recursive: true })
   mkdirSync(join(repoDir, 'prisma/migrations/20260909_rename_carrier_to_service_package'), { recursive: true })
@@ -95,6 +135,19 @@ exit 0
   writeExecutable(
     join(binDir, 'sleep'),
     `#!/usr/bin/env bash
+exit 0
+`,
+  )
+
+  // curl is used only for the post-swap /books asset verification. Real
+  // network in unit tests is forbidden: the shim emits the configured code
+  // and records every requested URL so tests prove all assets are checked,
+  // not just that the last one returned 200 (cubic P3).
+  writeExecutable(
+    join(binDir, 'curl'),
+    `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$CURL_LOG"
+printf '%s' "\${STATIC_ASSET_CODE:-200}"
 exit 0
 `,
   )
@@ -175,6 +228,20 @@ if [[ "$args" == *" --format {{.Config.Image}} kingcrmhub "* ]]; then
   printf 'deployer-kingcrmhub'
   exit 0
 fi
+if [[ "$args" == *" caddy validate "* ]]; then
+  if [[ "$FAIL_CADDY_CMD" == "validate" ]]; then
+    echo "Caddy validate failed" >&2
+    exit 1
+  fi
+  exit 0
+fi
+if [[ "$args" == *" caddy reload "* ]]; then
+  if [[ "$FAIL_CADDY_CMD" == "reload" ]]; then
+    echo "Caddy reload failed" >&2
+    exit 1
+  fi
+  exit 0
+fi
 if [[ "$1" == "exec" ]]; then
   request_path="${'${@: -1}'}"
   case "$request_path" in
@@ -200,12 +267,20 @@ exit 0
     FAIL_MIGRATE_RESOLVE: failMigrateResolve ? '1' : '0',
     PATH: `${binDir}:${process.env.PATH ?? ''}`,
     REPO_DIR: repoDir,
+    STATIC_SRC_DIR: staticDir,
+    STATIC_DST_DIR: join(root, 'sites', 'bradys-books'),
+    STATIC_ASSET_CODE: String(staticAssetCode),
+    // curl URL log: the shim appends every invocation so tests can prove each
+    // /books asset path is actually probed (cubic P3).
+    CURL_LOG: join(root, 'curl.log'),
+    // caddy shim failure injection: 'validate' or 'reload' (or '' = success).
+    FAIL_CADDY_CMD: failCaddyCmd || '',
   }
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === 'string' && !(key in env)) env[key] = value
   }
 
-  return { deployLog, env, lockFile, root }
+  return { deployLog, env, lockFile, root, curlLog: join(root, 'curl.log') }
 }
 
 /** Execute the deployment script against a fresh mocked harness. */
@@ -216,7 +291,7 @@ function runMockDeploy(options: DeployHarnessOptions = {}) {
     encoding: 'utf8',
     env: harness.env,
   })
-  return { deployLog: harness.deployLog, result }
+  return { deployLog: harness.deployLog, result, curlLog: harness.curlLog, root: harness.root }
 }
 
 describe('KingCRMhub deploy hardening', () => {
@@ -449,5 +524,159 @@ describe('KingCRMhub deploy hardening', () => {
     expect(packageJson.dependencies.dotenv).toBe('^16.6.1')
     expect(prismaConfig).toContain('seed: "npx tsx prisma/seed.ts"')
     expect(prismaConfig).not.toContain('seed: "bun prisma/seed.ts"')
+  })
+
+  it('syncs the vendored /books static site and Caddy config, then verifies all assets 200', deployTimeout, () => {
+    const { deployLog, result, curlLog: curlLogPath } = runMockDeploy()
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status, output).toBe(0)
+    expect(output).toContain('STATIC_SYNC_OK')
+    expect(output).toContain('CADDY_CONFIG_SYNC_OK')
+    expect(output).not.toContain('CADDY_VALIDATE_FAIL')
+    expect(output).toContain('CADDY_RELOAD_OK')
+    expect(output).toContain('STATIC_VERIFY_OK')
+    expect(output).toContain('DEPLOY_V4_DONE')
+
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+    // The caddy reload must happen through docker exec so the unit test
+    // harness can shim it; never a bare host caddy binary.
+    expect(dockerCalls).toContain('exec caddy caddy validate')
+    expect(dockerCalls).toContain('exec caddy caddy reload')
+
+    // Every /books asset must actually be probed by the verify loop, not
+    // just the last one (cubic P3) — the curl shim logs each URL.
+    const curlLog = readFileSync(curlLogPath, 'utf8')
+    for (const asset of [
+      'index.html',
+      'planner_cover.jpg',
+      'planner_page.jpg',
+      'book1_cover.jpg',
+      'book2_cover.jpg',
+      'sample_p013.jpg',
+      'sample_p041.jpg',
+      'sample_p083.jpg',
+      'Big_Lines_Sample_Pack_FREE_3pages.pdf',
+    ]) {
+      expect(curlLog).toContain(`/books/${asset}`)
+    }
+  })
+
+  it('fails the deploy and rolls back when a /books asset verification returns non-200', deployTimeout, () => {
+    const { deployLog, result, root: rootPath } = runMockDeploy({ staticAssetCode: 307 })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('STATIC_VERIFY_FAIL')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+
+    // External artifacts must be restored on rollback so a failed deploy
+    // never serves a mixed deployment (cubic P1): stale volume file restored,
+    // old Caddy config restored + reloaded (reload appears again in rollback,
+    // so the docker log holds 2 reload invocations).
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+    const reloadCount = (dockerCalls.match(/exec caddy caddy reload/g) ?? []).length
+    expect(reloadCount).toBeGreaterThanOrEqual(2)
+    const restoredVol = readFileSync(join(rootPath, 'sites', 'bradys-books', 'stale_extras.txt'), 'utf8')
+    expect(restoredVol).toBe('stale')
+    expect(readFileSync(join(rootPath, 'Caddyfile.apps'), 'utf8')).toBe('old-caddy-config\n')
+  })
+
+  it('fails the deploy and rolls back when Caddy validate fails', deployTimeout, () => {
+    const { result } = runMockDeploy({ failCaddyCmd: 'validate' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('CADDY_VALIDATE_FAIL')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('CADDY_RELOAD_OK')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('fails the deploy and rolls back when Caddy reload fails', deployTimeout, () => {
+    const { result } = runMockDeploy({ failCaddyCmd: 'reload' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('CADDY_VALIDATE_OK')
+    expect(output).toContain('CADDY_RELOAD_FAIL')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('fails the deploy when the vendored static source directory is missing', deployTimeout, () => {
+    const missingDir = join(tmpdir(), 'missing-static-dir-' + Date.now())
+    const harness = createDeployHarness({ staticSrcDir: missingDir })
+    // The harness pre-creates the source dir like the real repo would; the
+    // failure mode happens when a deploy of an old checkout lacks it, so
+    // physically remove it before running the script.
+    rmSync(missingDir, { recursive: true, force: true })
+    const result = spawnSync('bash', [deployScriptPath], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: harness.env as NodeJS.ProcessEnv,
+    })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('STATIC_SRC_MISSING')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('fails the deploy when the vendored static source directory is empty', deployTimeout, () => {
+    const emptyDir = join(tmpdir(), 'empty-static-dir-' + Date.now())
+    tempDirs.push(emptyDir)
+    const harness = createDeployHarness({ staticSrcDir: emptyDir })
+    // Physically empty the source dir so the script fails closed instead of
+    // syncing nothing while reporting STATIC_SYNC_OK.
+    rmSync(emptyDir, { recursive: true, force: true })
+    mkdirSync(emptyDir, { recursive: true })
+    const result = spawnSync('bash', [deployScriptPath], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: harness.env as NodeJS.ProcessEnv,
+    })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('STATIC_SRC_EMPTY')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('vendors every asset the /books index.html references in the deploy tree (drift guard)', deployTimeout, () => {
+    // Regression for cubic P2 on PR #216: index.html referenced
+    // planner_cover.jpg / book1_cover.jpg / book2_cover.jpg but the deploy
+    // tree shipped only 6 files and the hand-maintained STATIC_FILES list
+    // omitted the covers — a fresh Caddy volume 404'd them while the deploy
+    // reported STATIC_*_OK. Every src= / href= file must exist in
+    // deploy/static/bradys-books, and the script must derive its sync list
+    // from the tree rather than a hand-maintained allowlist.
+    const indexHtml = readFileSync(join(repoRoot, 'deploy', 'static', 'bradys-books', 'index.html'), 'utf8')
+    const staticDir = join(repoRoot, 'deploy', 'static', 'bradys-books')
+    const assets = [...indexHtml.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]).filter((ref) => /\.(?:jpg|jpeg|png|pdf)$/i.test(ref))
+    expect(assets.length).toBeGreaterThan(0)
+
+    const onDisk = new Set(readdirSync(staticDir).filter((f) => !f.startsWith('.')))
+    for (const asset of assets) {
+      expect(onDisk.has(asset), `index.html references ${asset} but deploy/static/bradys-books does not contain it`).toBe(true)
+    }
+
+    const script = readDeployScript()
+    expect(script).toContain('find "$STATIC_SRC_DIR" -type f -print0')
+    expect(script).not.toContain('STATIC_FILES=(index.html')
+    expect(script).toContain('STATIC_PHASE_DONE=1')
+    expect(script).toContain('CADDY_CONFIG_BACKUP')
+
+    // Caddy surface pins (cubic P2/P3): HSTS must be on the apex host that
+    // serves the /books static block (www only redirects away), and the
+    // static matcher must not swallow unrelated /booksfoo-style paths.
+    const caddyfile = readFileSync(join(repoRoot, 'deploy', 'Caddyfile.apps'), 'utf8')
+    const apexBlock = /kingcrmhub\.net \{(?:.|\n)*?\n\}/.exec(caddyfile)?.[0] ?? ''
+    const wwwBlock = /www\.kingcrmhub\.net \{(?:.|\n)*?\n\}/.exec(caddyfile)?.[0] ?? ''
+    expect(apexBlock).toContain('Strict-Transport-Security')
+    expect(apexBlock).not.toContain('handle_path /books*')
+    expect(apexBlock).toContain('handle_path /books/*')
+    expect(wwwBlock).not.toContain('Strict-Transport-Security')
   })
 })
