@@ -48,6 +48,15 @@ export default function PublicLandingPage() {
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
             <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
             <Link href="/claim" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Claim</Link>
+            <a
+              href="https://www.amazon.com/dp/B0HJPZX6WG"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+              style={{ color: 'rgba(244,240,230,0.72)' }}
+            >
+              Amazon Planner
+            </a>
             <Link href="/auth" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Log in</Link>
             <Link
               href="/auth?mode=signup"
