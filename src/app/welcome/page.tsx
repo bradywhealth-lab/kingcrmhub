@@ -1,247 +1,187 @@
 import Link from 'next/link'
-import { ArrowRight, ExternalLink, TrendingUp, Wand2, Zap, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, ExternalLink, LayoutGrid, Send, Sparkles } from 'lucide-react'
 import type { Metadata } from 'next'
 
 // `/` is rewritten to this page for visitors; declare `/` as the canonical
 // so the duplicate /welcome URL can't split ranking signals (SEO review fix).
 export const metadata: Metadata = {
   title: {
-    absolute: 'King CRM Hub — The Client Pipeline for One-Person Businesses',
+    absolute: 'King CRM Hub — The Client Command Center for One-Person Businesses',
   },
   description:
-    'See who to follow up with, what to say, and when to send it. Built for freelancers and solo operators, not sales teams.',
+    'Clients, pipeline, work, and money in one calm command center — with follow-ups handled for you. Built for freelancers and solo operators, not sales teams.',
   alternates: { canonical: '/' },
 }
 
-// Locked landing palette (Gate v3): Ink #0C111B, Paper #F4F0E6, Signal Teal #18B897
-// Contrast (machine-verified, WCAG AA normal text):
-//   Paper on Ink 16.60:1 PASS | Ink on Paper 16.60:1 PASS
-//   Teal on Ink   7.50:1 PASS | Ink on Teal   7.50:1 PASS
-//   Teal on Paper 2.21:1 FAIL -> teal NEVER used as text on paper surfaces;
-//   teal is an accent on Ink backgrounds only.
-const INK = '#0C111B'
-const PAPER = '#F4F0E6'
-const TEAL = '#18B897'
+// "Regal" landing palette: white canvas, ink-black chrome, one Cobalt accent.
+const INK = '#0B0B0C'
+const COBALT = '#2F6BFF'
 
-const PROOF_POINTS = [
+const PROOF = [
   'Made for one-person businesses',
-  'Pipeline from first contact → paid',
-  'Automations in every plan, no upsell games',
+  'Pipeline from first hello → paid',
+  'Automations on every plan, no upsell games',
   'Free for AI Prompt Arsenal & Freelancer OS buyers',
+]
+
+const FEATURES = [
+  { icon: LayoutGrid, title: 'One command center', desc: 'Every client, project, and payment tracked from first hello to paid — no spreadsheet chaos.' },
+  { icon: Send, title: 'Follow-ups on autopilot', desc: 'Know who to contact next, what to say, and when — with your own prompts plugged in.' },
+  { icon: Sparkles, title: 'Automations, every plan', desc: 'Sequences, reminders, and workflow rules from day one. No upsell games.' },
 ]
 
 export default function PublicLandingPage() {
   return (
-    <main data-deploy-marker="public-landing-v3" className="min-h-screen px-6 py-10" style={{ background: INK }}>
-      <div
-        className="mx-auto max-w-6xl rounded-[32px] border p-8 md:p-14"
-        style={{ background: INK, borderColor: 'rgba(244,240,230,0.14)' }}
-      >
-        {/* NAV */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
-            style={{ borderColor: `${TEAL}55`, background: `${TEAL}14`, color: TEAL }}
-          >
-            <Wand2 className="h-3.5 w-3.5" /> King CRM Hub
-          </div>
-          <nav aria-label="Primary navigation" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
-            <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
-            <Link href="/claim" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Claim</Link>
-            <a
-              href="https://www.amazon.com/dp/B0HJPZX6WG"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80"
-              style={{ color: 'rgba(244,240,230,0.72)' }}
-            >
-              Amazon Planner <ExternalLink className="ml-1 h-3.5 w-3.5" />
+    <main data-deploy-marker="regal-landing-v1" className="min-h-screen bg-white text-[#0B0B0C]">
+      {/* TOP NAV */}
+      <header className="sticky top-0 z-40 bg-[#0B0B0C] text-white">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-7 px-5 sm:px-8">
+          <span className="font-display text-xl font-extrabold tracking-tight">KING<span style={{ color: COBALT }}>.</span></span>
+          <nav aria-label="Primary" className="ml-2 hidden items-center gap-6 text-sm font-medium text-white/70 md:flex">
+            <Link href="/pricing" className="transition-colors hover:text-white">Pricing</Link>
+            <Link href="/claim" className="transition-colors hover:text-white">Claim</Link>
+            <Link href="/compare" className="transition-colors hover:text-white">Compare</Link>
+            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 transition-colors hover:text-white">
+              Amazon Planner <ExternalLink className="h-3.5 w-3.5" />
             </a>
-            <Link href="/auth" style={{ color: 'rgba(244,240,230,0.72)' }} className="transition-opacity hover:opacity-80">Log in</Link>
-            <Link
-              href="/auth?mode=signup"
-              className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold"
-              style={{ background: TEAL, color: INK }}
-            >
-              Start free <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
           </nav>
-        </div>
-
-        <h1
-          className="mt-6 max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.03em] md:text-6xl"
-          style={{ color: PAPER }}
-        >
-          Run your client pipeline like a one-person agency.
-        </h1>
-
-        <p className="mt-6 max-w-3xl text-lg leading-8" style={{ color: 'rgba(244,240,230,0.72)' }}>
-          See who to follow up with, what to say, and when to send it. Built for freelancers and solo
-          operators, not sales teams.
-        </p>
-
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <Link
-            href="/auth?mode=signup"
-            className="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-semibold"
-            style={{ background: TEAL, color: INK }}
-          >
-            Start free <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-          <Link
-            href="/claim"
-            className="inline-flex items-center rounded-2xl border px-6 py-3 text-sm font-semibold"
-            style={{ borderColor: 'rgba(244,240,230,0.25)', background: 'transparent', color: PAPER }}
-          >
-            Bought the prompts? Claim your free account
-          </Link>
-          <Link
-            href="/pricing"
-            className="inline-flex items-center rounded-2xl border px-6 py-3 text-sm font-semibold"
-            style={{ borderColor: 'rgba(244,240,230,0.25)', background: 'transparent', color: PAPER }}
-          >
-            View pricing
-          </Link>
-        </div>
-        <p className="mt-4 max-w-3xl text-sm font-medium" style={{ color: 'rgba(244,240,230,0.62)' }}>
-          No per-seat fees. Automations included on every plan.
-        </p>
-
-        {/* PROOF STRIP */}
-        <div
-          className="mt-12 rounded-3xl border p-6 md:p-8"
-          style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}
-        >
-          <p className="text-base font-semibold" style={{ color: PAPER }}>
-            Built for people who sell their own work.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            {PROOF_POINTS.map((point) => (
-              <div
-                key={point}
-                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium"
-                style={{ borderColor: 'rgba(244,240,230,0.16)', background: 'rgba(244,240,230,0.05)', color: PAPER }}
-              >
-                <CheckCircle2 className="h-4 w-4" style={{ color: TEAL }} />
-                {point}
-              </div>
-            ))}
+          <div className="ml-auto flex items-center gap-4">
+            <Link href="/auth" className="text-sm font-semibold text-white/80 transition-colors hover:text-white">Log in</Link>
+            <Link href="/auth?mode=signup" className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold" style={{ background: COBALT, color: '#fff' }}>
+              Start free <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-          <p className="mt-5 text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
-            New product. Early freelancers get founder pricing and a direct line to Brady.
-          </p>
         </div>
+      </header>
 
-        {/* FEATURE CARDS */}
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {[
-            { icon: TrendingUp, title: 'Client pipeline command center', desc: 'Every client and project tracked from first contact to paid — no spreadsheet chaos.' },
-            { icon: Wand2, title: 'Follow-up guidance', desc: 'Know who to contact next, what to say, and when to send it — with your own prompts plugged in.' },
-            { icon: Zap, title: 'Automations in every plan', desc: 'Sequences, reminders, and workflow rules included from day one. No upsell games.' },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="rounded-3xl border p-5"
-              style={{ borderColor: 'rgba(244,240,230,0.12)', background: 'rgba(244,240,230,0.05)' }}
-            >
-              <div
-                className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl"
-                style={{ background: `${TEAL}22`, color: TEAL }}
-              >
-                <item.icon className="h-5 w-5" />
+      {/* HERO */}
+      <section className="mx-auto max-w-4xl px-5 pt-16 pb-6 text-center sm:px-8 sm:pt-20">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[#0B0B0C]/12 px-4 py-2 text-[13px] font-semibold text-[#0B0B0C]/60">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: COBALT }} /> The client OS for one-person businesses
+        </span>
+        <h1 className="font-display mx-auto mt-6 max-w-3xl text-5xl font-bold leading-[1.03] tracking-[-0.03em] sm:text-6xl">
+          Run your whole business from{' '}
+          <span className="relative whitespace-nowrap">
+            one calm
+            <span className="absolute inset-x-0 bottom-1.5 -z-0 h-3.5 rounded-sm" style={{ background: COBALT, opacity: 0.28 }} />
+          </span>{' '}
+          command center.
+        </h1>
+        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#0B0B0C]/60">
+          Clients, pipeline, work, and money — with the follow-ups handled for you. Built for freelancers and solo operators, not sales teams.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link href="/auth?mode=signup" className="inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-[15px] font-bold" style={{ background: COBALT, color: '#fff' }}>
+            Start free <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link href="/claim" className="inline-flex items-center rounded-xl border border-[#0B0B0C]/15 bg-white px-6 py-3.5 text-[15px] font-bold text-[#0B0B0C]">
+            Bought the prompts? Claim free
+          </Link>
+        </div>
+        <p className="mt-5 text-[13px] font-semibold text-[#0B0B0C]/45">No per-seat fees · Automations on every plan · Free for prompt-pack owners</p>
+      </section>
+
+      {/* PRODUCT PREVIEW */}
+      <section className="mx-auto mt-10 max-w-5xl px-5 sm:px-8">
+        <div className="overflow-hidden rounded-2xl border border-[#0B0B0C]/10 bg-white shadow-[0_40px_90px_rgba(11,11,12,0.14)]">
+          <div className="flex h-11 items-center gap-2 bg-[#0B0B0C] px-4">
+            <span className="flex gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-white/25" /><i className="h-2.5 w-2.5 rounded-full bg-white/25" /><i className="h-2.5 w-2.5 rounded-full bg-white/25" /></span>
+            <span className="ml-3 font-mono text-xs text-white/50">app.kingcrmhub.net/home</span>
+          </div>
+          <div className="grid grid-cols-[180px_1fr] max-sm:grid-cols-1">
+            <div className="border-r border-[#0B0B0C]/8 bg-[#F6F6F4] p-4 max-sm:hidden">
+              {['Overview', "Today's plays", 'Follow-ups', 'Invoices'].map((n, i) => (
+                <div key={n} className={`mb-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold ${i === 0 ? 'border border-[#0B0B0C]/10 bg-white text-[#0B0B0C]' : 'text-[#0B0B0C]/55'}`}>{n}</div>
+              ))}
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2">
+                {[['Clients', '5'], ['Pipeline', '$300k'], ['Score', '82'], ['Due', '7']].map(([l, v], i) => (
+                  <div key={l} className={`rounded-xl border p-3 ${i === 1 ? 'border-[color:var(--x)] bg-[#2F6BFF]/8' : 'border-[#0B0B0C]/10'}`} style={i === 1 ? { borderColor: COBALT } : undefined}>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#0B0B0C]/45">{l}</div>
+                    <div className="font-display mt-1 text-2xl font-bold">{v}</div>
+                  </div>
+                ))}
               </div>
-              <p className="text-lg font-semibold" style={{ color: PAPER }}>{item.title}</p>
-              <p className="mt-2 text-sm leading-6" style={{ color: 'rgba(244,240,230,0.62)' }}>{item.desc}</p>
+              <div className="mt-4 overflow-hidden rounded-xl border border-[#0B0B0C]/10">
+                {[['Emily Davis — send pricing', 'Proposal', '$75,000'], ['Alex Chen — book call', 'Qualified', '$50,000'], ['Lisa Anderson — qualify budget', 'New', '$30,000']].map((r, i) => (
+                  <div key={r[0]} className={`flex items-center gap-3 px-4 py-3 text-[13px] ${i > 0 ? 'border-t border-[#0B0B0C]/8' : ''}`}>
+                    <span className="flex-1 font-medium text-[#0B0B0C]">{r[0]}</span>
+                    <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: 'rgba(47,107,255,0.12)', color: '#1E4FCC' }}>{r[1]}</span>
+                    <span className="font-mono font-semibold">{r[2]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PROOF STRIP */}
+      <section className="mx-auto mt-14 max-w-5xl px-5 sm:px-8">
+        <div className="flex flex-wrap gap-2.5">
+          {PROOF.map((p) => (
+            <span key={p} className="inline-flex items-center gap-2 rounded-full border border-[#0B0B0C]/10 bg-[#F6F6F4] px-4 py-2 text-sm font-medium text-[#0B0B0C]/75">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: COBALT }} /> {p}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section className="mx-auto mt-12 grid max-w-5xl gap-5 px-5 sm:px-8 md:grid-cols-3">
+        {FEATURES.map((f) => (
+          <div key={f.title} className="rounded-2xl border border-[#0B0B0C]/10 p-6">
+            <div className="grid h-11 w-11 place-items-center rounded-xl" style={{ background: INK, color: COBALT }}>
+              <f.icon className="h-5 w-5" />
+            </div>
+            <h3 className="font-display mt-4 text-xl font-semibold">{f.title}</h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-[#0B0B0C]/60">{f.desc}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* METRICS BAND */}
+      <section className="mt-16 bg-[#0B0B0C] px-5 py-14 text-white sm:px-8">
+        <div className="mx-auto grid max-w-4xl gap-8 text-center md:grid-cols-3">
+          {[['3.2×', 'faster follow-ups'], ['$0', 'per-seat fees, ever'], ['1', 'calm place for everything']].map(([n, l]) => (
+            <div key={l}>
+              <div className="font-display text-5xl font-extrabold" style={{ color: COBALT }}>{n}</div>
+              <div className="mt-2 text-[15px] text-white/65">{l}</div>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* SEE THE WORKSPACE — real product screenshots only (no mockups rule).
-            Images are actual captures of the built UI: pipeline kanban, lead
-            detail with AI follow-up guidance, and automation rules. */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-semibold tracking-[-0.02em]" style={{ color: PAPER }}>
-            See the workspace
-          </h2>
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
-            {[
-              {
-                caption: 'Client pipeline command center',
-                alt: 'King CRM Hub pipeline view for freelancers',
-                src: '/screenshots/pipeline.png',
-              },
-              {
-                caption: 'Follow-up guidance',
-                alt: 'Follow-up guidance with custom AI prompts',
-                src: '/screenshots/follow-up-guidance.png',
-              },
-              {
-                caption: 'Automations from day one',
-                alt: 'Automation rules included on every plan',
-                src: '/screenshots/automations.png',
-              },
-            ].map((shot) => (
-              <figure key={shot.src} className="rounded-3xl border overflow-hidden" style={{ borderColor: 'rgba(244,240,230,0.14)' }}>
-                <img
-                  src={shot.src}
-                  alt={shot.alt}
-                  loading="lazy"
-                  className="w-full aspect-[16/10] object-cover object-top"
-                  style={{ background: INK }}
-                />
-                <figcaption className="px-4 py-3 text-sm font-medium" style={{ color: PAPER, background: `${TEAL}0F` }}>
-                  {shot.caption}
-                </figcaption>
-              </figure>
-            ))}
+      {/* GUMROAD PATH */}
+      <section className="mx-auto max-w-5xl px-5 py-14 sm:px-8">
+        <div className="rounded-2xl border border-[#0B0B0C]/10 bg-[#F6F6F4] p-7 md:flex md:items-center md:justify-between md:gap-6">
+          <div>
+            <h3 className="font-display text-xl font-semibold">Already own the AI Prompt Arsenal or Freelancer OS?</h3>
+            <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[#0B0B0C]/60">
+              Your prompts do the thinking — let your CRM do the follow-up. Grab the packs and templates that plug straight into this workspace.
+            </p>
           </div>
-          <p className="mt-5 text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
-            Your prompts do the thinking. The CRM handles the follow-up.
-          </p>
-        </div>
-
-        <div className="mt-8 rounded-3xl p-5" style={{ background: PAPER }}>
-          <p className="text-sm font-semibold" style={{ color: INK }}>
-            Automations in every plan. Flat pricing, no per-seat tax.
-          </p>
-        </div>
-
-        {/* GUMROAD PATH */}
-        <div
-          className="mt-10 rounded-3xl border p-6"
-          style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}
-        >
-          <p className="text-base font-semibold" style={{ color: PAPER }}>
-            Already own the AI Prompt Arsenal or Freelancer OS?
-          </p>
-          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'rgba(244,240,230,0.66)' }}>
-            Your prompts do the thinking — let your CRM do the follow-up. Grab the prompt packs and
-            templates that plug straight into this workspace.
-          </p>
-          <a
-            href="https://bradywave32.gumroad.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-flex items-center rounded-2xl border px-5 py-2.5 text-sm font-semibold"
-            style={{ borderColor: `${TEAL}66`, background: INK, color: TEAL }}
-          >
-            Browse the prompt library <ExternalLink className="ml-2 h-3.5 w-3.5" />
+          <a href="https://bradywave32.gumroad.com" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold md:mt-0" style={{ background: INK, color: '#fff' }}>
+            Browse the prompt library <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
+      </section>
 
-        <footer className="mt-12 flex flex-col items-center gap-3">
-          <nav aria-label="Footer navigation" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium">
-            <Link href="/pricing" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Pricing</Link>
-            <Link href="/claim" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Claim</Link>
-            <Link href="/terms" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Terms</Link>
-            <Link href="/privacy" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Privacy</Link>
-            <Link href="/auth" style={{ color: 'rgba(244,240,230,0.55)' }} className="transition-opacity hover:opacity-80">Log in</Link>
+      {/* FOOTER */}
+      <footer className="border-t border-[#0B0B0C]/10 px-5 py-8 sm:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
+          <span className="font-display text-lg font-extrabold">KING<span style={{ color: COBALT }}>.</span></span>
+          <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#0B0B0C]/55">
+            <Link href="/pricing" className="hover:text-[#0B0B0C]">Pricing</Link>
+            <Link href="/claim" className="hover:text-[#0B0B0C]">Claim</Link>
+            <Link href="/terms" className="hover:text-[#0B0B0C]">Terms</Link>
+            <Link href="/privacy" className="hover:text-[#0B0B0C]">Privacy</Link>
+            <Link href="/auth" className="hover:text-[#0B0B0C]">Log in</Link>
           </nav>
-          <p className="text-center text-sm font-semibold" style={{ color: PAPER }}>
-            © 2026 King CRM Hub. Proof. Decision. Next Move.
-          </p>
-        </footer>
-      </div>
+          <span className="text-sm text-[#0B0B0C]/45">© 2026 King CRM Hub</span>
+        </div>
+      </footer>
     </main>
   )
 }
