@@ -211,7 +211,7 @@ export const useAppStore = create<AppState>()(
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       activeTab: 'dashboard',
       setActiveTab: (tab) => set({ activeTab: tab }),
-      theme: 'dark',
+      theme: 'light',
       setTheme: (theme) => set({ theme }),
       
       // Dashboard Stats
