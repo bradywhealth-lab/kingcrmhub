@@ -161,6 +161,10 @@ if [[ ! -d "$STATIC_SRC_DIR" ]]; then
   exit 1
 fi
 mkdir -p "$STATIC_DST_DIR"
+# Reproducible volume: clear destination before copying so files removed
+# from the repo never linger as stale volume extras (cubic P2). Only ever
+# touches the dedicated /books static volume.
+find "$STATIC_DST_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 cp -R "$STATIC_SRC_DIR"/. "$STATIC_DST_DIR"/
 # Derive the asset set from the source tree instead of a hand-maintained
 # allowlist. Allowlists drifted (cover images shipped in index.html without
@@ -202,7 +206,14 @@ if ! docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter ca
   restore_old
   exit 1
 fi
-docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1
+echo "CADDY_VALIDATE_OK"
+# Reload failure must fail the deploy too — a config that validates but fails
+# to reload would silently leave the old config active (cubic P2).
+if ! docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+  echo "CADDY_RELOAD_FAIL" >&2
+  restore_old
+  exit 1
+fi
 echo "CADDY_RELOAD_OK"
 
 echo "=== VERIFY /books STATIC ASSETS PUBLIC 200 ==="

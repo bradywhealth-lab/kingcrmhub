@@ -1,6 +1,13 @@
 kingcrmhub.net {
+    # HSTS lives on the apex host that actually serves browsers (the static
+    # /books block runs entirely in Caddy before Next middleware emits its
+    # own HSTS) — the www host only 301-redirects away, so binding the header
+    # there protected nothing (cubic P2).
+    header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
     redir /books /books/ permanent
-    handle_path /books* {
+    # Prefix matcher: /books/* matches /books/ and its subtree only. The bare
+    # /books* wildcard also swallowed unrelated paths like /booksfoo (cubic P3).
+    handle_path /books/* {
         root * /data/sites/bradys-books
         file_server
     }
@@ -22,6 +29,5 @@ claw.clawhaven.cloud {
 }
 
 www.kingcrmhub.net {
-    header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
     redir https://kingcrmhub.net{uri} permanent
 }

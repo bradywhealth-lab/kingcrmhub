@@ -43,6 +43,7 @@ interface DeployHarnessOptions {
   failMigrateResolve?: boolean
   staticSrcDir?: string
   staticAssetCode?: number
+  failCaddyCmd?: 'validate' | 'reload'
 }
 
 interface DeployHarness {
@@ -50,6 +51,7 @@ interface DeployHarness {
   env: Record<string, string>
   lockFile: string
   root: string
+  curlLog: string
 }
 
 /**
@@ -66,6 +68,7 @@ function createDeployHarness({
   failMigrateResolve = false,
   staticSrcDir,
   staticAssetCode = 200,
+  failCaddyCmd,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -129,10 +132,13 @@ exit 0
   )
 
   // curl is used only for the post-swap /books asset verification. Real
-  // network in unit tests is forbidden: the shim emits the configured code.
+  // network in unit tests is forbidden: the shim emits the configured code
+  // and records every requested URL so tests prove all assets are checked,
+  // not just that the last one returned 200 (cubic P3).
   writeExecutable(
     join(binDir, 'curl'),
     `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$CURL_LOG"
 printf '%s' "\${STATIC_ASSET_CODE:-200}"
 exit 0
 `,
@@ -214,6 +220,20 @@ if [[ "$args" == *" --format {{.Config.Image}} kingcrmhub "* ]]; then
   printf 'deployer-kingcrmhub'
   exit 0
 fi
+if [[ "$args" == *" caddy validate "* ]]; then
+  if [[ "$FAIL_CADDY_CMD" == "validate" ]]; then
+    echo "Caddy validate failed" >&2
+    exit 1
+  fi
+  exit 0
+fi
+if [[ "$args" == *" caddy reload "* ]]; then
+  if [[ "$FAIL_CADDY_CMD" == "reload" ]]; then
+    echo "Caddy reload failed" >&2
+    exit 1
+  fi
+  exit 0
+fi
 if [[ "$1" == "exec" ]]; then
   request_path="${'${@: -1}'}"
   case "$request_path" in
@@ -242,12 +262,17 @@ exit 0
     STATIC_SRC_DIR: staticDir,
     STATIC_DST_DIR: join(root, 'sites', 'bradys-books'),
     STATIC_ASSET_CODE: String(staticAssetCode),
+    // curl URL log: the shim appends every invocation so tests can prove each
+    // /books asset path is actually probed (cubic P3).
+    CURL_LOG: join(root, 'curl.log'),
+    // caddy shim failure injection: 'validate' or 'reload' (or '' = success).
+    FAIL_CADDY_CMD: failCaddyCmd || '',
   }
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === 'string' && !(key in env)) env[key] = value
   }
 
-  return { deployLog, env, lockFile, root }
+  return { deployLog, env, lockFile, root, curlLog: join(root, 'curl.log') }
 }
 
 /** Execute the deployment script against a fresh mocked harness. */
@@ -258,7 +283,7 @@ function runMockDeploy(options: DeployHarnessOptions = {}) {
     encoding: 'utf8',
     env: harness.env,
   })
-  return { deployLog: harness.deployLog, result }
+  return { deployLog: harness.deployLog, result, curlLog: harness.curlLog }
 }
 
 describe('KingCRMhub deploy hardening', () => {
@@ -494,7 +519,7 @@ describe('KingCRMhub deploy hardening', () => {
   })
 
   it('syncs the vendored /books static site and Caddy config, then verifies all assets 200', deployTimeout, () => {
-    const { deployLog, result } = runMockDeploy()
+    const { deployLog, result, curlLog: curlLogPath } = runMockDeploy()
     const output = `${result.stdout}\n${result.stderr}`
 
     expect(result.status, output).toBe(0)
@@ -510,6 +535,23 @@ describe('KingCRMhub deploy hardening', () => {
     // harness can shim it; never a bare host caddy binary.
     expect(dockerCalls).toContain('exec caddy caddy validate')
     expect(dockerCalls).toContain('exec caddy caddy reload')
+
+    // Every /books asset must actually be probed by the verify loop, not
+    // just the last one (cubic P3) — the curl shim logs each URL.
+    const curlLog = readFileSync(curlLogPath, 'utf8')
+    for (const asset of [
+      'index.html',
+      'planner_cover.jpg',
+      'planner_page.jpg',
+      'book1_cover.jpg',
+      'book2_cover.jpg',
+      'sample_p013.jpg',
+      'sample_p041.jpg',
+      'sample_p083.jpg',
+      'Big_Lines_Sample_Pack_FREE_3pages.pdf',
+    ]) {
+      expect(curlLog).toContain(`/books/${asset}`)
+    }
   })
 
   it('fails the deploy when a /books asset verification returns non-200', deployTimeout, () => {
@@ -518,6 +560,28 @@ describe('KingCRMhub deploy hardening', () => {
 
     expect(result.status).toBe(1)
     expect(output).toContain('STATIC_VERIFY_FAIL')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('fails the deploy and rolls back when Caddy validate fails', deployTimeout, () => {
+    const { result } = runMockDeploy({ failCaddyCmd: 'validate' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('CADDY_VALIDATE_FAIL')
+    expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('CADDY_RELOAD_OK')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('fails the deploy and rolls back when Caddy reload fails', deployTimeout, () => {
+    const { result } = runMockDeploy({ failCaddyCmd: 'reload' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('CADDY_VALIDATE_OK')
+    expect(output).toContain('CADDY_RELOAD_FAIL')
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
   })
@@ -562,5 +626,16 @@ describe('KingCRMhub deploy hardening', () => {
     const script = readDeployScript()
     expect(script).toContain('STATIC_SRC_FILES=("$STATIC_SRC_DIR"/*)')
     expect(script).not.toContain('STATIC_FILES=(index.html')
+
+    // Caddy surface pins (cubic P2/P3): HSTS must be on the apex host that
+    // serves the /books static block (www only redirects away), and the
+    // static matcher must not swallow unrelated /booksfoo-style paths.
+    const caddyfile = readFileSync(join(repoRoot, 'deploy', 'Caddyfile.apps'), 'utf8')
+    const apexBlock = /kingcrmhub\.net \{(?:.|\n)*?\n\}/.exec(caddyfile)?.[0] ?? ''
+    const wwwBlock = /www\.kingcrmhub\.net \{(?:.|\n)*?\n\}/.exec(caddyfile)?.[0] ?? ''
+    expect(apexBlock).toContain('Strict-Transport-Security')
+    expect(apexBlock).not.toContain('handle_path /books*')
+    expect(apexBlock).toContain('handle_path /books/*')
+    expect(wwwBlock).not.toContain('Strict-Transport-Security')
   })
 })
