@@ -85,7 +85,7 @@ export default function ComparePage() {
       <header className="border-b border-[var(--ink,#0C111B)]/10 bg-white/40 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-[var(--teal,#18B897)] flex items-center justify-center shadow-lg">
+            <div className="h-10 w-10 rounded-2xl bg-[var(--teal,#2f6bff)] flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-lg">K</span>
             </div>
             <div>
@@ -149,7 +149,7 @@ export default function ComparePage() {
             {TIERS.map((tier) => (
               <div
                 key={tier.name}
-                className="border border-[var(--ink,#0C111B)]/10 rounded-2xl p-6 text-center space-y-2 bg-[var(--teal,#18B897)]/10"
+                className="border border-[var(--ink,#0C111B)]/10 rounded-2xl p-6 text-center space-y-2 bg-[var(--teal,#2f6bff)]/10"
               >
                 <p className="font-semibold">{tier.name}</p>
                 <p className="text-3xl font-bold">{tier.price}</p>
@@ -185,7 +185,7 @@ export default function ComparePage() {
           <ul className="space-y-3 text-lg">
             {BUILDING_NEXT.map((item) => (
               <li key={item} className="flex items-start gap-3">
-                <span className="text-[var(--teal,#18B897)] font-bold" aria-hidden="true">
+                <span className="text-[var(--teal,#2f6bff)] font-bold" aria-hidden="true">
                   •
                 </span>
                 <span>{item}</span>

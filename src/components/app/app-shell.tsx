@@ -1,38 +1,34 @@
 "use client"
 
-import { Bell, Bot, CheckSquare, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Plus, Search, Settings, Share2, Sparkles, Users, X, Zap, GitBranch } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { Bell, Bot, CheckSquare, LayoutDashboard, LogOut, Menu, MessageSquare, Moon, Plus, Search, Settings, Share2, Sparkles, Sun, Users, X, Zap, GitBranch, ChevronDown } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/lib/store"
 
 const mockNotifications: Array<{ id: string; title: string; body: string; time: string; unread: boolean }> = []
 
+// Freelancer-native IA. `id`s match the DashboardView router in src/app/page.tsx.
 export const APP_NAV_ITEMS = [
-  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", short: "Overview" },
-  { id: "leads", icon: Users, label: "Leads", short: "Clients" },
-  { id: "pipeline", icon: GitBranch, label: "Pipeline", short: "Deals" },
-  { id: "tasks", icon: CheckSquare, label: "Tasks", short: "Hub" },
-  { id: "automation", icon: Zap, label: "Automations", short: "Workflows" },
-  { id: "assistant", icon: MessageSquare, label: "AI Assistant", short: "Chat" },
-  { id: "prompts", icon: Sparkles, label: "Prompts", short: "Library" },
-  { id: "social", icon: Share2, label: "Social", short: "Media" },
-  { id: "settings", icon: Settings, label: "Settings", short: "Config" },
+  { id: "dashboard", icon: LayoutDashboard, label: "Home" },
+  { id: "leads", icon: Users, label: "Clients" },
+  { id: "pipeline", icon: GitBranch, label: "Pipeline" },
+  { id: "tasks", icon: CheckSquare, label: "Work" },
+  { id: "automation", icon: Zap, label: "Automations" },
+  { id: "assistant", icon: MessageSquare, label: "Assistant" },
+  { id: "prompts", icon: Sparkles, label: "Prompts" },
+  { id: "social", icon: Share2, label: "Social" },
 ] as const
+
+const PRIMARY_COUNT = 6
 
 function getInitials(name: string | null | undefined) {
   if (!name) return "KC"
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
+  return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
 }
 
 export function AppShell({
@@ -50,209 +46,220 @@ export function AppShell({
   onSignOut: () => void
   children: React.ReactNode
 }) {
-  const { sidebarOpen, setSidebarOpen } = useAppStore()
+  const { theme, setTheme } = useAppStore()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const unreadCount = useMemo(() => mockNotifications.filter((notification) => notification.unread).length, [])
-  const [isDesktop, setIsDesktop] = useState(false)
-  const prevIsDesktop = useRef(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const unreadCount = useMemo(() => mockNotifications.filter((n) => n.unread).length, [])
 
-  // Track the lg breakpoint live so the drawer open state can re-derive on resize/rotation.
+  // Apply the Regal dark theme by toggling `.dark` on <html>.
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)")
-    const apply = () => setIsDesktop(mq.matches)
-    apply()
-    mq.addEventListener("change", apply)
-    return () => mq.removeEventListener("change", apply)
-  }, [])
+    document.documentElement.classList.toggle("dark", theme === "dark")
+  }, [theme])
 
-  // Off-canvas drawer below lg: when the viewport crosses from desktop into mobile while
-  // the drawer is open, force-close it so it never overlays content at 375px. A plain
-  // hamburger toggle on mobile never trips this (previous viewport is still mobile).
-  useEffect(() => {
-    const crossedToMobile = prevIsDesktop.current && !isDesktop
-    prevIsDesktop.current = isDesktop
-    if (crossedToMobile && sidebarOpen) setSidebarOpen(false)
-  }, [isDesktop, sidebarOpen])
+  const primary = APP_NAV_ITEMS.slice(0, PRIMARY_COUNT)
+  const overflow = APP_NAV_ITEMS.slice(PRIMARY_COUNT)
+  const activeItem = APP_NAV_ITEMS.find((i) => i.id === activeView)
+
+  const navigate = (view: string) => {
+    setActiveView(view)
+    setMobileNavOpen(false)
+  }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_48%,#fcf8ec_100%)] text-[#0c111b]">
-      {/* Mobile backdrop — closes the drawer when the sidebar is open on small screens */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          aria-hidden="true"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <motion.aside
-        initial={false}
-        animate={{ width: sidebarOpen ? 288 : 88 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className={cn(
-          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-[#0c111b] shadow-[24px_0_60px_rgba(15,23,42,0.16)]",
-          // Off-canvas drawer below lg: the app shell leaves no left margin on mobile (overflow fix)
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        )}
-      >
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
-          <AnimatePresence mode="wait">
-            {sidebarOpen && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_10px_30px_rgba(24,184,151,0.35)]">
-                  <Bot className="h-5 w-5 text-[var(--ink)]" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/55">King CRM Hub</p>
-                  <p className="text-lg font-semibold text-white">Freelancer Workspace</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white/65 hover:bg-white/8 hover:text-white">
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* ===== TOP NAVIGATION ===== */}
+      <header className="sticky top-0 z-40 bg-[var(--ink)] text-white">
+        <div className="flex h-[60px] items-center gap-3 px-4 sm:px-6">
+          {/* Logo */}
+          <button onClick={() => navigate("dashboard")} className="mr-2 shrink-0 font-display text-xl font-extrabold tracking-tight text-white">
+            KING<span className="text-[var(--accent-solid)]">.</span>
+          </button>
 
-        <div className="px-4 pt-5">
-          <div className={cn("rounded-2xl border border-white/10 bg-white/5 p-4 text-white", !sidebarOpen && "px-2 py-3") }>
-            <AnimatePresence mode="wait">
-              {sidebarOpen ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border border-white/10 bg-white/10">
-                      <AvatarFallback className="bg-[#18b897] text-sm font-semibold text-[#0c111b]">{getInitials(currentUser?.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">{currentUser?.name || "Workspace User"}</p>
-                      <p className="truncate text-xs capitalize text-white/55">{currentUser?.role || "member"}</p>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-[linear-gradient(135deg,rgba(24,184,151,0.16),rgba(255,255,255,0.02))] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Organization</p>
-                    <p className="mt-1 text-sm font-medium text-white">{currentUser?.organization?.name || "King CRM workspace"}</p>
-                    <Badge className="mt-2 border-0 bg-white/10 text-white/75">{currentUser?.organization?.plan || "Pro"}</Badge>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-center">
-                  <Avatar className="h-11 w-11 border border-white/10 bg-white/10">
-                    <AvatarFallback className="bg-[#18b897] text-sm font-semibold text-[#0c111b]">{getInitials(currentUser?.name)}</AvatarFallback>
-                  </Avatar>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-2 px-3 py-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-          {APP_NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveView(item.id)
-                // Off-canvas drawer: close on selection so the destination view is not
-                // hidden behind the open drawer on mobile.
-                if (!isDesktop) setSidebarOpen(false)
-              }}
-              className={cn(
-                "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
-                activeView === item.id
-                  ? "bg-[linear-gradient(90deg,rgba(24,184,151,0.24),rgba(24,184,151,0.08))] text-white shadow-[0_12px_28px_rgba(24,184,151,0.15)]"
-                  : "text-white/62 hover:bg-white/6 hover:text-white"
-              )}
-            >
-              <div className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors",
-                activeView === item.id ? "border-[#127c66]/60 bg-[#18b897]/18" : "border-white/8 bg-white/4 group-hover:border-white/16"
-              )}>
-                <item.icon className="h-4 w-4" />
-              </div>
-              <AnimatePresence mode="wait">
-                {sidebarOpen && (
-                  <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: "auto" }} exit={{ opacity: 0, width: 0 }} className="min-w-0 overflow-hidden">
-                    <p className="truncate text-sm font-medium">{item.label}</p>
-                    <p className="truncate text-xs text-white/42">{item.short}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </button>
-          ))}
-        </nav>
-
-        <div className="border-t border-white/10 p-3">
-          <Button variant="ghost" onClick={onSignOut} className={cn("w-full rounded-2xl border border-white/10 bg-white/4 text-white/72 hover:bg-white/8 hover:text-white", !sidebarOpen && "px-0")}>
-            <LogOut className="h-4 w-4" />
-            {sidebarOpen && <span className="ml-2">Sign out</span>}
-          </Button>
-        </div>
-      </motion.aside>
-
-      <div
-        className={cn(
-          "ml-0 transition-all duration-150 ease-out",
-          sidebarOpen ? "lg:ml-[288px]" : "lg:ml-[88px]"
-        )}
-      >
-        <header className="sticky top-0 z-30 border-b border-[rgba(31,42,54,0.08)] bg-[rgba(252,252,252,0.82)] backdrop-blur-xl">
-          <div className="flex min-h-20 items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-4">
-            <div className="flex min-w-0 flex-1 items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Open navigation"
-                onClick={() => setSidebarOpen(true)}
-                className="h-11 w-11 shrink-0 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#0c111b]/70 shadow-sm lg:hidden"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <div className="hidden min-w-0 lg:block">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#0c111b]/45">Workspace command center</p>
-                <h1 className="truncate text-xl font-semibold text-[#0c111b]">{APP_NAV_ITEMS.find((item) => item.id === activeView)?.label || "Dashboard"}</h1>
-              </div>
-              <div className="relative ml-auto w-full min-w-0 max-w-xl">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0c111b]/35" />
-                <Input placeholder="Search leads, tasks, campaigns, or notes..." className="h-12 w-full rounded-2xl border-[rgba(31,42,54,0.08)] bg-white pl-11 shadow-[0_8px_24px_rgba(31,42,54,0.05)] focus-visible:ring-[#18b897]/30" />
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-              <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          {/* Desktop pill nav */}
+          <nav className="hidden items-center gap-1 lg:flex">
+            {primary.map((item) => {
+              const active = activeView === item.id
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(item.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                    active ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              )
+            })}
+            {overflow.length > 0 && (
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-11 w-11 shrink-0 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white text-[#0c111b]/70 shadow-sm hover:bg-[#f6f9ff] hover:text-[#127c66]">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#18b897]" />}
-                  </Button>
+                  <button className={cn(
+                    "flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                    overflow.some((o) => o.id === activeView) ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                  )}>
+                    More <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 rounded-2xl border-[rgba(31,42,54,0.08)] bg-white p-1 shadow-[0_18px_48px_rgba(31,42,54,0.12)]">
-                  <DropdownMenuLabel className="flex items-center justify-between px-3 py-2">
-                    <span className="text-sm font-semibold text-[#0c111b]">Notifications</span>
-                    {unreadCount > 0 && <Badge className="border-0 bg-[#18b897]/12 text-[#127c66]">{unreadCount}</Badge>}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {mockNotifications.map((notification) => (
-                    <DropdownMenuItem key={notification.id} className="flex cursor-pointer flex-col items-start gap-0.5 rounded-xl p-3">
-                      <span className={cn("text-sm text-[#0c111b]", notification.unread && "font-semibold")}>{notification.title}</span>
-                      <span className="text-xs text-[#0c111b]/55">{notification.body}</span>
-                      <span className="text-[11px] text-[#0c111b]/35">{notification.time}</span>
+                <DropdownMenuContent align="start" className="w-44">
+                  {overflow.map((item) => (
+                    <DropdownMenuItem key={item.id} onClick={() => navigate(item.id)} className="cursor-pointer gap-2">
+                      <item.icon className="h-4 w-4" /> {item.label}
                     </DropdownMenuItem>
                   ))}
+                  <DropdownMenuItem onClick={() => navigate("settings")} className="cursor-pointer gap-2">
+                    <Settings className="h-4 w-4" /> Settings
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            )}
+          </nav>
 
-              <Button
-                onClick={onAddLead}
-                aria-label="Add lead"
-                className="h-12 shrink-0 rounded-2xl bg-[var(--teal)] px-3 text-[var(--ink)] shadow-[0_12px_28px_rgba(24,184,151,0.28)] hover:opacity-95 sm:px-5"
-              >
-                <Plus className={cn("h-4 w-4", "lg:mr-2")} />
-                <span className="hidden lg:inline">Add lead</span>
-              </Button>
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Open navigation"
+            onClick={() => setMobileNavOpen((v) => !v)}
+            className="ml-auto h-10 w-10 rounded-xl text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
+          >
+            {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+
+          {/* Right cluster */}
+          <div className="ml-auto hidden items-center gap-2 lg:flex">
+            <div className="relative w-[220px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+              <div className="flex h-9 items-center rounded-xl border border-white/15 bg-white/5 pl-9 pr-2 text-sm text-white/50">
+                Search
+                <kbd className="ml-auto rounded border border-white/15 px-1.5 py-0.5 font-mono text-[11px] text-white/40">⌘K</kbd>
+              </div>
             </div>
+            <ThemeToggle theme={theme} setTheme={setTheme} />
+            <NotificationsBell open={notificationsOpen} setOpen={setNotificationsOpen} unreadCount={unreadCount} />
+            <Button onClick={onAddLead} className="h-9 gap-2 rounded-xl bg-[var(--accent-solid)] px-4 font-semibold text-white hover:bg-[var(--accent-hover)]">
+              <Plus className="h-4 w-4" /> New
+            </Button>
+            <UserMenu currentUser={currentUser} onSignOut={onSignOut} onSettings={() => navigate("settings")} />
           </div>
-        </header>
 
-        <main className="min-h-[calc(100vh-5rem)] px-0 pb-10">{children}</main>
-      </div>
+          {/* Mobile right cluster (compact) */}
+          <div className="flex items-center gap-1.5 lg:hidden">
+            <ThemeToggle theme={theme} setTheme={setTheme} />
+            <Button onClick={onAddLead} size="icon" aria-label="New" className="h-9 w-9 rounded-xl bg-[var(--accent-solid)] text-white hover:bg-[var(--accent-hover)]">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile nav drawer */}
+        <AnimatePresence>
+          {mobileNavOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="overflow-hidden border-t border-white/10 lg:hidden"
+            >
+              <div className="grid grid-cols-2 gap-1.5 p-3">
+                {APP_NAV_ITEMS.map((item) => {
+                  const active = activeView === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => navigate(item.id)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                        active ? "bg-[var(--accent-solid)] text-white" : "text-white/70 hover:bg-white/8"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" /> {item.label}
+                    </button>
+                  )
+                })}
+                <button onClick={() => navigate("settings")} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/8">
+                  <Settings className="h-4 w-4" /> Settings
+                </button>
+                <button onClick={onSignOut} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/8">
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      <main className="min-h-[calc(100vh-60px)]">{children}</main>
     </div>
   )
 }
+
+function ThemeToggle({ theme, setTheme }: { theme: "dark" | "light"; setTheme: (t: "dark" | "light") => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label="Toggle theme"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="h-9 w-9 rounded-xl border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
+    >
+      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </Button>
+  )
+}
+
+function NotificationsBell({ open, setOpen, unreadCount }: { open: boolean; setOpen: (v: boolean) => void; unreadCount: number }) {
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white">
+          <Bell className="h-4 w-4" />
+          {unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--accent-solid)]" />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span className="text-sm font-semibold">Notifications</span>
+          {unreadCount > 0 && <Badge className="border-0 bg-[var(--accent-soft)] text-[var(--accent-text)]">{unreadCount}</Badge>}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <div className="px-3 py-6 text-center text-sm text-muted-foreground">You're all caught up.</div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function UserMenu({ currentUser, onSignOut, onSettings }: { currentUser: AppShellUser; onSignOut: () => void; onSettings: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1 rounded-xl p-0.5 pr-1.5 transition-colors hover:bg-white/8">
+          <Avatar className="h-9 w-9 rounded-xl border border-white/10">
+            <AvatarFallback className="rounded-xl bg-[var(--accent-solid)] text-sm font-semibold text-white">{getInitials(currentUser?.name)}</AvatarFallback>
+          </Avatar>
+          <ChevronDown className="h-3.5 w-3.5 text-white/50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">
+        <div className="px-2 py-2">
+          <p className="truncate text-sm font-semibold text-foreground">{currentUser?.name || "Workspace User"}</p>
+          <p className="truncate text-xs capitalize text-muted-foreground">{currentUser?.role || "member"}</p>
+          {currentUser?.organization && (
+            <div className="mt-2 rounded-lg bg-muted p-2">
+              <p className="truncate text-xs font-medium text-foreground">{currentUser.organization.name}</p>
+              <Badge className="mt-1 border-0 bg-[var(--accent-soft)] capitalize text-[var(--accent-text)]">{currentUser.organization.plan}</Badge>
+            </div>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onSettings} className="cursor-pointer gap-2"><Settings className="h-4 w-4" /> Settings</DropdownMenuItem>
+        <DropdownMenuItem onClick={onSignOut} className="cursor-pointer gap-2 text-destructive focus:text-destructive"><LogOut className="h-4 w-4" /> Sign out</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+type AppShellUser = { name: string | null; role: string; organization?: { name: string; plan: string } } | null

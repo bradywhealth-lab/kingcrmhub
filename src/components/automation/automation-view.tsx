@@ -126,8 +126,8 @@ export function AutomationView({ onCreateSuccess }: AutomationViewProps) {
     <div className="p-6 space-y-6 bg-[#FDFBF7] min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-black">AI Automation</h1>
-          <p className="text-gray-500">Automate your workflows with intelligent triggers</p>
+          <h1 className="text-2xl font-bold text-foreground">AI Automation</h1>
+          <p className="text-muted-foreground">Automate your workflows with intelligent triggers</p>
         </div>
         <Button className="btn-gold gap-2" onClick={() => openCreateAutomationDialog(setShowCreateAutomationDialog)}>
           <Plus className="w-4 h-4" />
@@ -181,8 +181,8 @@ export function AutomationView({ onCreateSuccess }: AutomationViewProps) {
                   <stat.icon className="w-5 h-5 text-[#3B8595]" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-black">{stat.value}</p>
-                  <p className="text-sm text-gray-500">{stat.title}</p>
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
                 </div>
               </div>
             </CardContent>
@@ -192,18 +192,18 @@ export function AutomationView({ onCreateSuccess }: AutomationViewProps) {
 
       <Card className="bg-white border-[#E2DDD4] shadow-sm">
         <CardContent className="p-4">
-          <p className="text-sm font-semibold text-black mb-3">Current automations</p>
+          <p className="text-sm font-semibold text-foreground mb-3">Current automations</p>
           {loadingAutomations ? (
-            <p className="text-sm text-gray-500">Loading automations...</p>
+            <p className="text-sm text-muted-foreground">Loading automations...</p>
           ) : automations.length === 0 ? (
-            <p className="text-sm text-gray-500">No automations created yet.</p>
+            <p className="text-sm text-muted-foreground">No automations created yet.</p>
           ) : (
             <ul className="space-y-2">
               {automations.map((automation) => (
                 <li key={automation.id} className="rounded-md border border-[#E2DDD4] p-3">
-                  <p className="font-medium text-black">{automation.name}</p>
-                  <p className="text-xs text-gray-600">Trigger: {automation.trigger}</p>
-                  <p className="text-xs text-gray-600">Actions: {automation.actions}</p>
+                  <p className="font-medium text-foreground">{automation.name}</p>
+                  <p className="text-xs text-muted-foreground">Trigger: {automation.trigger}</p>
+                  <p className="text-xs text-muted-foreground">Actions: {automation.actions}</p>
                 </li>
               ))}
             </ul>

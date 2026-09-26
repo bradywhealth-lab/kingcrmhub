@@ -64,9 +64,9 @@ import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 
 // Dashboard visual configuration. All rendered values come from authenticated APIs.
 const chartConfig: ChartConfig = {
-  leads: { label: "Leads", color: "#18B897" },
+  leads: { label: "Leads", color: "#2f6bff" },
   won: { label: "Won", color: "#0C111B" },
-  revenue: { label: "Revenue", color: "#127C66" },
+  revenue: { label: "Revenue", color: "#1e4fcc" },
 }
 
 type DashboardStats = {
@@ -115,7 +115,7 @@ function normalizePipelineStages(rawStages: unknown): PipelineStage[] {
     return {
       id: String(stageRecord.id),
       name: typeof stageRecord.name === "string" ? stageRecord.name : `Stage ${stageIndex + 1}`,
-      color: typeof stageRecord.color === "string" ? stageRecord.color : "#18B897",
+      color: typeof stageRecord.color === "string" ? stageRecord.color : "#2f6bff",
       order: typeof stageRecord.order === "number" ? stageRecord.order : stageIndex,
       items: Array.isArray(stageRecord.items)
         ? (stageRecord.items as Record<string, unknown>[]).map((item) => ({
@@ -145,7 +145,7 @@ function formatLeadTrend(data: DashboardStats["leadTrend"] | undefined) {
 }
 
 function formatSourceBreakdown(data: DashboardStats["sourceBreakdown"] | undefined) {
-  const palette = ["#18B897", "#0C111B", "#1FD0AA", "#127C66", "#6B6E74", "#D97706"]
+  const palette = ["#2f6bff", "#0C111B", "#5b86ff", "#1e4fcc", "#6B6E74", "#D97706"]
   if (!Array.isArray(data) || data.length === 0) return []
   return data.map((entry, index) => ({
     name: entry.name,
@@ -155,11 +155,11 @@ function formatSourceBreakdown(data: DashboardStats["sourceBreakdown"] | undefin
 }
 
 function getActivityVisual(type: string) {
-  if (type === "email") return { icon: Mail, className: "bg-[#18b897]/12 text-[#127c66]" }
+  if (type === "email") return { icon: Mail, className: "bg-[#2f6bff]/12 text-[#1e4fcc]" }
   if (type === "call" || type === "sms") return { icon: Phone, className: "bg-emerald-100 text-emerald-600" }
   if (type === "meeting") return { icon: Calendar, className: "bg-purple-100 text-purple-600" }
-  if (type.startsWith("ai")) return { icon: Brain, className: "bg-[#18b897]/20 text-[#127c66]" }
-  return { icon: Activity, className: "bg-gray-100 text-gray-600" }
+  if (type.startsWith("ai")) return { icon: Brain, className: "bg-[#2f6bff]/20 text-[#1e4fcc]" }
+  return { icon: Activity, className: "bg-gray-100 text-muted-foreground" }
 }
 
 // Utility Components
@@ -189,8 +189,8 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 80 ? "bg-gradient-to-r from-[#18b897] to-[#127c66] text-black" : 
-                score >= 60 ? "bg-[#18b897] text-[#0c111b]" : "bg-[#0c111b] text-white"
+  const color = score >= 80 ? "bg-gradient-to-r from-[#2f6bff] to-[#1e4fcc] text-foreground" : 
+                score >= 60 ? "bg-[#2f6bff] text-[#0c111b]" : "bg-[#0c111b] text-white"
   return (
     <div className={cn("px-2 py-0.5 rounded text-xs font-semibold", color)}>
       {score}
@@ -202,10 +202,10 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     new: "bg-[#0c111b] text-white",
     contacted: "bg-gray-600 text-white",
-    qualified: "bg-[#18b897] text-black",
-    proposal: "bg-[#127c66] text-white",
-    negotiation: "bg-[#127c66] text-white",
-    won: "bg-[#127c66] text-white",
+    qualified: "bg-[#2f6bff] text-foreground",
+    proposal: "bg-[#1e4fcc] text-white",
+    negotiation: "bg-[#1e4fcc] text-white",
+    won: "bg-[#1e4fcc] text-white",
     lost: "bg-red-600 text-white",
   }
   return (
@@ -304,34 +304,71 @@ function DashboardView() {
   const visibleActivities = activities.slice(0, 5)
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Page header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground" suppressHydrationWarning>
+            Home · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+          </p>
+          <h1 className="mt-1 text-3xl font-bold text-foreground">Good morning</h1>
+        </div>
+        <div className="flex overflow-hidden rounded-xl border border-border">
+          {["This week", "Month", "Quarter"].map((t, i) => (
+            <span key={t} className={cn("px-4 py-2 text-sm font-semibold", i === 0 ? "bg-[var(--ink)] text-white" : "bg-card text-muted-foreground")}>{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Focus band — soft cobalt tint, the day's next-best plays */}
+      {myDay && myDay.leadsToCall.length > 0 && (
+        <div className="grid gap-5 rounded-2xl bg-[var(--accent-soft)] p-5 md:grid-cols-[1.1fr_2fr] md:items-center md:p-6">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Plays to make <span className="text-[var(--accent-text)]">today</span>.</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{myDay.summary || "Ranked by value at risk — clear these and you're ahead of the week."}</p>
+          </div>
+          <div className="space-y-2.5">
+            {myDay.leadsToCall.slice(0, 3).map((lead, idx) => (
+              <div key={lead.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-solid)] font-mono text-xs font-bold text-white">{idx + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">{lead.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{lead.company || "Client"} · {lead.reason}</p>
+                </div>
+                <ScoreBadge score={lead.aiScore} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm hover:shadow-md transition-shadow card-hover">
+          <Card key={stat.title} className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm hover:shadow-md transition-shadow card-hover">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">{stat.title}</p>
-                  <p className="text-2xl font-bold text-black mt-1">
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
                     <AnimatedNumber value={stat.value} prefix={stat.prefix} />
                   </p>
                 </div>
                 <div className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  stat.color === "gold" && "bg-[#18b897]/20",
+                  stat.color === "gold" && "bg-[#2f6bff]/20",
                   stat.color === "black" && "bg-[#0c111b]",
                   stat.color === "emerald" && "bg-emerald-100",
                 )}>
                   <stat.icon className={cn(
                     "w-5 h-5",
-                    stat.color === "gold" && "text-[#127c66]",
+                    stat.color === "gold" && "text-[#1e4fcc]",
                     stat.color === "black" && "text-white",
                     stat.color === "emerald" && "text-emerald-600",
                   )} />
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+              <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
                 <TrendingUp className="w-4 h-4 text-emerald-500" />
                 <span>{stat.detail}</span>
               </div>
@@ -343,16 +380,16 @@ function DashboardView() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <Card className="lg:col-span-2 bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="lg:col-span-2 bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
-            <CardTitle className="text-black">Revenue & Leads</CardTitle>
-            <CardDescription className="text-gray-500">Monthly performance overview</CardDescription>
+            <CardTitle className="text-foreground">Revenue & Leads</CardTitle>
+            <CardDescription className="text-muted-foreground">Monthly performance overview</CardDescription>
           </CardHeader>
           <CardContent>
             {liveTrend.length === 0 ? (
-              <div className="flex h-[280px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] text-sm text-gray-500">
+              <div className="flex h-[280px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] text-sm text-muted-foreground">
                 <BarChart3 className="h-10 w-10 text-gray-300" />
-                <p className="font-medium text-gray-400">No performance data yet</p>
+                <p className="font-medium text-muted-foreground">No performance data yet</p>
                 <p className="text-xs text-gray-350">Add leads and track pipeline movements to see trends.</p>
               </div>
             ) : (
@@ -360,8 +397,8 @@ function DashboardView() {
                 <AreaChart data={liveTrend}>
                   <defs>
                     <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#18B897" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#18B897" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#2f6bff" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#2f6bff" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorWon" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#0C111B" stopOpacity={0.2}/>
@@ -372,7 +409,7 @@ function DashboardView() {
                   <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                   <YAxis stroke="#6B7280" fontSize={12} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area type="monotone" dataKey="leads" stroke="#18B897" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="leads" stroke="#2f6bff" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={2} />
                   <Area type="monotone" dataKey="won" stroke="#0C111B" fillOpacity={1} fill="url(#colorWon)" strokeWidth={2} />
                 </AreaChart>
               </ChartContainer>
@@ -381,14 +418,14 @@ function DashboardView() {
         </Card>
         
         {/* Lead Sources */}
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
-            <CardTitle className="text-black">Lead Sources</CardTitle>
-            <CardDescription className="text-gray-500">Distribution by channel</CardDescription>
+            <CardTitle className="text-foreground">Lead Sources</CardTitle>
+            <CardDescription className="text-muted-foreground">Distribution by channel</CardDescription>
           </CardHeader>
           <CardContent>
             {liveSources.length === 0 ? (
-              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] px-6 text-center text-sm text-gray-500">
+              <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] px-6 text-center text-sm text-muted-foreground">
                 Lead-source data appears after you add leads.
               </div>
             ) : (
@@ -407,9 +444,9 @@ function DashboardView() {
                     <div key={source.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full" style={{ backgroundColor: source.color }} />
-                        <span className="text-sm text-gray-600">{source.name}</span>
+                        <span className="text-sm text-muted-foreground">{source.name}</span>
                       </div>
-                      <span className="text-sm font-medium text-black">{source.value}</span>
+                      <span className="text-sm font-medium text-foreground">{source.value}</span>
                     </div>
                   ))}
                 </div>
@@ -422,17 +459,17 @@ function DashboardView() {
       {/* AI Insights & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* AI Insights */}
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#127c66]" />
-              <CardTitle className="text-black">AI Insights</CardTitle>
+              <Sparkles className="w-5 h-5 text-[#1e4fcc]" />
+              <CardTitle className="text-foreground">AI Insights</CardTitle>
             </div>
-            <CardDescription className="text-gray-500">Smart recommendations based on your workspace activity</CardDescription>
+            <CardDescription className="text-muted-foreground">Smart recommendations based on your workspace activity</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {visibleInsights.length === 0 && (
-              <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-gray-500">
+              <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-muted-foreground">
                 No live insights yet. Recommendations will appear as your workspace records activity.
               </div>
             )}
@@ -443,8 +480,8 @@ function DashboardView() {
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "p-3 rounded-lg border",
-                  insight.type === "prediction" && "bg-[#18b897]/5 border-[#127c66]/30",
-                  insight.type === "recommendation" && "bg-[#18b897]/8 border-[#127c66]/25",
+                  insight.type === "prediction" && "bg-[#2f6bff]/5 border-[#1e4fcc]/30",
+                  insight.type === "recommendation" && "bg-[#2f6bff]/8 border-[#1e4fcc]/25",
                   insight.type === "trend" && "bg-emerald-50 border-emerald-200",
                   insight.type === "alert" && "bg-amber-50 border-amber-200",
                 )}
@@ -454,21 +491,21 @@ function DashboardView() {
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "text-xs font-medium uppercase",
-                        insight.type === "prediction" && "text-[#127c66]",
-                        insight.type === "recommendation" && "text-[#127c66]",
+                        insight.type === "prediction" && "text-[#1e4fcc]",
+                        insight.type === "recommendation" && "text-[#1e4fcc]",
                         insight.type === "trend" && "text-emerald-600",
                         insight.type === "alert" && "text-amber-600",
                       )}>
                         {insight.type}
                       </span>
                       {insight.confidence && (
-                        <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">
+                        <Badge variant="outline" className="text-xs border-gray-300 text-muted-foreground">
                           {Math.round(insight.confidence * 100)}% confidence
                         </Badge>
                       )}
                     </div>
-                    <h4 className="text-sm font-medium text-black mt-1">{insight.title}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{insight.description}</p>
+                    <h4 className="text-sm font-medium text-foreground mt-1">{insight.title}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">{insight.description}</p>
                   </div>
 
                 </div>
@@ -478,18 +515,18 @@ function DashboardView() {
         </Card>
         
         {/* Recent Activity */}
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[#127c66]" />
-              <CardTitle className="text-black">Recent Activity</CardTitle>
+              <Activity className="w-5 h-5 text-[#1e4fcc]" />
+              <CardTitle className="text-foreground">Recent Activity</CardTitle>
             </div>
-            <CardDescription className="text-gray-500">Latest actions and updates</CardDescription>
+            <CardDescription className="text-muted-foreground">Latest actions and updates</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {visibleActivities.length === 0 && (
-                <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-gray-500">
+                <div className="rounded-xl border border-dashed border-[rgba(31,42,54,0.15)] p-6 text-center text-sm text-muted-foreground">
                   No activity yet. Real workspace actions will appear here.
                 </div>
               )}
@@ -501,9 +538,9 @@ function DashboardView() {
                     <visual.icon className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-black truncate">{activity.title}</p>
-                    <p className="text-xs text-gray-500 truncate">{activity.description}</p>
-                    <p className="text-xs text-gray-400 mt-1" suppressHydrationWarning>
+                    <p className="text-sm text-foreground truncate">{activity.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
                       {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -515,42 +552,42 @@ function DashboardView() {
       </div>
 
       {myDay && (
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-[#127c66]" />
-              <CardTitle className="text-black">AI Daily Assistant</CardTitle>
+              <Bot className="w-5 h-5 text-[#1e4fcc]" />
+              <CardTitle className="text-foreground">AI Daily Assistant</CardTitle>
             </div>
-            <CardDescription className="text-gray-500">{myDay.summary}</CardDescription>
+            <CardDescription className="text-muted-foreground">{myDay.summary}</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-semibold text-black mb-3">Priority Leads to Call</h4>
+              <h4 className="text-sm font-semibold text-foreground mb-3">Priority Leads to Call</h4>
               <div className="space-y-2">
                 {myDay.leadsToCall.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)]">
-                    <p className="text-sm font-medium text-black">{lead.name}</p>
-                    <p className="text-xs text-gray-500">{lead.company || 'Unknown company'}</p>
+                  <div key={lead.id} className="p-3 bg-muted rounded-lg border border-[rgba(31,42,54,0.08)]">
+                    <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                    <p className="text-xs text-muted-foreground">{lead.company || 'Unknown company'}</p>
                     <div className="flex items-center justify-between mt-2">
                       <ScoreBadge score={lead.aiScore} />
-                      <span className="text-xs text-gray-500">{lead.reason}</span>
+                      <span className="text-xs text-muted-foreground">{lead.reason}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-black mb-3">Upcoming Meetings</h4>
+              <h4 className="text-sm font-semibold text-foreground mb-3">Upcoming Meetings</h4>
               <div className="space-y-2">
                 {myDay.meetings.length === 0 ? (
-                  <div className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)] text-sm text-gray-500">
+                  <div className="p-3 bg-muted rounded-lg border border-[rgba(31,42,54,0.08)] text-sm text-muted-foreground">
                     No meetings queued yet.
                   </div>
                 ) : myDay.meetings.slice(0, 5).map((meeting) => (
-                  <div key={meeting.id} className="p-3 bg-[#f4f0e6] rounded-lg border border-[rgba(31,42,54,0.08)]">
-                    <p className="text-sm font-medium text-black">{meeting.title}</p>
-                    <p className="text-xs text-gray-500">{meeting.lead?.name || 'Unassigned lead'}</p>
-                    <p className="text-xs text-gray-500 mt-1">{new Date(meeting.time).toLocaleString()}</p>
+                  <div key={meeting.id} className="p-3 bg-muted rounded-lg border border-[rgba(31,42,54,0.08)]">
+                    <p className="text-sm font-medium text-foreground">{meeting.title}</p>
+                    <p className="text-xs text-muted-foreground">{meeting.lead?.name || 'Unassigned lead'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(meeting.time).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -905,17 +942,17 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
   }
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-background min-h-screen">
       {/* Header with Add new lead + Import CSV on tab */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-black">Leads</h1>
-          <p className="text-gray-500">Lead management with smart scoring and clear next steps</p>
+          <h1 className="text-2xl font-bold text-foreground">Leads</h1>
+          <p className="text-muted-foreground">Lead management with smart scoring and clear next steps</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            className="border-[#127c66] text-[#0c111b] hover:bg-[#f4f0e6] gap-2"
+            className="border-[#1e4fcc] text-[#0c111b] hover:bg-muted gap-2"
             onClick={onScrape}
           >
             <Globe className="w-4 h-4" />
@@ -923,7 +960,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           </Button>
           <Button 
             variant="outline" 
-            className="border-[#127c66] text-[#127c66] hover:bg-[#18b897]/10 gap-2"
+            className="border-[#1e4fcc] text-[#1e4fcc] hover:bg-[#2f6bff]/10 gap-2"
             onClick={onUploadCSV}
           >
             <Upload className="w-4 h-4" />
@@ -939,12 +976,12 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       {/* Filters */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
+          <Filter className="w-4 h-4 text-muted-foreground" />
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[140px] bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+            <SelectTrigger className="w-[140px] bg-card border-[rgba(31,42,54,0.08)]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
-            <SelectContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+            <SelectContent className="bg-card border-[rgba(31,42,54,0.08)]">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="new">New</SelectItem>
               <SelectItem value="qualified">Qualified</SelectItem>
@@ -955,10 +992,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           </Select>
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[140px] bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+          <SelectTrigger className="w-[140px] bg-card border-[rgba(31,42,54,0.08)]">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
-          <SelectContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+          <SelectContent className="bg-card border-[rgba(31,42,54,0.08)]">
             <SelectItem value="score">AI Score</SelectItem>
             <SelectItem value="value">Value</SelectItem>
             <SelectItem value="date">Date Added</SelectItem>
@@ -967,57 +1004,57 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </div>
       
       {/* Leads Table */}
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm overflow-hidden">
+      <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm overflow-hidden">
         {error && (
           <div className="p-4 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">{error}</div>
         )}
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading leads...</div>
+          <div className="p-8 text-center text-muted-foreground">Loading leads...</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[rgba(31,42,54,0.08)] bg-[#f4f0e6]">
-                <th className="text-left p-4 text-sm font-medium text-gray-600">Contact</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600">Company</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600">Source</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600">Status</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600">AI Score</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600">Value</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600">Next Action</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-600"></th>
+              <tr className="border-b border-[rgba(31,42,54,0.08)] bg-muted">
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Contact</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Company</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Source</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">AI Score</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Value</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Next Action</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground"></th>
               </tr>
             </thead>
             <tbody>
               {filteredLeads.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-gray-500">No leads yet. Add one or import a CSV.</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No leads yet. Add one or import a CSV.</td></tr>
               ) : filteredLeads.map((lead) => (
                 <motion.tr
                   key={lead.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="border-b border-[rgba(31,42,54,0.08)] hover:bg-[#fcf8ec] transition-colors cursor-pointer"
+                  className="border-b border-[rgba(31,42,54,0.08)] hover:bg-background transition-colors cursor-pointer"
                   onClick={() => setSelectedLead(lead)}
                 >
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9">
-                        <AvatarFallback className="bg-[#18b897] text-black text-sm font-medium">
+                        <AvatarFallback className="bg-[#2f6bff] text-foreground text-sm font-medium">
                           {lead.firstName?.[0]}{lead.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium text-black">{lead.firstName} {lead.lastName}</p>
-                        <p className="text-xs text-gray-500">{lead.email}</p>
+                        <p className="text-sm font-medium text-foreground">{lead.firstName} {lead.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{lead.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="p-4">
-                    <p className="text-sm text-black">{lead.company}</p>
-                    <p className="text-xs text-gray-500">{lead.title}</p>
+                    <p className="text-sm text-foreground">{lead.company}</p>
+                    <p className="text-xs text-muted-foreground">{lead.title}</p>
                   </td>
                   <td className="p-4">
-                    <Badge variant="outline" className="capitalize border-[rgba(31,42,54,0.08)] text-gray-600">
+                    <Badge variant="outline" className="capitalize border-[rgba(31,42,54,0.08)] text-muted-foreground">
                       {lead.source}
                     </Badge>
                   </td>
@@ -1028,24 +1065,24 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                     <div className="flex items-center gap-2">
                       <ScoreBadge score={lead.aiScore} />
                       {lead.aiConfidence && (
-                        <span className="text-xs text-gray-400">{Math.round(lead.aiConfidence * 100)}%</span>
+                        <span className="text-xs text-muted-foreground">{Math.round(lead.aiConfidence * 100)}%</span>
                       )}
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="text-sm text-black font-medium">
+                    <span className="text-sm text-foreground font-medium">
                       ${lead.estimatedValue?.toLocaleString() || '-'}
                     </span>
                   </td>
                   <td className="p-4">
-                    <p className="text-sm text-gray-600 max-w-[200px] truncate">{lead.aiNextAction}</p>
+                    <p className="text-sm text-muted-foreground max-w-[200px] truncate">{lead.aiNextAction}</p>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[#127c66] hover:bg-[#18b897]/10"
+                        className="text-[#1e4fcc] hover:bg-[#2f6bff]/10"
                         onClick={(e) => {
                           e.stopPropagation()
                           void rescoreLead(lead.id)
@@ -1096,12 +1133,12 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           setAssistantSaving(false)
         }}
       >
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)] max-w-2xl">
           {selectedLead && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-xl text-black">Lead Details</DialogTitle>
-                <DialogDescription className="text-gray-500">
+                <DialogTitle className="text-xl text-foreground">Lead Details</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
                   Lead insights for {selectedLead.firstName} {selectedLead.lastName}
                 </DialogDescription>
               </DialogHeader>
@@ -1109,41 +1146,41 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               <div className="grid grid-cols-2 gap-6 py-4">
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-gray-500 text-xs">Email</Label>
-                    <p className="text-black">{selectedLead.email}</p>
+                    <Label className="text-muted-foreground text-xs">Email</Label>
+                    <p className="text-foreground">{selectedLead.email}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500 text-xs">Phone</Label>
-                    <p className="text-black">{selectedLead.phone}</p>
+                    <Label className="text-muted-foreground text-xs">Phone</Label>
+                    <p className="text-foreground">{selectedLead.phone}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500 text-xs">Company</Label>
-                    <p className="text-black">{selectedLead.company}</p>
+                    <Label className="text-muted-foreground text-xs">Company</Label>
+                    <p className="text-foreground">{selectedLead.company}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500 text-xs">Title</Label>
-                    <p className="text-black">{selectedLead.title}</p>
+                    <Label className="text-muted-foreground text-xs">Title</Label>
+                    <p className="text-foreground">{selectedLead.title}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-gray-500 text-xs">AI Score</Label>
+                    <Label className="text-muted-foreground text-xs">AI Score</Label>
                     <div className="flex items-center gap-2 mt-1">
                       <ScoreBadge score={selectedLead.aiScore} />
                       <Progress value={selectedLead.aiScore} className="flex-1 h-2" />
                     </div>
                   </div>
                   <div>
-                    <Label className="text-gray-500 text-xs">Estimated Value</Label>
-                    <p className="text-black text-xl font-semibold">${selectedLead.estimatedValue?.toLocaleString()}</p>
+                    <Label className="text-muted-foreground text-xs">Estimated Value</Label>
+                    <p className="text-foreground text-xl font-semibold">${selectedLead.estimatedValue?.toLocaleString()}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500 text-xs">AI Recommended Action</Label>
-                    <p className="text-[#127c66]">{selectedLead.aiNextAction}</p>
+                    <Label className="text-muted-foreground text-xs">AI Recommended Action</Label>
+                    <p className="text-[#1e4fcc]">{selectedLead.aiNextAction}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-500 text-xs">Status</Label>
+                    <Label className="text-muted-foreground text-xs">Status</Label>
                     <div className="mt-1">
                       <StatusBadge status={selectedLead.status} />
                     </div>
@@ -1151,10 +1188,10 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                 </div>
               </div>
 
-              <Card className="bg-[#fcf8ec] border-[rgba(31,42,54,0.08)]">
+              <Card className="bg-background border-[rgba(31,42,54,0.08)]">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2 text-black">
-                    <Bot className="w-4 h-4 text-[#127c66]" />
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <Bot className="w-4 h-4 text-[#1e4fcc]" />
                     AI Offer Assistant
                   </CardTitle>
                   <CardDescription>
@@ -1183,7 +1220,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
 
                     <Button
                       variant="outline"
-                      className="border-[rgba(31,42,54,0.08)] text-gray-700 hover:bg-[#f4f0e6]"
+                      className="border-[rgba(31,42,54,0.08)] text-foreground hover:bg-muted"
                       disabled={!assistantPlaybook || assistantSaving}
                       onClick={() => void savePlaybookToTimeline(selectedLead.id)}
                     >
@@ -1194,27 +1231,27 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   {assistantPlaybook && (
                     <div className="space-y-4">
                       <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-4">
-                        <p className="text-xs text-gray-500">Recommended Offer</p>
-                        <p className="text-sm font-semibold text-black mt-1">
+                        <p className="text-xs text-muted-foreground">Recommended Offer</p>
+                        <p className="text-sm font-semibold text-foreground mt-1">
                           {assistantPlaybook.recommendedPackage.name}
-                          <span className="text-xs text-gray-500 ml-2">
+                          <span className="text-xs text-muted-foreground ml-2">
                             ({Math.round((assistantPlaybook.recommendedPackage.confidence || 0) * 100)}% confidence)
                           </span>
                         </p>
-                        <p className="text-sm text-gray-600 mt-2">{assistantPlaybook.recommendedPackage.rationale}</p>
-                        <p className="text-sm text-[#127c66] mt-2">
+                        <p className="text-sm text-muted-foreground mt-2">{assistantPlaybook.recommendedPackage.rationale}</p>
+                        <p className="text-sm text-[#1e4fcc] mt-2">
                           Service suggestion: {assistantPlaybook.suggestedPlanType}
                         </p>
                       </div>
 
                       {assistantPlaybook.backupPackages?.length > 0 && (
                         <div>
-                          <p className="text-xs text-gray-500 mb-2">Backup Offers</p>
+                          <p className="text-xs text-muted-foreground mb-2">Backup Offers</p>
                           <div className="space-y-2">
                             {assistantPlaybook.backupPackages.map((pkg, idx) => (
                               <div key={`${pkg.name}-${idx}`} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
-                                <p className="text-sm font-medium text-black">{pkg.name}</p>
-                                <p className="text-xs text-gray-600 mt-1">{pkg.rationale}</p>
+                                <p className="text-sm font-medium text-foreground">{pkg.name}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{pkg.rationale}</p>
                               </div>
                             ))}
                           </div>
@@ -1223,16 +1260,16 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
-                          <p className="text-xs text-gray-500 mb-2">Qualification Summary</p>
-                          <ul className="text-sm text-gray-700 space-y-1">
+                          <p className="text-xs text-muted-foreground mb-2">Qualification Summary</p>
+                          <ul className="text-sm text-foreground space-y-1">
                             {assistantPlaybook.qualificationSummary.map((item, idx) => (
                               <li key={`qual-${idx}`}>• {item}</li>
                             ))}
                           </ul>
                         </div>
                         <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
-                          <p className="text-xs text-gray-500 mb-2">Objection Handling</p>
-                          <ul className="text-sm text-gray-700 space-y-1">
+                          <p className="text-xs text-muted-foreground mb-2">Objection Handling</p>
+                          <ul className="text-sm text-foreground space-y-1">
                             {assistantPlaybook.objectionHandling.map((item, idx) => (
                               <li key={`obj-${idx}`}>• {item}</li>
                             ))}
@@ -1241,22 +1278,22 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       </div>
 
                       <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3 space-y-2">
-                        <p className="text-xs text-gray-500">Follow-up Scripts</p>
-                        <p className="text-sm text-gray-700"><span className="font-medium text-black">Call opening:</span> {assistantPlaybook.followUpScripts.callOpening}</p>
-                        <p className="text-sm text-gray-700"><span className="font-medium text-black">SMS:</span> {assistantPlaybook.followUpScripts.sms}</p>
-                        <p className="text-sm text-gray-700"><span className="font-medium text-black">Email subject:</span> {assistantPlaybook.followUpScripts.emailSubject}</p>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap"><span className="font-medium text-black">Email body:</span> {assistantPlaybook.followUpScripts.emailBody}</p>
+                        <p className="text-xs text-muted-foreground">Follow-up Scripts</p>
+                        <p className="text-sm text-foreground"><span className="font-medium text-foreground">Call opening:</span> {assistantPlaybook.followUpScripts.callOpening}</p>
+                        <p className="text-sm text-foreground"><span className="font-medium text-foreground">SMS:</span> {assistantPlaybook.followUpScripts.sms}</p>
+                        <p className="text-sm text-foreground"><span className="font-medium text-foreground">Email subject:</span> {assistantPlaybook.followUpScripts.emailSubject}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap"><span className="font-medium text-foreground">Email body:</span> {assistantPlaybook.followUpScripts.emailBody}</p>
                       </div>
 
                       {assistantPlaybook.citations?.length > 0 && (
                         <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3 space-y-2">
-                          <p className="text-xs text-gray-500">Grounding Citations</p>
+                          <p className="text-xs text-muted-foreground">Grounding Citations</p>
                           {assistantPlaybook.citations.slice(0, 4).map((c, idx) => (
-                            <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#127c66] bg-[#fcf8ec] p-2">
-                              <p className="text-xs font-medium text-black">
+                            <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#1e4fcc] bg-background p-2">
+                              <p className="text-xs font-medium text-foreground">
                                 {c.packageName} - {c.documentName} (chunk {c.chunkIndex})
                               </p>
-                              <p className="text-xs text-gray-600 mt-1">{c.snippet}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{c.snippet}</p>
                             </div>
                           ))}
                         </div>
@@ -1278,7 +1315,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-[rgba(31,42,54,0.08)] text-black hover:bg-[#f4f0e6]"
+                  className="border-[rgba(31,42,54,0.08)] text-foreground hover:bg-muted"
                   onClick={openEditLead}
                 >
                   <Edit className="w-4 h-4 mr-2" />
@@ -1295,44 +1332,44 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </Dialog>
 
       <Dialog open={showEditLeadDialog} onOpenChange={setShowEditLeadDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-black">Edit Lead</DialogTitle>
+            <DialogTitle className="text-foreground">Edit Lead</DialogTitle>
             <DialogDescription>Update the lead’s CRM profile and workflow status.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-gray-600">First name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.firstName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, firstName: e.target.value }))} />
+              <Label className="text-muted-foreground">First name</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.firstName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, firstName: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Last name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.lastName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, lastName: e.target.value }))} />
+              <Label className="text-muted-foreground">Last name</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.lastName} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, lastName: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Email</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="email" value={editLeadForm.email} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, email: e.target.value }))} />
+              <Label className="text-muted-foreground">Email</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" type="email" value={editLeadForm.email} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, email: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Phone</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.phone} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, phone: e.target.value }))} />
+              <Label className="text-muted-foreground">Phone</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.phone} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, phone: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Company</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.company} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, company: e.target.value }))} />
+              <Label className="text-muted-foreground">Company</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.company} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, company: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.title} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, title: e.target.value }))} />
+              <Label className="text-muted-foreground">Title</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.title} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, title: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Source</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.source} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, source: e.target.value }))} />
+              <Label className="text-muted-foreground">Source</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.source} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, source: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Status</Label>
+              <Label className="text-muted-foreground">Status</Label>
               <Select value={editLeadForm.status} onValueChange={(value) => setEditLeadForm((prev) => ({ ...prev, status: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
@@ -1345,12 +1382,12 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600">Estimated value</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="number" value={editLeadForm.estimatedValue} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, estimatedValue: e.target.value }))} />
+              <Label className="text-muted-foreground">Estimated value</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" type="number" value={editLeadForm.estimatedValue} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, estimatedValue: e.target.value }))} />
             </div>
             <div className="md:col-span-2">
-              <Label className="text-gray-600">AI next action</Label>
-              <Textarea className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={editLeadForm.aiNextAction} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, aiNextAction: e.target.value }))} />
+              <Label className="text-muted-foreground">AI next action</Label>
+              <Textarea className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={editLeadForm.aiNextAction} onChange={(e) => setEditLeadForm((prev) => ({ ...prev, aiNextAction: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
@@ -1365,9 +1402,9 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </Dialog>
 
       <AlertDialog open={showDeleteLeadConfirm} onOpenChange={setShowDeleteLeadConfirm}>
-        <AlertDialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <AlertDialogContent className="bg-card border-[rgba(31,42,54,0.08)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-black">Delete this lead?</AlertDialogTitle>
+            <AlertDialogTitle className="text-foreground">Delete this lead?</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}`.trim() || 'This lead' : 'This lead'} will be permanently removed from your CRM. Its sequence enrollments will also be deleted, while timeline entries are retained without the lead association. This cannot be undone.
             </AlertDialogDescription>
@@ -1389,19 +1426,19 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
       </AlertDialog>
 
       <Dialog open={showContactLeadDialog} onOpenChange={setShowContactLeadDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)]">
           <DialogHeader>
-            <DialogTitle className="text-black">Contact Lead</DialogTitle>
+            <DialogTitle className="text-foreground">Contact Lead</DialogTitle>
             <DialogDescription>Send or record an SMS follow-up for this lead.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">To</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={selectedLead?.phone || ''} readOnly />
+              <Label className="text-muted-foreground">To</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={selectedLead?.phone || ''} readOnly />
             </div>
             <div>
-              <Label className="text-gray-600">Message</Label>
-              <Textarea className="mt-1 min-h-28 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} />
+              <Label className="text-muted-foreground">Message</Label>
+              <Textarea className="mt-1 min-h-28 bg-muted border-[rgba(31,42,54,0.08)]" value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -1426,25 +1463,25 @@ function SortableItem({ item }: { item: PipelineItem }) {
   
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] hover:border-[#127c66] cursor-grab active:cursor-grabbing mb-2 shadow-sm">
+      <Card className="bg-card border-[rgba(31,42,54,0.08)] hover:border-[#1e4fcc] cursor-grab active:cursor-grabbing mb-2 shadow-sm">
         <CardContent className="p-3">
           <div className="flex items-start justify-between mb-2">
-            <h4 className="text-sm font-medium text-black truncate flex-1">{item.title}</h4>
+            <h4 className="text-sm font-medium text-foreground truncate flex-1">{item.title}</h4>
           </div>
           
           {item.value && (
-            <p className="text-lg font-semibold text-black mb-2">${item.value.toLocaleString()}</p>
+            <p className="text-lg font-semibold text-foreground mb-2">${item.value.toLocaleString()}</p>
           )}
           
           <div className="flex items-center justify-between">
             {item.aiWinProbability && (
-              <Badge variant="outline" className="text-xs border-[#127c66]/50 text-[#127c66]">
+              <Badge variant="outline" className="text-xs border-[#1e4fcc]/50 text-[#1e4fcc]">
                 {Math.round(item.aiWinProbability * 100)}% win
               </Badge>
             )}
             {item.lead && (
               <Avatar className="w-6 h-6">
-                <AvatarFallback className="bg-[#18b897] text-black text-xs">
+                <AvatarFallback className="bg-[#2f6bff] text-foreground text-xs">
                   {item.lead.firstName?.[0]}{item.lead.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
@@ -1470,7 +1507,7 @@ function PipelineStageColumn({
       ref={setNodeRef}
       className={cn(
         "shrink-0 w-[300px] bg-white rounded-lg border shadow-sm transition-colors",
-        isOver ? "border-[#127c66] bg-[#f4f0e6]" : "border-[rgba(31,42,54,0.08)]"
+        isOver ? "border-[#1e4fcc] bg-muted" : "border-[rgba(31,42,54,0.08)]"
       )}
     >
       {children}
@@ -1573,19 +1610,19 @@ function PipelineView() {
   )
   
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-background min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-black">Pipeline</h1>
-          <p className="text-gray-500">Drag and drop deals through your sales stages</p>
+          <h1 className="text-2xl font-bold text-foreground">Pipeline</h1>
+          <p className="text-muted-foreground">Drag and drop deals through your sales stages</p>
         </div>
         <div className="flex items-center gap-4">
-          <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] px-4 py-2 shadow-sm">
+          <Card className="bg-card border-[rgba(31,42,54,0.08)] px-4 py-2 shadow-sm">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-[#127c66]" />
-              <span className="text-lg font-semibold text-black">${totalValue.toLocaleString()}</span>
-              <span className="text-sm text-gray-500">{saving ? "saving…" : "live total"}</span>
+              <DollarSign className="w-4 h-4 text-[#1e4fcc]" />
+              <span className="text-lg font-semibold text-foreground">${totalValue.toLocaleString()}</span>
+              <span className="text-sm text-muted-foreground">{saving ? "saving…" : "live total"}</span>
             </div>
           </Card>
           <Button className="btn-gold gap-2" onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}>
@@ -1596,7 +1633,7 @@ function PipelineView() {
       </div>
       
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-gray-500">
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
           <RefreshCw className="w-5 h-5 animate-spin mr-2" />
           Loading pipeline…
         </div>
@@ -1613,15 +1650,15 @@ function PipelineView() {
                     style={{ borderTopLeftRadius: 8, borderTopRightRadius: 8, borderTop: `3px solid ${stage.color}` }}
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-black">{stage.name}</h3>
-                      <Badge variant="secondary" className="bg-[#f4f0e6] text-gray-600">
+                      <h3 className="text-sm font-medium text-foreground">{stage.name}</h3>
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground">
                         {stage.items.length}
                       </Badge>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-gray-400 hover:text-[#127c66]"
+                      className="h-6 w-6 text-muted-foreground hover:text-[#1e4fcc]"
                       onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
                     >
                       <Plus className="w-3 h-3" />
@@ -1638,7 +1675,7 @@ function PipelineView() {
                       </SortableContext>
                       
                       {stage.items.length === 0 && (
-                        <div className="text-center py-8 text-gray-400 text-sm">
+                        <div className="text-center py-8 text-muted-foreground text-sm">
                           Drop a deal here
                         </div>
                       )}
@@ -1782,11 +1819,11 @@ function AutomationView() {
   const activeCount = automations.filter((automation) => automation.isActive).length
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-background min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-black">AI Automation</h1>
-          <p className="text-gray-500">Automate your workflows with intelligent triggers</p>
+          <h1 className="text-2xl font-bold text-foreground">AI Automation</h1>
+          <p className="text-muted-foreground">Automate your workflows with intelligent triggers</p>
         </div>
         <Button
           className="btn-gold gap-2"
@@ -1803,15 +1840,15 @@ function AutomationView() {
           { title: "Total Automations", value: automations.length, icon: Activity },
           { title: "Runs Logged", value: automations.reduce((total, automation) => total + automation.executionCount, 0), icon: Brain },
         ].map((stat) => (
-          <Card key={stat.title} className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+          <Card key={stat.title} className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#18b897]/20 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-[#127c66]" />
+                <div className="w-10 h-10 rounded-lg bg-[#2f6bff]/20 flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-[#1e4fcc]" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-black">{stat.value}</p>
-                  <p className="text-sm text-gray-500">{stat.title}</p>
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
                 </div>
               </div>
             </CardContent>
@@ -1819,34 +1856,34 @@ function AutomationView() {
         ))}
       </div>
 
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+      <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
         <CardHeader>
-          <CardTitle className="text-black">Automation Library</CardTitle>
+          <CardTitle className="text-foreground">Automation Library</CardTitle>
           <CardDescription>Lead-triggered workflows that run inside your CRM organization.</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-sm text-gray-500">Loading automations…</div>
+            <div className="text-sm text-muted-foreground">Loading automations…</div>
           ) : automations.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[rgba(31,42,54,0.08)] p-6 text-sm text-gray-500">
+            <div className="rounded-lg border border-dashed border-[rgba(31,42,54,0.08)] p-6 text-sm text-muted-foreground">
               No automations yet. Create a workflow for new leads, stage changes, or follow-up reminders.
             </div>
           ) : (
             <div className="space-y-3">
               {automations.map((automation) => (
-                <div key={automation.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f4f0e6] p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div key={automation.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-muted p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-black">{automation.name}</p>
-                      <Badge variant="outline" className={automation.isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-gray-500'}>
+                      <p className="text-sm font-semibold text-foreground">{automation.name}</p>
+                      <Badge variant="outline" className={automation.isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-muted-foreground'}>
                         {automation.isActive ? 'active' : 'paused'}
                       </Badge>
-                      <Badge variant="outline" className="border-[#127c66]/60 text-[#127c66] capitalize">
+                      <Badge variant="outline" className="border-[#1e4fcc]/60 text-[#1e4fcc] capitalize">
                         {automation.trigger.replaceAll('_', ' ')}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{automation.description || 'No description provided.'}</p>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-sm text-muted-foreground mt-1">{automation.description || 'No description provided.'}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
                       {automation.actions.length} action{automation.actions.length === 1 ? '' : 's'} • {automation.executionCount} run{automation.executionCount === 1 ? '' : 's'}
                       {automation.lastExecutedAt ? ` • Last run ${new Date(automation.lastExecutedAt).toLocaleString()}` : ''}
                     </p>
@@ -1865,24 +1902,24 @@ function AutomationView() {
       </Card>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)]">
           <DialogHeader>
-            <DialogTitle className="text-black">Create Automation</DialogTitle>
+            <DialogTitle className="text-foreground">Create Automation</DialogTitle>
             <DialogDescription>Set a trigger and default action for your team workflow.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <Label className="text-muted-foreground">Name</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Description</Label>
-              <Textarea className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
+              <Label className="text-muted-foreground">Description</Label>
+              <Textarea className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Trigger</Label>
+              <Label className="text-muted-foreground">Trigger</Label>
               <Select value={form.trigger} onValueChange={(value) => setForm((prev) => ({ ...prev, trigger: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lead_created">Lead created</SelectItem>
                   <SelectItem value="lead_scored">Lead scored</SelectItem>
@@ -1892,9 +1929,9 @@ function AutomationView() {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600">Action type</Label>
+              <Label className="text-muted-foreground">Action type</Label>
               <Select value={form.actionType} onValueChange={(value) => setForm((prev) => ({ ...prev, actionType: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="create_task">Create task</SelectItem>
                   <SelectItem value="send_sms">Send SMS</SelectItem>
@@ -1904,8 +1941,8 @@ function AutomationView() {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600">Action target</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={form.actionTarget} onChange={(e) => setForm((prev) => ({ ...prev, actionTarget: e.target.value }))} placeholder="Task text, phone, owner email, issue title..." />
+              <Label className="text-muted-foreground">Action target</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={form.actionTarget} onChange={(e) => setForm((prev) => ({ ...prev, actionTarget: e.target.value }))} placeholder="Task text, phone, owner email, issue title..." />
             </div>
           </div>
           <DialogFooter>
@@ -2245,14 +2282,14 @@ function SocialMediaView() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-[#fcf8ec] min-h-screen">
+    <div className="p-6 space-y-6 bg-background min-h-screen">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-black">Social Media</h1>
-          <p className="text-gray-500">Elite AI content studio with queue, scheduling, and media prompt generation</p>
+          <h1 className="text-2xl font-bold text-foreground">Social Media</h1>
+          <p className="text-muted-foreground">Elite AI content studio with queue, scheduling, and media prompt generation</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-[#127c66] text-[#127c66] gap-2" onClick={() => setShowMediaDialog(true)}>
+          <Button variant="outline" className="border-[#1e4fcc] text-[#1e4fcc] gap-2" onClick={() => setShowMediaDialog(true)}>
             <ImageIcon className="w-4 h-4" />
             Generate Media
           </Button>
@@ -2270,20 +2307,20 @@ function SocialMediaView() {
             whileTap={{ scale: 0.99 }}
             type="button"
             onClick={() => applyCampaignPack(pack)}
-            className="text-left p-4 bg-[#fcfcfc] border border-[rgba(31,42,54,0.08)] rounded-xl shadow-sm hover:shadow-md transition-shadow"
+            className="text-left p-4 bg-card border border-[rgba(31,42,54,0.08)] rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
-            <p className="text-sm font-semibold text-black">{pack.label}</p>
-            <p className="text-xs text-gray-500 mt-1">{pack.topic}</p>
-            <p className="text-xs text-[#127c66] mt-2">CTA: {pack.cta}</p>
+            <p className="text-sm font-semibold text-foreground">{pack.label}</p>
+            <p className="text-xs text-muted-foreground mt-1">{pack.topic}</p>
+            <p className="text-xs text-[#1e4fcc] mt-2">CTA: {pack.cta}</p>
           </motion.button>
         ))}
       </div>
 
-      <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm">
+      <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-black text-lg">Connected Social Accounts</CardTitle>
+              <CardTitle className="text-foreground text-lg">Connected Social Accounts</CardTitle>
               <CardDescription>Store the platform identities your scheduled content can publish through.</CardDescription>
             </div>
             <Button variant="outline" className="border-[rgba(31,42,54,0.08)]" onClick={() => setShowSocialAccountDialog(true)}>
@@ -2294,23 +2331,23 @@ function SocialMediaView() {
         </CardHeader>
         <CardContent>
           {socialAccounts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[rgba(31,42,54,0.08)] p-6 text-sm text-gray-500">
+            <div className="rounded-lg border border-dashed border-[rgba(31,42,54,0.08)] p-6 text-sm text-muted-foreground">
               No connected accounts yet. Add LinkedIn, Facebook, Instagram, or X credentials before using automated publishing.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {socialAccounts.map((account) => (
-                <div key={account.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-[#f4f0e6] p-4 space-y-3">
+                <div key={account.id} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-muted p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-black capitalize">{account.platform}</p>
-                      <p className="text-xs text-gray-500">{account.accountName || account.accountId}</p>
+                      <p className="text-sm font-semibold text-foreground capitalize">{account.platform}</p>
+                      <p className="text-xs text-muted-foreground">{account.accountName || account.accountId}</p>
                     </div>
-                    <Badge variant="outline" className={account.isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-gray-500'}>
+                    <Badge variant="outline" className={account.isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-muted-foreground'}>
                       {account.isActive ? 'active' : 'paused'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Token stored: {account.accessTokenConfigured ? 'yes' : 'no'}
                     {account.lastSyncedAt ? ` • Synced ${new Date(account.lastSyncedAt).toLocaleString()}` : ''}
                   </p>
@@ -2328,16 +2365,16 @@ function SocialMediaView() {
       </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-1">
+        <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-1">
           <CardHeader>
-            <CardTitle className="text-black text-lg">Manual Composer</CardTitle>
+            <CardTitle className="text-foreground text-lg">Manual Composer</CardTitle>
             <CardDescription>Create, draft, and schedule premium brand posts.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <Label className="text-gray-600">Platform</Label>
+              <Label className="text-muted-foreground">Platform</Label>
               <Select value={composerPlatform} onValueChange={setComposerPlatform}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter/X</SelectItem>
@@ -2347,16 +2384,16 @@ function SocialMediaView() {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600">Title</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerTitle} onChange={(e) => setComposerTitle(e.target.value)} placeholder="Post title (optional)" />
+              <Label className="text-muted-foreground">Title</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={composerTitle} onChange={(e) => setComposerTitle(e.target.value)} placeholder="Post title (optional)" />
             </div>
             <div>
-              <Label className="text-gray-600">Post content</Label>
-              <Textarea className="mt-1 min-h-28 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerContent} onChange={(e) => setComposerContent(e.target.value)} placeholder="Write a high-converting post..." />
+              <Label className="text-muted-foreground">Post content</Label>
+              <Textarea className="mt-1 min-h-28 bg-muted border-[rgba(31,42,54,0.08)]" value={composerContent} onChange={(e) => setComposerContent(e.target.value)} placeholder="Write a high-converting post..." />
             </div>
             <div>
-              <Label className="text-gray-600">Schedule (optional)</Label>
-              <Input type="datetime-local" className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={composerScheduleAt} onChange={(e) => setComposerScheduleAt(e.target.value)} />
+              <Label className="text-muted-foreground">Schedule (optional)</Label>
+              <Input type="datetime-local" className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={composerScheduleAt} onChange={(e) => setComposerScheduleAt(e.target.value)} />
             </div>
             <div className="flex gap-2">
               <Button
@@ -2378,15 +2415,15 @@ function SocialMediaView() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-2">
+        <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm xl:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-black text-lg">Content Queue</CardTitle>
+                <CardTitle className="text-foreground text-lg">Content Queue</CardTitle>
                 <CardDescription>Manage drafts, scheduled posts, and published content.</CardDescription>
               </div>
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-[180px] bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px] bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All platforms</SelectItem>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
@@ -2399,9 +2436,9 @@ function SocialMediaView() {
           </CardHeader>
           <CardContent className="space-y-3">
             {loading ? (
-              <div className="py-10 text-center text-gray-500">Loading queue...</div>
+              <div className="py-10 text-center text-muted-foreground">Loading queue...</div>
             ) : filteredItems.length === 0 ? (
-              <div className="py-10 text-center text-gray-500 border border-dashed border-[rgba(31,42,54,0.08)] rounded-lg">
+              <div className="py-10 text-center text-muted-foreground border border-dashed border-[rgba(31,42,54,0.08)] rounded-lg">
                 No posts yet. Generate with AI or create your first draft.
               </div>
             ) : filteredItems.map((item) => (
@@ -2410,21 +2447,21 @@ function SocialMediaView() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ y: -1 }}
-                className="p-4 bg-[#f4f0e6] border border-[rgba(31,42,54,0.08)] rounded-lg"
+                className="p-4 bg-muted border border-[rgba(31,42,54,0.08)] rounded-lg"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize border-[#127c66]/60 text-[#127c66]">{item.platform}</Badge>
+                      <Badge variant="outline" className="capitalize border-[#1e4fcc]/60 text-[#1e4fcc]">{item.platform}</Badge>
                       <Badge variant="outline" className={cn(
                         item.status === 'published' && 'border-emerald-500 text-emerald-600',
-                        item.status === 'scheduled' && 'border-[#18b897] text-[#127c66]',
-                        item.status === 'draft' && 'border-gray-400 text-gray-600'
+                        item.status === 'scheduled' && 'border-[#2f6bff] text-[#1e4fcc]',
+                        item.status === 'draft' && 'border-gray-400 text-muted-foreground'
                       )}>{item.status}</Badge>
                     </div>
-                    <p className="text-sm font-semibold text-black mt-2">{item.title || 'Untitled post'}</p>
-                    <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap line-clamp-3">{item.content}</p>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-sm font-semibold text-foreground mt-2">{item.title || 'Untitled post'}</p>
+                    <p className="text-sm text-foreground mt-1 whitespace-pre-wrap line-clamp-3">{item.content}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
                       Created {new Date(item.createdAt).toLocaleString()}
                       {item.scheduledFor ? ` • Scheduled ${new Date(item.scheduledFor).toLocaleString()}` : ''}
                     </p>
@@ -2456,20 +2493,20 @@ function SocialMediaView() {
       </div>
 
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-2xl">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-black flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#127c66]" />Generate Social Content</DialogTitle>
+            <DialogTitle className="text-foreground flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#1e4fcc]" />Generate Social Content</DialogTitle>
             <DialogDescription>Create premium content with AI and save directly to queue.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-3">
-              <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
+              <Label className="text-muted-foreground">Topic</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="5 mistakes clients make before hiring a freelancer" />
             </div>
             <div>
-              <Label className="text-gray-600">Platform</Label>
+              <Label className="text-muted-foreground">Platform</Label>
               <Select value={platform} onValueChange={setPlatform}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter/X</SelectItem>
@@ -2479,9 +2516,9 @@ function SocialMediaView() {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600">Tone</Label>
+              <Label className="text-muted-foreground">Tone</Label>
               <Select value={tone} onValueChange={setTone}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="professional">Professional</SelectItem>
                   <SelectItem value="authoritative">Authoritative</SelectItem>
@@ -2499,19 +2536,19 @@ function SocialMediaView() {
           <Separator />
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Generated title</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={generatedTitle} onChange={(e) => setGeneratedTitle(e.target.value)} />
+              <Label className="text-muted-foreground">Generated title</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={generatedTitle} onChange={(e) => setGeneratedTitle(e.target.value)} />
             </div>
             <div>
-              <Label className="text-gray-600">Generated content</Label>
-              <Textarea className="mt-1 min-h-32 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={generatedContent} onChange={(e) => setGeneratedContent(e.target.value)} />
+              <Label className="text-muted-foreground">Generated content</Label>
+              <Textarea className="mt-1 min-h-32 bg-muted border-[rgba(31,42,54,0.08)]" value={generatedContent} onChange={(e) => setGeneratedContent(e.target.value)} />
             </div>
             <div className="flex flex-wrap gap-2">
               {generatedHashtags.map((h) => (
                 <Badge key={h} variant="outline" className="border-[rgba(31,42,54,0.08)]">{h}</Badge>
               ))}
             </div>
-            {bestTimeToPost && <p className="text-xs text-gray-500">Best time to post: {bestTimeToPost}</p>}
+            {bestTimeToPost && <p className="text-xs text-muted-foreground">Best time to post: {bestTimeToPost}</p>}
           </div>
           <DialogFooter className="flex gap-2">
             <Button
@@ -2534,20 +2571,20 @@ function SocialMediaView() {
       </Dialog>
 
       <Dialog open={showMediaDialog} onOpenChange={setShowMediaDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)] max-w-xl">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)] max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-black flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[#127c66]" />Generate Media Prompt</DialogTitle>
+            <DialogTitle className="text-foreground flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[#1e4fcc]" />Generate Media Prompt</DialogTitle>
             <DialogDescription>Create image prompts and caption/CTA for high-performing visuals.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Topic</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
+              <Label className="text-muted-foreground">Topic</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={mediaTopic} onChange={(e) => setMediaTopic(e.target.value)} placeholder="Client success transformation visual" />
             </div>
             <div>
-              <Label className="text-gray-600">Platform</Label>
+              <Label className="text-muted-foreground">Platform</Label>
               <Select value={mediaPlatform} onValueChange={setMediaPlatform}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="instagram">Instagram</SelectItem>
@@ -2560,16 +2597,16 @@ function SocialMediaView() {
               {saving ? 'Generating...' : 'Generate media pack'}
             </Button>
             <div>
-              <Label className="text-gray-600">Image prompt</Label>
-              <Textarea className="mt-1 min-h-24 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaPrompt} onChange={(e) => setMediaPrompt(e.target.value)} />
+              <Label className="text-muted-foreground">Image prompt</Label>
+              <Textarea className="mt-1 min-h-24 bg-muted border-[rgba(31,42,54,0.08)]" value={mediaPrompt} onChange={(e) => setMediaPrompt(e.target.value)} />
             </div>
             <div>
-              <Label className="text-gray-600">Caption</Label>
-              <Textarea className="mt-1 min-h-16 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaCaption} onChange={(e) => setMediaCaption(e.target.value)} />
+              <Label className="text-muted-foreground">Caption</Label>
+              <Textarea className="mt-1 min-h-16 bg-muted border-[rgba(31,42,54,0.08)]" value={mediaCaption} onChange={(e) => setMediaCaption(e.target.value)} />
             </div>
             <div>
-              <Label className="text-gray-600">CTA</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={mediaCta} onChange={(e) => setMediaCta(e.target.value)} />
+              <Label className="text-muted-foreground">CTA</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={mediaCta} onChange={(e) => setMediaCta(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -2591,16 +2628,16 @@ function SocialMediaView() {
       </Dialog>
 
       <Dialog open={showSocialAccountDialog} onOpenChange={setShowSocialAccountDialog}>
-        <DialogContent className="bg-[#fcfcfc] border-[rgba(31,42,54,0.08)]">
+        <DialogContent className="bg-card border-[rgba(31,42,54,0.08)]">
           <DialogHeader>
-            <DialogTitle className="text-black">Connect Social Account</DialogTitle>
+            <DialogTitle className="text-foreground">Connect Social Account</DialogTitle>
             <DialogDescription>Store the platform account details this workspace should publish through.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-gray-600">Platform</Label>
+              <Label className="text-muted-foreground">Platform</Label>
               <Select value={socialForm.platform} onValueChange={(value) => setSocialForm((prev) => ({ ...prev, platform: value }))}>
-                <SelectTrigger className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="twitter">Twitter / X</SelectItem>
@@ -2610,16 +2647,16 @@ function SocialMediaView() {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600">Account ID / page ID</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={socialForm.accountId} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountId: e.target.value }))} />
+              <Label className="text-muted-foreground">Account ID / page ID</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={socialForm.accountId} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountId: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Display name</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" value={socialForm.accountName} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountName: e.target.value }))} />
+              <Label className="text-muted-foreground">Display name</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" value={socialForm.accountName} onChange={(e) => setSocialForm((prev) => ({ ...prev, accountName: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-gray-600">Access token</Label>
-              <Input className="mt-1 bg-[#f4f0e6] border-[rgba(31,42,54,0.08)]" type="password" value={socialForm.accessToken} onChange={(e) => setSocialForm((prev) => ({ ...prev, accessToken: e.target.value }))} />
+              <Label className="text-muted-foreground">Access token</Label>
+              <Input className="mt-1 bg-muted border-[rgba(31,42,54,0.08)]" type="password" value={socialForm.accessToken} onChange={(e) => setSocialForm((prev) => ({ ...prev, accessToken: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
@@ -2701,7 +2738,7 @@ export default function EliteCRM() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#fcf8ec] flex items-center justify-center text-gray-500">
+      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
         <RefreshCw className="w-5 h-5 animate-spin mr-2" />
         Loading workspace…
       </div>

@@ -44,8 +44,8 @@ const PRESENTATION: Record<PlanId, PresentationPlan> = {
   },
   starter: {
     icon: Zap,
-    color: "border-[#127c66]/40",
-    btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
+    color: "border-[#1e4fcc]/40",
+    btnClass: "bg-[#2f6bff] text-[#0c111b] hover:bg-[#245be0]",
     features: [
       { text: "1 user seat", included: true },
       { text: "Up to 500 leads", included: true },
@@ -61,9 +61,9 @@ const PRESENTATION: Record<PlanId, PresentationPlan> = {
   },
   pro: {
     icon: Crown,
-    color: "border-[#127c66]",
+    color: "border-[#1e4fcc]",
     popular: true,
-    btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
+    btnClass: "bg-[#2f6bff] text-[#0c111b] hover:bg-[#245be0]",
     features: [
       { text: "3 user seats", included: true },
       { text: "Unlimited leads", included: true },
@@ -234,7 +234,7 @@ export function CrmPricingPage() {
         </div>
         <button
           onClick={() => router.push("/auth")}
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-[#127c66]/40 px-4 text-sm font-medium text-[#127c66] transition hover:bg-[#18b897] hover:text-[#0c111b]"
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-[#1e4fcc]/40 px-4 text-sm font-medium text-[#1e4fcc] transition hover:bg-[#2f6bff] hover:text-[#0c111b]"
         >
           Sign in <ArrowRight className="h-3.5 w-3.5" />
         </button>
@@ -242,13 +242,13 @@ export function CrmPricingPage() {
 
       {/* Hero */}
       <section className="px-6 pb-12 pt-12 text-center sm:px-10 sm:pt-16">
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#127c66]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#127c66] shadow-sm backdrop-blur-sm">
-          <Star className="h-3 w-3 fill-[#18b897]" />
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#1e4fcc]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#1e4fcc] shadow-sm backdrop-blur-sm">
+          <Star className="h-3 w-3 fill-[#2f6bff]" />
           {BILLING_LABEL[billing]}
         </div>
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-[#0c111b] sm:text-5xl">
           Plans built for{" "}
-          <span className="text-[#127c66]">
+          <span className="text-[#1e4fcc]">
             independent client work
           </span>
         </h1>
@@ -268,19 +268,19 @@ export function CrmPricingPage() {
               <div
                 key={plan.id}
                 className={`relative flex flex-col rounded-3xl border-2 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg ${plan.color} ${
-                  plan.popular ? "ring-2 ring-[#18b897]/30 shadow-[0_8px_32px_rgba(24,184,151,0.18)]" : ""
+                  plan.popular ? "ring-2 ring-[#2f6bff]/30 shadow-[0_8px_32px_rgba(24,184,151,0.18)]" : ""
                 }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="flex items-center gap-1 rounded-full bg-[#18b897] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--ink)] shadow-md">
+                    <span className="flex items-center gap-1 rounded-full bg-[#2f6bff] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--ink)] shadow-md">
                       <Crown className="h-3 w-3" />
                       Most Popular
                     </span>
                   </div>
                 )}
-                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#18b897]" : "bg-[#f4f0e6]"}`}>
-                  <Icon className={`h-5 w-5 ${plan.popular ? "text-[var(--ink)]" : "text-[#127c66]"}`} />
+                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#2f6bff]" : "bg-muted"}`}>
+                  <Icon className={`h-5 w-5 ${plan.popular ? "text-[var(--ink)]" : "text-[#1e4fcc]"}`} />
                 </div>
                 <h3 className="text-lg font-bold text-[#0c111b]">{plan.name}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-[#545961]">{plan.description}</p>
@@ -339,10 +339,10 @@ export function CrmPricingPage() {
         <div className="overflow-hidden rounded-3xl border border-[var(--ink-line)] bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--ink-line)] bg-[#f4f0e6]">
+              <tr className="border-b border-[var(--ink-line)] bg-muted">
                 <th className="py-4 pl-6 text-left font-semibold text-[#545961]">Feature</th>
                 {PLANS.map((p) => (
-                  <th key={p.id} className={`py-4 text-center font-bold ${p.popular ? "text-[#127c66]" : "text-[#0c111b]"}`}>
+                  <th key={p.id} className={`py-4 text-center font-bold ${p.popular ? "text-[#1e4fcc]" : "text-[#0c111b]"}`}>
                     {p.name}
                   </th>
                 ))}
@@ -350,7 +350,7 @@ export function CrmPricingPage() {
             </thead>
             <tbody>
               {COMPARE_FEATURES.map((feature, i) => (
-                <tr key={feature} className={i % 2 === 0 ? "bg-white" : "bg-[#f4f0e6]"}>
+                <tr key={feature} className={i % 2 === 0 ? "bg-white" : "bg-muted"}>
                   <td className="py-3.5 pl-6 text-[#0c111b]">{feature}</td>
                   {(["free", "starter", "pro", "enterprise"] as PlanId[]).map((planId) => {
                     const val = FEATURE_MAP[planId][i];
@@ -391,7 +391,7 @@ export function CrmPricingPage() {
             <div key={i} className="overflow-hidden rounded-2xl border border-[var(--ink-line)] bg-white">
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-semibold text-[#0c111b] hover:bg-[#f4f0e6]"
+                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-semibold text-[#0c111b] hover:bg-muted"
               >
                 {item.q}
                 <ChevronDown className={`h-4 w-4 shrink-0 text-[#545961] transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
@@ -407,7 +407,7 @@ export function CrmPricingPage() {
       </section>
 
       {/* Bottom CTA */}
-      <section className="bg-[#18b897] px-6 py-16 text-center sm:px-10">
+      <section className="bg-[#2f6bff] px-6 py-16 text-center sm:px-10">
         <h2 className="text-3xl font-bold text-[#0c111b]">Ready to run a tighter operation?</h2>
         <p className="mx-auto mt-3 max-w-md text-base text-[#0c111b]/80">
           Start free today. Paid options will open only after the full billing flow is verified.
@@ -415,7 +415,7 @@ export function CrmPricingPage() {
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
             onClick={() => router.push("/auth")}
-            className="flex h-12 items-center gap-2 rounded-2xl bg-white px-8 text-sm font-bold text-[#127c66] shadow-lg transition hover:shadow-xl"
+            className="flex h-12 items-center gap-2 rounded-2xl bg-white px-8 text-sm font-bold text-[#1e4fcc] shadow-lg transition hover:shadow-xl"
           >
             Start for free <ArrowRight className="h-4 w-4" />
           </button>

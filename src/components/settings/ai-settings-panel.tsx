@@ -154,7 +154,7 @@ export function AISettingsPanel() {
   if (loading) {
     return (
       <Card className="border-[var(--ink-line)] bg-white shadow-sm">
-        <CardContent className="flex items-center justify-center py-12 text-gray-500">
+        <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
           <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
           Loading AI settings…
         </CardContent>
@@ -175,7 +175,7 @@ export function AISettingsPanel() {
               <Sparkles className="h-5 w-5 text-[var(--ink)]" />
             </div>
             <div>
-              <CardTitle className="text-black">AI Assistant Configuration</CardTitle>
+              <CardTitle className="text-foreground">AI Assistant Configuration</CardTitle>
               <CardDescription>
                 Choose your AI provider. Be aware: fallback availability depends on what platform keys are actually configured on this deployment.
               </CardDescription>
@@ -187,7 +187,7 @@ export function AISettingsPanel() {
           <div className="flex items-center gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4">
             <Bot className="h-5 w-5 text-[var(--teal-deep)]" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-black">
+              <p className="text-sm font-medium text-foreground">
                 Current: {settings?.providerLabel}
               </p>
 
@@ -213,7 +213,7 @@ export function AISettingsPanel() {
 
           {/* Provider Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-700">AI Provider</Label>
+            <Label className="text-sm font-medium text-foreground">AI Provider</Label>
             <Select
               value={selectedProvider}
               onValueChange={(value) => void saveProvider(value)}
@@ -237,7 +237,7 @@ export function AISettingsPanel() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {selectedProvider === 'openrouter'
                 ? settings?.platformFallbacks?.openrouter
                   ? 'Free tier active — auto-routes to best available AI model.'
@@ -261,7 +261,7 @@ export function AISettingsPanel() {
             <>
               <Separator />
               <div className="space-y-3">
-                <Label className="text-sm font-medium text-gray-700">
+                <Label className="text-sm font-medium text-foreground">
                   {selectedProvider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key
                 </Label>
 
@@ -301,7 +301,7 @@ export function AISettingsPanel() {
                     <button
                       type="button"
                       onClick={() => setShowKey(!showKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                     >
                       {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -314,7 +314,7 @@ export function AISettingsPanel() {
                     {saving ? 'Saving…' : 'Save Key'}
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Your key is stored securely and only used for AI features within your organization.
                   {selectedProvider === 'openai'
                     ? ' Get your key at platform.openai.com/api-keys'
@@ -329,8 +329,8 @@ export function AISettingsPanel() {
             <>
               <Separator />
               <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4 space-y-2">
-                <p className="text-sm font-medium text-black">Free Tier Details</p>
-                <ul className="text-xs text-gray-600 space-y-1">
+                <p className="text-sm font-medium text-foreground">Free Tier Details</p>
+                <ul className="text-xs text-muted-foreground space-y-1">
                   <li>• Standard tier AI assistant included — powered by Groq inference when a platform or org key is available</li>
                   <li>• Great for lead qualification, email/SMS drafting, sales coaching</li>
                   <li>• Upgrade to Advanced tier anytime for premium capabilities</li>

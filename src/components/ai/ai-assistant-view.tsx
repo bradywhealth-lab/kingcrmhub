@@ -88,7 +88,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          className="w-2 h-2 rounded-full bg-[#18b897]"
+          className="w-2 h-2 rounded-full bg-[#2f6bff]"
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
         />
@@ -115,7 +115,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-gray-100 text-muted-foreground hover:text-muted-foreground"
     >
       {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
@@ -137,13 +137,13 @@ function MessageBubble({ message }: { message: Message }) {
       <div
         className={cn(
           "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
-          isUser ? "bg-[#18b897]" : "bg-[#0c111b]"
+          isUser ? "bg-[#2f6bff]" : "bg-[#0c111b]"
         )}
       >
         {isUser ? (
           <span className="text-xs font-bold text-[#0c111b]">U</span>
         ) : (
-          <Bot className="w-4 h-4 text-[#18b897]" />
+          <Bot className="w-4 h-4 text-[#2f6bff]" />
         )}
       </div>
 
@@ -153,14 +153,14 @@ function MessageBubble({ message }: { message: Message }) {
           className={cn(
             "px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
             isUser
-              ? "bg-[#18b897] text-[#0c111b] rounded-tr-sm"
+              ? "bg-[#2f6bff] text-[#0c111b] rounded-tr-sm"
               : "bg-white border border-[var(--ink-line)] text-gray-800 rounded-tl-sm shadow-sm"
           )}
         >
           {message.content}
         </div>
         <div className={cn("flex items-center gap-1", isUser && "flex-row-reverse")}>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-muted-foreground">
             {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
           {!isUser && <CopyButton text={message.content} />}
@@ -385,14 +385,14 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
         <div className="p-4 border-b border-[var(--ink-line)] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-[#18b897]" />
+              <Bot className="w-4 h-4 text-[#2f6bff]" />
             </div>
-            <span className="font-semibold text-black text-sm">AI Assistant</span>
+            <span className="font-semibold text-foreground text-sm">AI Assistant</span>
           </div>
           <Button
             size="icon"
             variant="ghost"
-            className="w-8 h-8 text-gray-400 hover:text-[#127c66] hover:bg-[#f4f0e6]"
+            className="w-8 h-8 text-muted-foreground hover:text-[#1e4fcc] hover:bg-muted"
             onClick={createNewChat}
             title="New chat"
           >
@@ -410,14 +410,14 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                 className={cn(
                   "w-full group flex items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors",
                   activeChatId === convo.id
-                    ? "bg-[#f4f0e6] text-black"
-                    : "text-gray-600 hover:bg-[#faf7ee] hover:text-black"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-[#faf7ee] hover:text-foreground"
                 )}
               >
-                <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" />
+                <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate leading-snug">{convo.title}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     {new Date(convo.updatedAt).toLocaleDateString([], { month: "short", day: "numeric" })}
                     {convo.messages.length > 0 && ` · ${convo.messages.length} msg${convo.messages.length > 1 ? "s" : ""}`}
                   </p>
@@ -428,7 +428,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                       e.stopPropagation()
                       deleteChat(convo.id)
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 hover:text-red-500 text-gray-400 transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 hover:text-red-500 text-muted-foreground transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -440,7 +440,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
 
         {/* Footer hint */}
         <div className="p-3 border-t border-[var(--ink-line)]">
-          <p className="text-[11px] text-gray-400 text-center">⌘ + Enter to send</p>
+          <p className="text-[11px] text-muted-foreground text-center">⌘ + Enter to send</p>
         </div>
       </div>
 
@@ -450,14 +450,14 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
           <>
             {/* Chat header */}
             <div className="px-6 py-4 border-b border-[var(--ink-line)] bg-white flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#18b897] flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[#2f6bff] flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-[#0c111b]" />
               </div>
               <div>
-                <h2 className="font-semibold text-black text-sm">
+                <h2 className="font-semibold text-foreground text-sm">
                   {activeChat.title === "New conversation" ? "AI Sales Assistant" : activeChat.title}
                 </h2>
-                <p className="text-xs text-gray-400">Workspace assistant · King CRM</p>
+                <p className="text-xs text-muted-foreground">Workspace assistant · King CRM</p>
               </div>
             </div>
 
@@ -505,11 +505,11 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center py-10"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-[#18b897] flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[#2f6bff] flex items-center justify-center mx-auto mb-4">
                       <Bot className="w-8 h-8 text-[#0c111b]" />
                     </div>
-                    <h3 className="text-xl font-semibold text-black">How can I help you close?</h3>
-                    <p className="text-gray-500 text-sm mt-2 mb-8">
+                    <h3 className="text-xl font-semibold text-foreground">How can I help you close?</h3>
+                    <p className="text-muted-foreground text-sm mt-2 mb-8">
                       Ask me anything, including lead qualification, follow-up scripts, objections, pipeline strategy, or how to use KingCRM better.
                     </p>
 
@@ -519,13 +519,13 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         <button
                           key={sp.label}
                           onClick={() => void sendMessage(sp.prompt)}
-                          className="p-4 bg-white border border-[var(--ink-line)] rounded-xl text-left hover:border-[#127c66] hover:shadow-sm transition-all group"
+                          className="p-4 bg-white border border-[var(--ink-line)] rounded-xl text-left hover:border-[#1e4fcc] hover:shadow-sm transition-all group"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-medium text-black">{sp.label}</p>
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#127c66] shrink-0 mt-0.5 transition-colors" />
+                            <p className="text-sm font-medium text-foreground">{sp.label}</p>
+                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#1e4fcc] shrink-0 mt-0.5 transition-colors" />
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{sp.prompt}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{sp.prompt}</p>
                         </button>
                       ))}
                     </div>
@@ -549,17 +549,17 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         className="flex items-start gap-3"
                       >
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0 mt-0.5">
-                          <Bot className="w-4 h-4 text-[#18b897]" />
+                          <Bot className="w-4 h-4 text-[#2f6bff]" />
                         </div>
                         <div className="max-w-[75%] px-4 py-3 bg-white border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                           {streamingContent}
-                          <span className="inline-block w-1.5 h-4 bg-[#18b897] ml-0.5 animate-pulse rounded-sm" />
+                          <span className="inline-block w-1.5 h-4 bg-[#2f6bff] ml-0.5 animate-pulse rounded-sm" />
                         </div>
                       </motion.div>
                     ) : (
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0">
-                          <Bot className="w-4 h-4 text-[#18b897]" />
+                          <Bot className="w-4 h-4 text-[#2f6bff]" />
                         </div>
                         <div className="bg-white border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm">
                           <TypingDots />
@@ -576,14 +576,14 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
             {/* Input area */}
             <div className="px-6 py-4 border-t border-[var(--ink-line)] bg-white">
               <div className="max-w-3xl mx-auto">
-                <div className="flex items-end gap-3 bg-[#f4f0e6] rounded-2xl border border-[var(--ink-line)] px-4 py-3 focus-within:border-[#127c66] transition-colors">
+                <div className="flex items-end gap-3 bg-muted rounded-2xl border border-[var(--ink-line)] px-4 py-3 focus-within:border-[#1e4fcc] transition-colors">
                   <Textarea
                     ref={textareaRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask about leads, scripts, pipeline strategy…"
-                    className="flex-1 bg-transparent border-none shadow-none resize-none text-sm text-black placeholder:text-gray-400 min-h-[36px] max-h-[160px] p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="flex-1 bg-transparent border-none shadow-none resize-none text-sm text-foreground placeholder:text-muted-foreground min-h-[36px] max-h-[160px] p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     rows={1}
                     disabled={streaming}
                   />
@@ -592,7 +592,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     className={cn(
                       "w-9 h-9 rounded-xl shrink-0 transition-all",
                       input.trim() && !streaming
-                        ? "bg-[#18b897] hover:bg-[#15a88a] text-[#0c111b] shadow-sm"
+                        ? "bg-[#2f6bff] hover:bg-[#245be0] text-[#0c111b] shadow-sm"
                         : "bg-[#e7e1d3] text-[#8c8c8b] cursor-not-allowed"
                     )}
                     disabled={!input.trim() || streaming}
@@ -601,7 +601,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-2 text-center">
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
                   AI can make mistakes. Verify before sending to clients.
                 </p>
               </div>

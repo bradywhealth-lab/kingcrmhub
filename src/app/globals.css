@@ -6,8 +6,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  /* Regal brand type system — wired via next/font in src/app/layout.tsx. */
+  --font-sans: var(--font-jakarta), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-jakarta), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,120 +48,191 @@
   --color-info: var(--info);
 }
 
-/* ============================================
-   KING CRM HUB - ELITE DESIGN SYSTEM
-   Cream background with cobalt blue accents
-   Landing page aesthetic applied globally
-   ============================================ */
+/* ============================================================
+   KING CRM HUB — "REGAL" DESIGN SYSTEM
+   White canvas · ink-black chrome · one confident Cobalt accent.
+   Light is the default; add `.dark` on <html> for dark theme.
+   Legacy brand var names (--teal, --cobalt, --ink, --paper, --cream*)
+   are kept but REPOINTED to Regal values so existing components
+   pick up the new palette without per-file edits.
+   ============================================================ */
 
 :root {
   --radius: 0.75rem;
-  
-  /* Primary Palette - Cobalt Blue */
-  --cobalt: #18b897;   /* canon teal — name frozen, consumers are CSS-only */
-  --cobalt-dark: #127c66; /* teal-deep */
-  --cobalt-light: #1fd0aa; /* bright teal (hover/shimmer) */
-  --cobalt-subtle: rgba(24, 184, 151, 0.12);
-  --cobalt-strong: rgba(24, 184, 151, 0.28);
-  
-  /* Cream Background System */
-  --cream: #fcf8ec;
-  --cream-light: #fcfcfc;
-  --cream-warm: #f5f0e6;
-  --cream-border: rgba(12, 17, 27, 0.08);
-  
-  /* Text Colors */
-  --navy: #0c111b; /* canon ink — name frozen */
-  --navy-light: rgba(12, 17, 27, 0.55);
-  --navy-muted: rgba(12, 17, 27, 0.45);
-  
-  /* Semantic Colors */
-  --success: #16a34a;
-  --success-light: #f0fdf4;
-  --warning: #ea580c;
+
+  /* Cobalt accent scale */
+  --accent-solid: #2f6bff;
+  --accent-ink: #ffffff;      /* text on a cobalt fill */
+  --accent-text: #1e4fcc;     /* cobalt text on light surfaces (AA) */
+  --accent-soft: rgba(47, 107, 255, 0.12);
+  --accent-strong: rgba(47, 107, 255, 0.28);
+  --accent-hover: #245be0;
+
+  /* Ink + paper */
+  --ink: #0b0b0c;
+  --ink-2: #17171a;
+  --paper: #ffffff;
+
+  /* Canvas + surfaces */
+  --background: #f6f6f4;
+  --foreground: #0b0b0c;
+  --card: #ffffff;
+  --card-foreground: #0b0b0c;
+  --popover: #ffffff;
+  --popover-foreground: #0b0b0c;
+
+  /* Primary = Cobalt */
+  --primary: #2f6bff;
+  --primary-foreground: #ffffff;
+
+  /* Secondary = Ink */
+  --secondary: #0b0b0c;
+  --secondary-foreground: #ffffff;
+
+  /* Muted + shadcn accent (hover surface) */
+  --muted: #f0f0ee;
+  --muted-foreground: rgba(11, 11, 12, 0.55);
+  --accent: rgba(47, 107, 255, 0.10);
+  --accent-foreground: #0b0b0c;
+
+  /* Semantic */
+  --success: #12855b;
+  --success-light: #ecfdf5;
+  --warning: #b26a00;
   --warning-light: #fff7ed;
   --destructive: #dc2626;
   --destructive-light: #fef2f2;
-  --info: #127c66; /* teal-deep: AA text on light */
-  
-  /* Base Theme */
-  --background: #fcf8ec;
-  --foreground: #0c111b;
-  --card: #fcfcfc;
-  --card-foreground: #0c111b;
-  --popover: #fcfcfc;
-  --popover-foreground: #0c111b;
-  
-  /* Primary - Cobalt */
-  --primary: #18b897;
-  --primary-foreground: #0c111b;
-  
-  /* Secondary - Navy */
-  --secondary: #0c111b;
-  --secondary-foreground: #ffffff;
-  
-  /* Muted - Cream tones */
-  --muted: #f5f0e6;
-  --muted-foreground: rgba(12, 17, 27, 0.55);
-  --accent: rgba(24, 184, 151, 0.08);
-  --accent-foreground: #0c111b;
-  
-  /* Borders & Inputs */
-  --border: rgba(12, 17, 27, 0.12);
-  --input: rgba(12, 17, 27, 0.15);
-  --ring: #127c66;
-  
-  /* Charts - Cobalt palette */
-  --chart-1: #18b897;
-  --chart-2: #127c66;
-  --chart-3: #1fd0aa;
-  --chart-4: #0c111b;
-  --chart-5: #646668;
-  
-  /* Sidebar */
-  --sidebar: #0c111b;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #18b897;
-  --sidebar-primary-foreground: #0c111b;
-  --sidebar-accent: rgba(24, 184, 151, 0.15);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #18b897;
+  --info: #1e4fcc;
 
-  /* ============================================
-     PUBLIC BRAND PALETTE — single source of truth
-     Locked Gate v3 landing palette. Interior + auth
-     must reference these instead of re-typing hexes.
-     Contrast machine-verified (WCAG AA normal text):
-       --paper on --ink  16.60:1 PASS
-       --ink   on --paper 16.60:1 PASS
-       --teal  on --ink    7.50:1 PASS
-       --ink   on --teal   7.50:1 PASS
-       --teal  on --paper  2.21:1 FAIL
-         -> teal is NEVER used as text on paper;
-            accent on ink backgrounds only.
-     ============================================ */
-  --ink: #0c111b;
-  --paper: #f4f0e6;
-  --teal: #18b897;
-  /* Deep teal for TEXT/ACCENT ON LIGHT SURFACES ONLY.
-     Machine-measured: 4.50:1 vs paper, 5.12:1 vs white,
-     4.82:1 vs cream — but only 3.69:1 vs ink (AA FAIL).
-     PAIRING RULE (enforced, not stylistic):
-       light surface (paper/white/cream) -> --teal-deep for text
-       dark  surface (ink)               -> --teal     for text
-     Never use --teal-deep as text on ink. */
-  --teal-deep: #127c66;
-  /* Light-surface border: ink @ 14% — mirror of the landing's paper@14%
-     border-on-ink (welcome/page.tsx). Machine-checked: decorative only. */
-  --ink-line: rgba(12, 17, 27, 0.14);
-  /* Button hover teal. Machine-measured: ink-on-#15a88a = 6.30:1 PASS.
-     (teal-deep FAILS as button bg with ink text: 3.69:1 — never use.) */
-  --teal-hover: #15a88a;
-  --ink-soft: rgba(244, 240, 230, 0.72);
-  --ink-faint: rgba(244, 240, 230, 0.12);
-  --teal-tint: rgba(24, 184, 151, 0.14);
-  --teal-edge: rgba(24, 184, 151, 0.4);
+  /* Borders / inputs / ring */
+  --border: rgba(11, 11, 12, 0.10);
+  --input: rgba(11, 11, 12, 0.14);
+  --ring: #2f6bff;
+
+  /* Charts (cobalt-led, no rainbow) */
+  --chart-1: #2f6bff;
+  --chart-2: #0b0b0c;
+  --chart-3: #5b86ff;
+  --chart-4: #12855b;
+  --chart-5: #8c8c92;
+
+  /* Sidebar (kept for compatibility) */
+  --sidebar: #0b0b0c;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #2f6bff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(47, 107, 255, 0.16);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-ring: #2f6bff;
+
+  /* Restrained elevation scale */
+  --shadow-xs: 0 1px 2px rgba(11, 11, 12, 0.05);
+  --shadow-sm: 0 1px 3px rgba(11, 11, 12, 0.07), 0 1px 2px rgba(11, 11, 12, 0.04);
+  --shadow-md: 0 8px 24px rgba(11, 11, 12, 0.09);
+  --shadow-lg: 0 22px 48px rgba(11, 11, 12, 0.12);
+
+  /* ---- Legacy brand var aliases (repointed to Regal) ---- */
+  --teal: #2f6bff;
+  --teal-deep: #1e4fcc;
+  --teal-hover: #245be0;
+  --teal-tint: rgba(47, 107, 255, 0.14);
+  --teal-edge: rgba(47, 107, 255, 0.40);
+  --cobalt: #2f6bff;
+  --cobalt-dark: #1e4fcc;
+  --cobalt-light: #5b86ff;
+  --cobalt-subtle: rgba(47, 107, 255, 0.12);
+  --cobalt-strong: rgba(47, 107, 255, 0.28);
+  --cream: #f6f6f4;
+  --cream-light: #ffffff;
+  --cream-warm: #efeeec;
+  --cream-border: rgba(11, 11, 12, 0.08);
+  --navy: #0b0b0c;
+  --navy-light: rgba(11, 11, 12, 0.55);
+  --navy-muted: rgba(11, 11, 12, 0.45);
+  --ink-line: rgba(11, 11, 12, 0.12);
+  --ink-soft: rgba(255, 255, 255, 0.72);
+  --ink-faint: rgba(255, 255, 255, 0.12);
+}
+
+.dark {
+  --accent-solid: #3b82f6;
+  --accent-ink: #ffffff;
+  --accent-text: #93b4ff;
+  --accent-soft: rgba(59, 130, 246, 0.16);
+  --accent-strong: rgba(59, 130, 246, 0.34);
+  --accent-hover: #5b95f7;
+
+  --ink: #000000;
+  --ink-2: #0c0c0e;
+  --paper: #f2f2f3;
+
+  --background: #08080a;
+  --foreground: #f2f2f3;
+  --card: #141416;
+  --card-foreground: #f2f2f3;
+  --popover: #141416;
+  --popover-foreground: #f2f2f3;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f3;
+  --secondary-foreground: #0b0b0c;
+
+  --muted: #17171a;
+  --muted-foreground: rgba(242, 242, 243, 0.60);
+  --accent: rgba(59, 130, 246, 0.16);
+  --accent-foreground: #f2f2f3;
+
+  --success: #34d399;
+  --success-light: rgba(52, 211, 153, 0.12);
+  --warning: #fbbf24;
+  --warning-light: rgba(251, 191, 36, 0.12);
+  --destructive: #f87171;
+  --destructive-light: rgba(248, 113, 113, 0.12);
+  --info: #93b4ff;
+
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #3b82f6;
+
+  --chart-1: #3b82f6;
+  --chart-2: #f2f2f3;
+  --chart-3: #93b4ff;
+  --chart-4: #34d399;
+  --chart-5: #66666d;
+
+  --sidebar: #000000;
+  --sidebar-foreground: #f2f2f3;
+  --sidebar-primary: #3b82f6;
+  --sidebar-accent: rgba(59, 130, 246, 0.18);
+  --sidebar-accent-foreground: #f2f2f3;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 22px 48px rgba(0, 0, 0, 0.6);
+
+  /* legacy aliases */
+  --teal: #3b82f6;
+  --teal-deep: #93b4ff;
+  --teal-hover: #5b95f7;
+  --teal-tint: rgba(59, 130, 246, 0.18);
+  --teal-edge: rgba(59, 130, 246, 0.45);
+  --cobalt: #3b82f6;
+  --cobalt-dark: #1e4fcc;
+  --cobalt-light: #93b4ff;
+  --cobalt-subtle: rgba(59, 130, 246, 0.16);
+  --cobalt-strong: rgba(59, 130, 246, 0.34);
+  --cream: #08080a;
+  --cream-light: #141416;
+  --cream-warm: #17171a;
+  --cream-border: rgba(255, 255, 255, 0.10);
+  --navy: #f2f2f3;
+  --navy-light: rgba(242, 242, 243, 0.6);
+  --navy-muted: rgba(242, 242, 243, 0.45);
+  --ink-line: rgba(255, 255, 255, 0.12);
 }
 
 @layer base {
@@ -169,508 +242,237 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Gate v3 canon: cream→paper wash with a teal tint (was the old cobalt drift). */
-    background-image: radial-gradient(circle at top right, rgba(24, 184, 151, 0.08), transparent 30%), linear-gradient(180deg, #fcf8ec 0%, #f4f0e6 48%, #fcf8ec 100%);
+    background-image: linear-gradient(180deg, var(--background) 0%, var(--background) 100%);
     min-height: 100vh;
   }
 
+  /* Editorial display face for headlines across marketing + app. */
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Tabular figures for money + metrics. */
+  .tabular-nums,
+  .kpi-tile,
+  .stat-card,
+  .table-elite td,
+  .kanban-card {
+    font-variant-numeric: tabular-nums;
+  }
+
   ::selection {
-    background: rgba(24, 184, 151, 0.22);
-    color: #0c111b;
+    background: var(--accent-soft);
+    color: var(--foreground);
   }
 }
 
-/* ============================================
-   SCROLLBAR - Cobalt accent
-   ============================================ */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(140, 140, 146, 0.4); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(140, 140, 146, 0.6); }
 
-::-webkit-scrollbar-track {
-  background: var(--cream-warm);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--cobalt);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--cobalt-dark);
-}
-
-/* ============================================
-   BUTTONS - Primary cobalt gradient
-   ============================================ */
-.btn-primary {
-  background: linear-gradient(135deg, var(--teal), var(--teal-hover));
-  color: var(--ink);
-  font-weight: 600;
-  border: none;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(24, 184, 151, 0.35);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #1fd0aa, #18b897);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(24, 184, 151, 0.45);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-secondary {
-  background: var(--navy);
-  color: #ffffff;
-  font-weight: 500;
-  border: none;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: rgba(12, 17, 27, 0.9);
-  transform: translateY(-1px);
-}
-
-.btn-outline {
-  background: transparent;
-  color: var(--teal-deep);
-  font-weight: 500;
-  border: 1.5px solid var(--cobalt);
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-}
-
-.btn-outline:hover {
-  background: var(--cobalt-subtle);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--navy);
-  font-weight: 500;
-  border: none;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-}
-
-.btn-ghost:hover {
-  background: rgba(12, 17, 27, 0.05);
-}
-
-/* ============================================
-   BRAND ACTION BUTTON
-   Legacy class name `.btn-gold` is referenced by 10+
-   components (settings, auth/password, auth/invite,
-   workspace overlays, automation, help) but was never
-   defined in this stylesheet, so every primary action
-   rendered unstyled. Defined here against the public
-   brand palette. Name kept for compatibility; new code
-   should use `.btn-brand` (same rules, semantic name).
-   Contrast: ink-on-teal 7.50:1 PASS (WCAG AA).
-   ============================================ */
+/* ============================================================
+   BUTTONS — quiet, solid, one accent
+   ============================================================ */
+.btn-primary,
 .btn-gold,
 .btn-brand {
-  background: var(--teal);
-  color: var(--ink);
+  background: var(--accent-solid);
+  color: var(--accent-ink);
   font-weight: 600;
   border: none;
   border-radius: 0.75rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(24, 184, 151, 0.28);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: var(--shadow-xs);
 }
-
+.btn-primary:hover,
 .btn-gold:hover,
 .btn-brand:hover {
-  background: var(--teal-hover);
-  color: var(--ink);
+  background: var(--accent-hover);
+  color: var(--accent-ink);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(24, 184, 151, 0.38);
+  box-shadow: var(--shadow-sm);
 }
-
+.btn-primary:active,
 .btn-gold:active,
-.btn-brand:active {
-  transform: translateY(0);
-}
-
+.btn-brand:active { transform: translateY(0); }
 .btn-gold:disabled,
-.btn-brand:disabled {
-  background: rgba(24, 184, 151, 0.4);
-  color: rgba(12, 17, 27, 0.6);
+.btn-brand:disabled,
+.btn-primary:disabled {
+  background: var(--accent-soft);
+  color: var(--muted-foreground);
   box-shadow: none;
   transform: none;
   cursor: not-allowed;
 }
 
-/* ============================================
-   CARDS - Clean with subtle borders
-   ============================================ */
-.card-elite {
-  background: var(--cream-light);
-  border: 1px solid var(--cream-border);
-  border-radius: 1rem;
-  transition: all 0.2s ease;
-}
-
-.card-elite:hover {
-  border-color: rgba(24, 184, 151, 0.3);
-  box-shadow: 0 8px 24px rgba(12, 17, 27, 0.08);
-}
-
-.card-premium {
-  background: var(--cream-light);
-  border: 1px solid var(--cream-border);
-  border-radius: 1rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.card-premium::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #18b897, #1fd0aa, #18b897);
-}
-
-/* ============================================
-   INPUTS - Rounded with cream background
-   ============================================ */
-.input-elite {
-  background: var(--cream-light);
-  border: 1px solid rgba(12, 17, 27, 0.15);
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-weight: 600;
+  border: none;
   border-radius: 0.75rem;
-  color: var(--navy);
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
+.btn-secondary:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 
+.btn-outline {
+  background: transparent;
+  color: var(--accent-text);
+  font-weight: 600;
+  border: 1px solid var(--accent-solid);
+  border-radius: 0.75rem;
+  transition: all 0.18s ease;
+}
+.btn-outline:hover { background: var(--accent-soft); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--foreground);
+  font-weight: 500;
+  border: none;
+  border-radius: 0.75rem;
+  transition: all 0.18s ease;
+}
+.btn-ghost:hover { background: var(--muted); }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card-elite,
+.card-premium {
+  background: var(--card);
+  border: 1px solid var(--cream-border);
+  border-radius: 1rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.card-elite:hover { border-color: var(--accent-strong); box-shadow: var(--shadow-md); }
+.card-premium { box-shadow: var(--shadow-sm); }
+
+/* Inputs */
+.input-elite {
+  background: var(--card);
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  color: var(--foreground);
+  transition: all 0.18s ease;
+}
 .input-elite:focus {
-  border-color: var(--cobalt);
-  box-shadow: 0 0 0 3px rgba(24, 184, 151, 0.15);
+  border-color: var(--accent-solid);
+  box-shadow: 0 0 0 3px var(--accent-soft);
   outline: none;
 }
+.input-elite::placeholder { color: var(--muted-foreground); }
 
-.input-elite::placeholder {
-  color: rgba(12, 17, 27, 0.35);
-}
+/* ============================================================
+   STATUS BADGES — quiet chips
+   ============================================================ */
+.badge-status { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+.badge-new { background: var(--muted); color: var(--foreground); }
+.badge-contacted { background: var(--muted); color: var(--muted-foreground); }
+.badge-qualified { background: var(--accent-soft); color: var(--accent-text); }
+.badge-proposal { background: var(--warning-light); color: var(--warning); }
+.badge-negotiation { background: var(--warning-light); color: var(--warning); }
+.badge-won { background: var(--success-light); color: var(--success); }
+.badge-lost { background: var(--destructive-light); color: var(--destructive); }
 
-/* ============================================
-   STATUS BADGES
-   ============================================ */
-.badge-status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
+/* AI emphasis — quiet ring, no glow */
+.ai-glow { box-shadow: 0 0 0 1px var(--accent-strong), var(--shadow-sm); }
+.ai-glow-success { box-shadow: 0 0 0 1px rgba(18, 133, 91, 0.45), var(--shadow-sm); }
 
-.badge-new { background: var(--navy); color: white; }
-.badge-contacted { background: rgba(12, 17, 27, 0.6); color: white; }
-.badge-qualified { background: var(--teal); color: var(--ink); }
-.badge-proposal { background: #b45309; color: white; }
-.badge-negotiation { background: #c2410c; color: white; }
-.badge-won { background: var(--success); color: white; }
-.badge-lost { background: var(--destructive); color: white; }
-
-/* ============================================
-   AI GLOW EFFECTS
-   ============================================ */
-.ai-glow {
-  box-shadow: 0 0 20px rgba(24, 184, 151, 0.35), 0 0 40px rgba(24, 184, 151, 0.15);
-}
-
-.ai-glow-success {
-  box-shadow: 0 0 20px rgba(22, 163, 74, 0.35), 0 0 40px rgba(22, 163, 74, 0.15);
-}
-
-/* ============================================
-   GRADIENT TEXT
-   ============================================ */
 .gradient-text {
-  background: linear-gradient(135deg, #18b897, #127c66);
+  background: linear-gradient(135deg, var(--accent-solid), var(--accent-text));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ============================================
-   GLASS EFFECT
-   ============================================ */
 .glass {
-  background: rgba(252, 248, 236, 0.95);
+  background: color-mix(in srgb, var(--card) 82%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(24, 184, 151, 0.15);
+  border: 1px solid var(--border);
 }
 
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
+/* Animations */
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .animate-shimmer {
-  background: linear-gradient(90deg, var(--cream-warm) 25%, var(--cream-light) 50%, var(--cream-warm) 75%);
+  background: linear-gradient(90deg, var(--muted) 25%, var(--card) 50%, var(--muted) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-
 @keyframes pulse-cobalt {
-  0%, 100% { box-shadow: 0 0 20px rgba(24, 184, 151, 0.35); }
-  50% { box-shadow: 0 0 30px rgba(24, 184, 151, 0.5); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-strong); }
+  50% { box-shadow: 0 0 0 4px var(--accent-soft); }
 }
+.animate-pulse-cobalt { animation: pulse-cobalt 2s ease-in-out infinite; }
 
-.animate-pulse-cobalt {
-  animation: pulse-cobalt 2s ease-in-out infinite;
-}
+/* Kanban */
+.kanban-column { background: var(--muted); border: 1px solid var(--cream-border); border-radius: 0.75rem; }
+.kanban-card { background: var(--card); border: 1px solid var(--cream-border); border-radius: 0.75rem; transition: all 0.18s ease; }
+.kanban-card:hover { border-color: var(--accent-strong); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 
-/* ============================================
-   KANBAN STYLES
-   ============================================ */
-.kanban-column {
-  background: var(--cream-light);
-  border: 1px solid var(--cream-border);
-  border-radius: 0.75rem;
-}
+/* Sidebar nav (legacy) */
+.nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; color: rgba(255,255,255,0.7); transition: all 0.18s ease; }
+.nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-item.active { background: var(--accent-solid); color: var(--accent-ink); }
 
-.kanban-card {
-  background: white;
-  border: 1px solid var(--cream-border);
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-}
+/* Focus states */
+.focus-ring:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
 
-.kanban-card:hover {
-  border-color: rgba(24, 184, 151, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(12, 17, 27, 0.08);
-}
+/* Links */
+.link-cobalt { color: var(--accent-text); text-decoration: none; font-weight: 600; transition: opacity 0.18s ease; }
+.link-cobalt:hover { opacity: 0.8; }
 
-/* ============================================
-   SIDEBAR NAVIGATION
-   ============================================ */
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
-  transition: all 0.2s ease;
-}
+.divider-cobalt { height: 1px; background: linear-gradient(90deg, transparent, var(--accent-solid), transparent); }
 
-.nav-item:hover {
-  background: rgba(24, 184, 151, 0.15);
-  color: white;
-}
+/* Score indicator */
+.score-indicator { position: relative; width: 100%; height: 8px; background: var(--muted); border-radius: 4px; overflow: hidden; }
+.score-indicator::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; background: var(--accent-solid); border-radius: 4px; transition: width 0.3s ease; }
 
-.nav-item.active {
-  background: var(--teal);
-  color: var(--ink);
-}
+/* Upload zone */
+.upload-zone { border: 2px dashed var(--accent-solid); background: var(--accent-soft); border-radius: 1rem; transition: all 0.18s ease; }
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent-hover); background: var(--accent-strong); }
 
-/* ============================================
-   FOCUS STATES
-   ============================================ */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--cobalt);
-  outline-offset: 2px;
-}
+/* Stats */
+.stat-card { background: var(--card); border: 1px solid var(--cream-border); border-radius: 1rem; padding: 1.25rem; transition: all 0.18s ease; }
+.stat-card:hover { border-color: var(--accent-strong); box-shadow: var(--shadow-md); }
+.stat-icon { width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent-text); }
 
-/* ============================================
-   LINKS
-   ============================================ */
-.link-cobalt {
-  color: var(--teal-deep);
-  text-decoration: none;
-  font-weight: 500;
-  transition: opacity 0.2s ease;
-}
+/* Table */
+.table-elite { width: 100%; border-collapse: separate; border-spacing: 0; }
+.table-elite th { background: var(--muted); padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); border-bottom: 1px solid var(--cream-border); }
+.table-elite td { padding: 1rem; border-bottom: 1px solid var(--cream-border); color: var(--foreground); }
+.table-elite tr:hover td { background: var(--muted); }
 
-.link-cobalt:hover {
-  opacity: 0.8;
-}
+/* Dialog */
+.dialog-elite { background: var(--card); border: 1px solid var(--cream-border); border-radius: 1rem; box-shadow: var(--shadow-lg); }
 
-/* ============================================
-   DIVIDERS
-   ============================================ */
-.divider-cobalt {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #18b897, transparent);
-}
+/* Toasts */
+.toast-success { background: var(--success-light); border: 1px solid rgba(18, 133, 91, 0.2); color: var(--success); }
+.toast-error { background: var(--destructive-light); border: 1px solid rgba(220, 38, 38, 0.2); color: var(--destructive); }
+.toast-warning { background: var(--warning-light); border: 1px solid rgba(178, 106, 0, 0.2); color: var(--warning); }
 
-/* ============================================
-   SCORE INDICATOR
-   ============================================ */
-.score-indicator {
-  position: relative;
-  width: 100%;
-  height: 8px;
-  background: var(--cream-warm);
-  border-radius: 4px;
-  overflow: hidden;
-}
+/* Layout helpers */
+.page-shell { background: transparent; }
+.panel-surface { background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--cream-border); box-shadow: var(--shadow-md); }
+.panel-soft { background: var(--card); border: 1px solid var(--cream-border); }
+.section-heading { letter-spacing: -0.03em; }
+.kpi-tile { background: var(--card); border: 1px solid var(--cream-border); box-shadow: var(--shadow-sm); }
 
-.score-indicator::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  background: linear-gradient(90deg, var(--navy), var(--cobalt));
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-/* ============================================
-   UPLOAD ZONE
-   ============================================ */
-.upload-zone {
-  border: 2px dashed var(--cobalt);
-  background: var(--cobalt-subtle);
-  border-radius: 1rem;
-  transition: all 0.2s ease;
-}
-
-.upload-zone:hover,
-.upload-zone.drag-over {
-  border-color: var(--cobalt-dark);
-  background: rgba(24, 184, 151, 0.18);
-}
-
-/* ============================================
-   STATS CARDS
-   ============================================ */
-.stat-card {
-  background: var(--cream-light);
-  border: 1px solid var(--cream-border);
-  border-radius: 1rem;
-  padding: 1.25rem;
-  transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  border-color: rgba(24, 184, 151, 0.25);
-  box-shadow: 0 4px 16px rgba(12, 17, 27, 0.06);
-}
-
-.stat-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cobalt-subtle);
-  color: var(--cobalt);
-}
-
-/* ============================================
-   TABLE STYLES
-   ============================================ */
-.table-elite {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.table-elite th {
-  background: var(--cream-warm);
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--navy-light);
-  border-bottom: 1px solid var(--cream-border);
-}
-
-.table-elite td {
-  padding: 1rem;
-  border-bottom: 1px solid var(--cream-border);
-  color: var(--navy);
-}
-
-.table-elite tr:hover td {
-  background: var(--cream-warm);
-}
-
-/* ============================================
-   MODAL/DIALOG
-   ============================================ */
-.dialog-elite {
-  background: var(--cream-light);
-  border: 1px solid var(--cream-border);
-  border-radius: 1rem;
-  box-shadow: 0 24px 48px rgba(12, 17, 27, 0.15);
-}
-
-/* ============================================
-   TOAST NOTIFICATIONS
-   ============================================ */
-.toast-success {
-  background: var(--success-light);
-  border: 1px solid rgba(22, 163, 74, 0.2);
-  color: var(--success);
-}
-
-.toast-error {
-  background: var(--destructive-light);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  color: var(--destructive);
-}
-
-.toast-warning {
-  background: var(--warning-light);
-  border: 1px solid rgba(234, 88, 12, 0.2);
-  color: var(--warning);
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 768px) {
-  .hide-mobile {
-    display: none;
+  .hide-mobile { display: none; }
+  .stat-card { padding: 1rem; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  
-  .stat-card {
-    padding: 1rem;
-  }
-}
-
-.page-shell {
-  background: transparent;
-}
-
-.panel-surface {
-  background: rgba(252, 252, 252, 0.92);
-  border: 1px solid rgba(12, 17, 27, 0.08);
-  box-shadow: 0 18px 48px rgba(12, 17, 27, 0.08);
-}
-
-.panel-soft {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 248, 252, 0.86));
-  border: 1px solid rgba(12, 17, 27, 0.08);
-}
-
-.section-heading {
-  letter-spacing: -0.03em;
-}
-
-.kpi-tile {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
-  border: 1px solid rgba(12, 17, 27, 0.08);
-  box-shadow: 0 12px 32px rgba(12, 17, 27, 0.06);
 }

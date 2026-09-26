@@ -67,14 +67,14 @@ export const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[]
 
 const STATUS_COLUMNS = [
   { key: 'todo' as const, label: 'To Do', color: 'bg-[#0c111b]/8 text-[#0c111b]' },
-  { key: 'in_progress' as const, label: 'In Progress', color: 'bg-[#127c66]/12 text-[#127c66]' },
-  { key: 'done' as const, label: 'Done', color: 'bg-[#18b897]/12 text-[#127c66]' },
+  { key: 'in_progress' as const, label: 'In Progress', color: 'bg-[#1e4fcc]/12 text-[#1e4fcc]' },
+  { key: 'done' as const, label: 'Done', color: 'bg-[#2f6bff]/12 text-[#1e4fcc]' },
   { key: 'blocked' as const, label: 'Blocked', color: 'bg-amber-100 text-amber-700' },
 ]
 
 const PRIORITY_DOT: Record<string, string> = {
   low: 'bg-slate-300',
-  normal: 'bg-[#127c66]',
+  normal: 'bg-[#1e4fcc]',
   high: 'bg-amber-500',
   urgent: 'bg-red-500',
 }
@@ -179,8 +179,8 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
               isDone
-                ? 'border-[#18b897] bg-[#18b897] text-white'
-                : 'border-[#0c111b]/20 hover:border-[#18b897]/50'
+                ? 'border-[#2f6bff] bg-[#2f6bff] text-white'
+                : 'border-[#0c111b]/20 hover:border-[#2f6bff]/50'
             }`}
           >
             {isDone && <Check className="h-3 w-3" />}
@@ -192,7 +192,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {isDone && task.completedAt && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[#18b897]">
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#2f6bff]">
                   <Check className="h-3 w-3" />
                   Completed {new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
@@ -202,7 +202,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onOpenPipelineItem?.(task.pipelineItem!.id) }}
                   aria-label={`Open pipeline item ${task.pipelineItem.title}`}
-                  className="inline-flex items-center gap-1 text-[11px] text-[#127c66] hover:text-[#0c111b] hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#1e4fcc] hover:text-[#0c111b] hover:underline"
                 >
                   <Building className="h-3 w-3" />
                   {task.pipelineItem.title}
@@ -216,7 +216,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
                 </span>
               )}
               {task.source === 'auto_spawn' && (
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#18b897]/30 text-[#127c66]">
+                <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#2f6bff]/30 text-[#1e4fcc]">
                   auto
                 </Badge>
               )}
@@ -243,8 +243,8 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
     <Card className="border-[rgba(31,42,54,0.06)] bg-[#f6f9ff] shadow-none">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#127c66]/10">
-            <Calendar className="h-4 w-4 text-[#127c66]" />
+          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1e4fcc]/10">
+            <Calendar className="h-4 w-4 text-[#1e4fcc]" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-[#0c111b]">{appt.title}</p>
@@ -257,7 +257,7 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
             </div>
           </div>
           {appt.status === 'completed' && (
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#18b897]/30 text-[#127c66]">done</Badge>
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#2f6bff]/30 text-[#1e4fcc]">done</Badge>
           )}
         </div>
       </CardContent>
@@ -506,7 +506,7 @@ export function TasksView({
               onClick={() => setTab(id)}
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 tab === id
-                  ? 'bg-[#18b897]/14 text-[#127c66]'
+                  ? 'bg-[#2f6bff]/14 text-[#1e4fcc]'
                   : 'text-[#0c111b]/55 hover:text-[#0c111b]'
               }`}
             >
@@ -541,7 +541,7 @@ export function TasksView({
           <Button
             onClick={() => setShowCreate(true)}
             size="sm"
-            className="rounded-xl bg-[#18b897] text-white hover:bg-[#15a88a] h-9 px-4 gap-1.5"
+            className="rounded-xl bg-[#2f6bff] text-white hover:bg-[#245be0] h-9 px-4 gap-1.5"
           >
             <Plus className="h-4 w-4" />
             Create Task
@@ -561,7 +561,7 @@ export function TasksView({
               key={col.key}
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
               onDrop={(e) => { e.preventDefault(); const taskId = e.dataTransfer.getData('text/plain'); if (taskId) handleMoveTask(taskId, col.key) }}
-              className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-[#fcf8ec]/60 p-4 min-h-[120px]">
+              className="rounded-2xl border border-[rgba(31,42,54,0.06)] bg-background/60 p-4 min-h-[120px]">
                 <div className="mb-3 flex items-center justify-between">
                   <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
                     {col.label}
@@ -649,7 +649,7 @@ export function TasksView({
                   id="task-priority"
                   value={createPriority}
                   onChange={(e) => setCreatePriority(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-white px-3 text-sm text-[#0c111b] focus:outline-none focus:ring-2 focus:ring-[#18b897]/30"
+                  className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-white px-3 text-sm text-[#0c111b] focus:outline-none focus:ring-2 focus:ring-[#2f6bff]/30"
                 >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
@@ -672,7 +672,7 @@ export function TasksView({
               <Button
                 onClick={handleCreateTask}
                 disabled={!createTitle.trim() || createSaving}
-                className="rounded-xl bg-[#18b897] text-white hover:bg-[#15a88a]"
+                className="rounded-xl bg-[#2f6bff] text-white hover:bg-[#245be0]"
               >
                 {createSaving ? 'Creating...' : 'Create Task'}
               </Button>
