@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 
@@ -262,10 +262,11 @@ export function CommandPalette({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white/95 backdrop-blur-xl border-[#E8E4D9] p-0 max-w-2xl shadow-2xl rounded-2xl overflow-hidden">
+      <DialogContent className="bg-popover/95 backdrop-blur-xl border-border p-0 max-w-2xl shadow-2xl rounded-2xl overflow-hidden">
+        <DialogTitle className="sr-only">Command palette</DialogTitle>
         {/* Search Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-[#E8E4D9]">
-          <Search className="w-5 h-5 text-[#D4AF37]" />
+        <div className="flex items-center gap-3 p-4 border-b border-border">
+          <Search className="w-5 h-5 text-[var(--accent-text)]" />
           <input
             type="text"
             placeholder="Type a command or search..."
@@ -274,7 +275,7 @@ export function CommandPalette({
             className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-lg"
             autoFocus
           />
-          <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground bg-[#F8F4E8] rounded border border-[#E8E4D9]">
+          <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground bg-muted rounded border border-border">
             esc
           </kbd>
         </div>
@@ -284,7 +285,7 @@ export function CommandPalette({
           <div className="p-2">
             {Object.entries(groupedCommands).map(([category, cmds], catIdx) => (
               <div key={category}>
-                {catIdx > 0 && <Separator className="my-2 bg-[#E8E4D9]" />}
+                {catIdx > 0 && <Separator className="my-2 bg-border" />}
                 <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {category}
                 </div>
@@ -300,16 +301,16 @@ export function CommandPalette({
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150",
                         selectedIndex === globalIndex
-                          ? "bg-[#D4AF37]/10 border border-[#D4AF37]/30"
-                          : "hover:bg-[#F8F4E8]"
+                          ? "bg-[var(--accent-soft)] border border-transparent"
+                          : "hover:bg-muted"
                       )}
                       onMouseEnter={() => setSelectedIndex(globalIndex)}
                     >
                       <div className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center",
                         selectedIndex === globalIndex
-                          ? "bg-[#D4AF37] text-white"
-                          : "bg-[#F8F4E8] text-[#D4AF37]"
+                          ? "bg-[var(--accent-solid)] text-white"
+                          : "bg-muted text-[var(--accent-text)]"
                       )}>
                         <cmd.icon className="w-4 h-4" />
                       </div>
@@ -326,7 +327,7 @@ export function CommandPalette({
                           {cmd.shortcut.map((key, i) => (
                             <kbd
                               key={i}
-                              className="px-1.5 py-0.5 text-xs font-medium text-muted-foreground bg-[#F8F4E8] rounded border border-[#E8E4D9]"
+                              className="px-1.5 py-0.5 text-xs font-medium text-muted-foreground bg-muted rounded border border-border"
                             >
                               {key}
                             </kbd>
@@ -335,7 +336,7 @@ export function CommandPalette({
                       )}
                       
                       {selectedIndex === globalIndex && (
-                        <ArrowRight className="w-4 h-4 text-[#D4AF37]" />
+                        <ArrowRight className="w-4 h-4 text-[var(--accent-text)]" />
                       )}
                     </motion.button>
                   )
@@ -353,18 +354,18 @@ export function CommandPalette({
         </ScrollArea>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#F8F4E8] border-t border-[#E8E4D9] text-xs text-muted-foreground">
+        <div className="flex items-center justify-between px-4 py-2 bg-muted border-t border-border text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-white rounded border border-[#E8E4D9]">↑↓</kbd>
+              <kbd className="px-1 py-0.5 bg-card rounded border border-border">↑↓</kbd>
               to navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-white rounded border border-[#E8E4D9]">↵</kbd>
+              <kbd className="px-1 py-0.5 bg-card rounded border border-border">↵</kbd>
               to select
             </span>
           </div>
-          <span className="flex items-center gap-1 text-[#D4AF37]">
+          <span className="flex items-center gap-1 text-[var(--accent-text)]">
             <Sparkles className="w-3 h-3" />
             Smart workspace search
           </span>
