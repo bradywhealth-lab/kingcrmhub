@@ -20,7 +20,7 @@ export function AuthLoadingSkeleton() {
     <main
       aria-busy="true"
       aria-label="Loading sign in"
-      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,var(--cream)_0%,var(--paper)_100%)] px-4 py-6 lg:px-8 lg:py-8"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,var(--background)_0%,var(--card)_100%)] px-4 py-6 lg:px-8 lg:py-8"
     >
       <p role="status" aria-live="polite" className="sr-only">
         Loading sign in
@@ -79,7 +79,7 @@ export function AuthLoadingSkeleton() {
               <div className="h-5 w-3/4 animate-pulse rounded-lg bg-[var(--ink)]/8" />
             </div>
 
-            <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[var(--paper)] p-1">
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(12,17,27,0.05)] p-1">
               <div className="h-12 animate-pulse rounded-[14px] bg-white shadow-[0_10px_25px_rgba(31,42,54,0.08)]" />
               <div className="h-12 animate-pulse rounded-[14px] bg-[var(--ink)]/5" />
             </div>

@@ -161,7 +161,7 @@ describe('resolveAIConfig', () => {
     expect(config.byokFailure).toContain('invalid or missing')
   })
 
-  it('uses the OpenRouter platform key when org chose openrouter without BYOK', async () => {
+  it('uses the OpenRouter platform key (free router) when org chose openrouter without BYOK', async () => {
     mockDb.organization.findUnique.mockResolvedValueOnce({
       settings: { aiProvider: 'openrouter' },
     })
@@ -169,7 +169,30 @@ describe('resolveAIConfig', () => {
     const config = await resolveAIConfig('org-1')
 
     expect(config.provider).toBe('openrouter')
-    expect(config.label).toBe('OpenRouter (platform)')
+    expect(config.model).toBe('openrouter/free')
+    expect(config.label).toBe('OpenRouter Free (platform)')
+  })
+
+  it('keeps a specific :free model on the platform OpenRouter key', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({
+      settings: { aiProvider: 'openrouter', aiModel: 'meta-llama/llama-3.3-70b-instruct:free' },
+    })
+
+    const config = await resolveAIConfig('org-1')
+
+    expect(config.model).toBe('meta-llama/llama-3.3-70b-instruct:free')
+  })
+
+  it('never funds a PAID model on the platform (default) OpenRouter key — coerces to the free router', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({
+      settings: { aiProvider: 'openrouter', aiModel: 'openai/gpt-4o' },
+    })
+
+    const config = await resolveAIConfig('org-1')
+
+    // No BYOK key → the platform key must not spend on a paid model.
+    expect(config.provider).toBe('openrouter')
+    expect(config.model).toBe('openrouter/free')
   })
 
   it('uses the Groq free tier when no OpenRouter key is set but Groq is', async () => {

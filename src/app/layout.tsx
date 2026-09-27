@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { initSentry } from "@/lib/observability/sentry";
@@ -6,6 +7,28 @@ import { rootJsonLdGraph } from "@/lib/seo/jsonld";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo/site-config";
 
 initSentry()
+
+// "Regal" brand type system: Bricolage Grotesque for editorial display headlines
+// that pop, Plus Jakarta Sans for calm, legible UI/body, JetBrains Mono for
+// tabular money + metrics. Self-hosted via next/font (no runtime CDN calls).
+const fontDisplay = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -53,8 +76,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
+    >
       <body className="antialiased bg-background text-foreground">
+        {/* No-flash theme: apply the persisted dark/light preference before paint
+            so every route (auth, landing, workspace-loading, app) is consistent. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var p=location.pathname;var app=p==='/'||p==='/admin'||p.indexOf('/admin/')===0;var s=localStorage.getItem('elite-crm-storage');var t=s?JSON.parse(s):null;var th=t&&t.state&&t.state.theme;document.documentElement.classList.toggle('dark',app&&th==='dark');}catch(e){}})();",
+          }}
+        />
         <script
           type="application/ld+json"
           // Static, build-time JSON-LD from a typed builder (no user input).

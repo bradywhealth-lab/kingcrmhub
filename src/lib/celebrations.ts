@@ -19,29 +19,29 @@ export function triggerWinCelebration() {
   fire(0.25, {
     spread: 26,
     startVelocity: 55,
-    colors: ['#D4AF37', '#F4D03F', '#0A0A0A'],
+    colors: ['#2F6BFF', '#5B86FF', '#0A0A0A'],
   })
   fire(0.2, {
     spread: 60,
-    colors: ['#D4AF37', '#FFFFFF'],
+    colors: ['#2F6BFF', '#FFFFFF'],
   })
   fire(0.35, {
     spread: 100,
     decay: 0.91,
     scalar: 0.8,
-    colors: ['#D4AF37', '#F4D03F'],
+    colors: ['#2F6BFF', '#5B86FF'],
   })
   fire(0.1, {
     spread: 120,
     startVelocity: 25,
     decay: 0.92,
     scalar: 1.2,
-    colors: ['#D4AF37'],
+    colors: ['#2F6BFF'],
   })
   fire(0.1, {
     spread: 120,
     startVelocity: 45,
-    colors: ['#0A0A0A', '#D4AF37'],
+    colors: ['#0A0A0A', '#2F6BFF'],
   })
 }
 
@@ -49,7 +49,7 @@ export function triggerSmallCelebration() {
   confetti({
     particleCount: 50,
     spread: 60,
-    colors: ['#D4AF37', '#F4D03F'],
+    colors: ['#2F6BFF', '#5B86FF'],
     origin: { y: 0.8 },
     zIndex: 9999,
   })
@@ -59,7 +59,7 @@ export function triggerSparkles(x: number, y: number) {
   confetti({
     particleCount: 20,
     spread: 30,
-    colors: ['#D4AF37', '#F4D03F'],
+    colors: ['#2F6BFF', '#5B86FF'],
     origin: { x: x / window.innerWidth, y: y / window.innerHeight },
     zIndex: 9999,
   })
@@ -91,7 +91,7 @@ export function triggerClickFeedback() {
   confetti({
     particleCount: 5,
     spread: 20,
-    colors: ['#D4AF37'],
+    colors: ['#2F6BFF'],
     origin: { y: 0.9 },
     zIndex: 9999,
     scalar: 0.5,

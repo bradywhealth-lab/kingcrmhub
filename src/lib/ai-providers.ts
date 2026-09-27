@@ -163,13 +163,15 @@ export async function resolveAIConfig(
     }
   }
 
-  // If org chose openrouter but no key, check platform env
+  // If org chose openrouter but no key, check platform env.
+  // The platform (default) key must NEVER fund a paid model: force the free
+  // router unless the org explicitly picked a specific zero-cost `:free` model.
   if (provider === 'openrouter' && process.env.OPENROUTER_API_KEY) {
     return {
       provider: 'openrouter',
-      model: model || 'openrouter/free',
+      model: isFreeOpenRouterModel(model) ? (model as string) : 'openrouter/free',
       apiKey: process.env.OPENROUTER_API_KEY,
-      label: 'OpenRouter (platform)',
+      label: 'OpenRouter Free (platform)',
       byokFailure,
     }
   }
@@ -226,8 +228,20 @@ export function getDefaultModel(provider: AIProvider): string {
     case 'groq': return 'llama-3.3-70b-versatile'
     case 'openai': return 'gpt-4o'
     case 'anthropic': return 'claude-sonnet-4-20250514'
+    // `openrouter/free` is OpenRouter's Free Models Router — it only ever
+    // selects zero-cost models, so the default OpenRouter experience is free.
     case 'openrouter': return 'openrouter/free'
   }
+}
+
+/**
+ * True when an OpenRouter model id is guaranteed zero-cost: either the
+ * `openrouter/free` router or a specific `:free` catalog variant. Used to keep
+ * the platform (default) OpenRouter key from ever funding a paid model.
+ */
+export function isFreeOpenRouterModel(model: string | null | undefined): boolean {
+  if (!model) return false
+  return model === 'openrouter/free' || model.endsWith(':free')
 }
 
 /**

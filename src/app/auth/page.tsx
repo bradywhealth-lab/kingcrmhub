@@ -385,7 +385,7 @@ function AuthPageInner() {
 
             {(mode === 'login' || mode === 'signup') && (
               <>
-                <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[var(--paper)] p-1">
+                <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(12,17,27,0.05)] p-1">
                   {(['login', 'signup'] as Mode[]).map((tab) => (
                     <button
                       key={tab}
@@ -503,9 +503,9 @@ function AuthPageInner() {
                     </p>
                   )}
 
-                  <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f7f4ec] p-4 text-sm text-[#0c111b]/60">
+                  <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(31,42,54,0.04)] p-4 text-sm text-[#0c111b]/60">
                     Already have a password-reset link?{' '}
-                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[var(--teal-deep)] hover:opacity-80">
+                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[#1e4fcc] hover:opacity-80">
                       Finish resetting your password
                     </button>
                   </div>
