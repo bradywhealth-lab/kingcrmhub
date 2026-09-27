@@ -186,7 +186,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             {isDone && <Check className="h-3 w-3" />}
           </button>
           <div className="min-w-0 flex-1">
-            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-foreground/40 line-through' : 'text-foreground'}`}>{task.title}</p>
+            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-foreground/50 line-through' : 'text-foreground'}`}>{task.title}</p>
             {task.description && (
               <p className="mt-1 text-xs text-foreground/55 line-clamp-2">{task.description}</p>
             )}
@@ -250,7 +250,7 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
             <p className="text-sm font-medium text-foreground">{appt.title}</p>
             <p className="mt-0.5 text-xs text-foreground/55">{timeStr}</p>
             {appt.location && (
-              <p className="mt-0.5 text-[11px] text-foreground/40">{appt.location}</p>
+              <p className="mt-0.5 text-[11px] text-foreground/50">{appt.location}</p>
             )}
             <div className="mt-1.5">
               <LeadBadge lead={appt.lead} />
@@ -277,7 +277,7 @@ function EmptyState({ tab }: { tab: FilterTab }) {
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <CheckSquare className="h-12 w-12 text-foreground/12" />
       <p className="mt-4 text-sm font-medium text-foreground/60">{m.title}</p>
-      <p className="mt-1 text-xs text-foreground/40 max-w-xs">{m.body}</p>
+      <p className="mt-1 text-xs text-foreground/50 max-w-xs">{m.body}</p>
     </div>
   )
 }
@@ -522,7 +522,7 @@ export function TasksView({
               onClick={() => setViewMode('list')}
               aria-label="List view"
               aria-pressed={viewMode === 'list' || tab === 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-foreground' : 'text-foreground/40 hover:text-foreground'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
             >
               <List className="h-4 w-4" />
             </button>
@@ -532,7 +532,7 @@ export function TasksView({
               aria-disabled={tab === 'completed'}
               disabled={tab === 'completed'}
               aria-pressed={viewMode === 'kanban' && tab !== 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-foreground' : tab === 'completed' ? 'cursor-not-allowed text-foreground/25' : 'text-foreground/40 hover:text-foreground'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-foreground' : tab === 'completed' ? 'cursor-not-allowed text-foreground/25' : 'text-foreground/50 hover:text-foreground'}`}
             >
               <Columns className="h-4 w-4" />
             </button>
@@ -581,7 +581,7 @@ export function TasksView({
 
           {filteredAppointments.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/40">Appointments</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/50">Appointments</h2>
               <div className="space-y-3">
                 {filteredAppointments.map((appt) => (
                   <AppointmentCard key={appt.id} appt={appt} />
@@ -597,7 +597,7 @@ export function TasksView({
         <div className="space-y-8">
           {filteredTasks.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/40">Tasks</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/50">Tasks</h2>
               <div className="space-y-3">
                 {filteredTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />
@@ -608,7 +608,7 @@ export function TasksView({
 
           {filteredAppointments.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/40">Appointments</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/50">Appointments</h2>
               <div className="space-y-3">
                 {filteredAppointments.map((appt) => (
                   <AppointmentCard key={appt.id} appt={appt} />

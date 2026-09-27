@@ -124,7 +124,7 @@ export function PromptsView({
         return (
           <section key={tier} className="space-y-3">
             <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-base font-semibold text-[var(--ink)]">{pack.name}</h3>
+              <h3 className="text-base font-semibold text-foreground">{pack.name}</h3>
               <Badge
                 variant="outline"
                 className={
@@ -139,7 +139,7 @@ export function PromptsView({
               {!tierUnlocked && (
                 <Button
                   size="sm"
-                  className="ml-auto bg-[var(--teal)] text-[var(--ink)] hover:opacity-90"
+                  className="ml-auto bg-[var(--teal)] text-foreground hover:opacity-90"
                   onClick={onUpgrade}
                 >
                   {tier === 'pro' ? 'Unlock with Pro' : 'Unlock with Studio'}
@@ -161,24 +161,24 @@ export function PromptsView({
                   <CardContent className="space-y-3 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--ink)]">{p.title}</p>
-                        <p className="mt-0.5 text-xs text-[rgba(31,42,54,0.5)]">{p.category}</p>
+                        <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{p.category}</p>
                       </div>
                       {!p.unlocked && (
-                        <Lock className="h-4 w-4 shrink-0 text-[rgba(31,42,54,0.35)]" aria-label="Locked on your plan" />
+                        <Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Locked on your plan" />
                       )}
                     </div>
 
                     {p.unlocked && p.body ? (
                       <>
-                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-xl bg-muted p-3 font-mono text-[11px] leading-5 text-[var(--ink)]">
+                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-xl bg-muted p-3 font-mono text-[11px] leading-5 text-foreground">
                           {p.body}
                         </pre>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-[rgba(31,42,54,0.15)] text-[var(--ink)]"
+                            className="border-[rgba(31,42,54,0.15)] text-foreground"
                             onClick={() => void copyPrompt(p.id, p.title, p.body)}
                           >
                             {copiedId === p.id ? (
@@ -190,7 +190,7 @@ export function PromptsView({
                           </Button>
                           <Button
                             size="sm"
-                            className="bg-[var(--teal)] text-[var(--ink)] hover:opacity-90"
+                            className="bg-[var(--teal)] text-foreground hover:opacity-90"
                             onClick={() => void runInAssistant(p)}
                           >
                             Run in AI Assistant
@@ -199,7 +199,7 @@ export function PromptsView({
                       </>
                     ) : (
                       <>
-                        <p className="rounded-xl bg-[rgba(31,42,54,0.04)] p-3 text-xs leading-5 text-[rgba(31,42,54,0.5)]">
+                        <p className="rounded-xl bg-[rgba(31,42,54,0.04)] p-3 text-xs leading-5 text-muted-foreground">
                           Available on {PLAN_LABEL[tier]}. Unlock to copy and run this prompt.
                         </p>
                         <Button

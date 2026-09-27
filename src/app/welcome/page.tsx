@@ -176,7 +176,7 @@ export default function PublicLandingPage() {
             <Link href="/pricing" className="hover:text-[#0B0B0C]">Pricing</Link>
             <Link href="/compare" className="hover:text-[#0B0B0C]">Compare</Link>
             <Link href="/claim" className="hover:text-[#0B0B0C]">Claim</Link>
-            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="hover:text-[#0B0B0C]">Amazon Planner</a>
+            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-[#0B0B0C]">Amazon Planner <ExternalLink className="h-3.5 w-3.5" /></a>
             <Link href="/terms" className="hover:text-[#0B0B0C]">Terms</Link>
             <Link href="/privacy" className="hover:text-[#0B0B0C]">Privacy</Link>
             <Link href="/auth" className="hover:text-[#0B0B0C]">Log in</Link>
