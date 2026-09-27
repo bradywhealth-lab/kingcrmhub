@@ -73,7 +73,7 @@ export function ClaimBanner() {
 
   return (
     <div className="flex items-start justify-between gap-3 border-b border-[color:var(--cobalt-dark)]/25 bg-[color:var(--cobalt)]/10 px-4 py-3 sm:px-6 lg:px-8">
-      <div className="flex items-start gap-2.5 text-sm text-[color:var(--ink)]">
+      <div className="flex items-start gap-2.5 text-sm text-[color:var(--foreground)]">
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--cobalt-dark)]" />
         <p>
           {label}{' '}
@@ -86,7 +86,7 @@ export function ClaimBanner() {
         type="button"
         aria-label="Dismiss"
         onClick={() => setDismissed(true)}
-        className="shrink-0 rounded-full p-1 text-[color:var(--ink)]/50 hover:bg-[color:var(--ink)]/5 hover:text-[color:var(--ink)]"
+        className="shrink-0 rounded-full p-1 text-[color:var(--foreground)]/50 hover:bg-[color:var(--foreground)]/5 hover:text-[color:var(--foreground)]"
       >
         <X className="h-4 w-4" />
       </button>

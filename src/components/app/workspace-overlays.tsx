@@ -84,7 +84,7 @@ export function WorkspaceOverlays({
       />
 
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="max-w-lg border-[var(--ink-line)] bg-white">
+        <DialogContent className="max-w-lg border-[var(--ink-line)] bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground">
               <Upload className="h-5 w-5 text-[#1e4fcc]" />
@@ -131,7 +131,7 @@ export function WorkspaceOverlays({
       </Dialog>
 
       <Dialog open={showScrapeDialog} onOpenChange={setShowScrapeDialog}>
-        <DialogContent className="max-w-2xl border-[var(--ink-line)] bg-white">
+        <DialogContent className="max-w-2xl border-[var(--ink-line)] bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground">
               <Globe className="h-5 w-5 text-[#1e4fcc]" />

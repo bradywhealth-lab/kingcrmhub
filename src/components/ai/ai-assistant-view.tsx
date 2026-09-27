@@ -141,7 +141,7 @@ function MessageBubble({ message }: { message: Message }) {
         )}
       >
         {isUser ? (
-          <span className="text-xs font-bold text-[#0c111b]">U</span>
+          <span className="text-xs font-bold text-foreground">U</span>
         ) : (
           <Bot className="w-4 h-4 text-[#2f6bff]" />
         )}
@@ -153,8 +153,8 @@ function MessageBubble({ message }: { message: Message }) {
           className={cn(
             "px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
             isUser
-              ? "bg-[#2f6bff] text-[#0c111b] rounded-tr-sm"
-              : "bg-white border border-[var(--ink-line)] text-gray-800 rounded-tl-sm shadow-sm"
+              ? "bg-[var(--accent-solid)] text-white rounded-tr-sm"
+              : "bg-card border border-[var(--ink-line)] text-foreground rounded-tl-sm shadow-sm"
           )}
         >
           {message.content}
@@ -378,9 +378,9 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
   }, [input])
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-[#faf7ee] overflow-hidden">
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
       {/* ── Sidebar: conversation list ── */}
-      <div className="w-72 shrink-0 flex flex-col border-r border-[var(--ink-line)] bg-white">
+      <div className="w-72 shrink-0 flex flex-col border-r border-[var(--ink-line)] bg-card">
         {/* Header */}
         <div className="p-4 border-b border-[var(--ink-line)] flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -411,7 +411,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                   "w-full group flex items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors",
                   activeChatId === convo.id
                     ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-[#faf7ee] hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -449,9 +449,9 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
         {activeChat && (
           <>
             {/* Chat header */}
-            <div className="px-6 py-4 border-b border-[var(--ink-line)] bg-white flex items-center gap-3">
+            <div className="px-6 py-4 border-b border-[var(--ink-line)] bg-card flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#2f6bff] flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-[#0c111b]" />
+                <Sparkles className="w-5 h-5 text-foreground" />
               </div>
               <div>
                 <h2 className="font-semibold text-foreground text-sm">
@@ -506,7 +506,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     className="text-center py-10"
                   >
                     <div className="w-16 h-16 rounded-2xl bg-[#2f6bff] flex items-center justify-center mx-auto mb-4">
-                      <Bot className="w-8 h-8 text-[#0c111b]" />
+                      <Bot className="w-8 h-8 text-foreground" />
                     </div>
                     <h3 className="text-xl font-semibold text-foreground">How can I help you close?</h3>
                     <p className="text-muted-foreground text-sm mt-2 mb-8">
@@ -519,7 +519,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         <button
                           key={sp.label}
                           onClick={() => void sendMessage(sp.prompt)}
-                          className="p-4 bg-white border border-[var(--ink-line)] rounded-xl text-left hover:border-[#1e4fcc] hover:shadow-sm transition-all group"
+                          className="p-4 bg-card border border-[var(--ink-line)] rounded-xl text-left hover:border-[#1e4fcc] hover:shadow-sm transition-all group"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium text-foreground">{sp.label}</p>
@@ -551,7 +551,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0 mt-0.5">
                           <Bot className="w-4 h-4 text-[#2f6bff]" />
                         </div>
-                        <div className="max-w-[75%] px-4 py-3 bg-white border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        <div className="max-w-[75%] px-4 py-3 bg-card border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                           {streamingContent}
                           <span className="inline-block w-1.5 h-4 bg-[#2f6bff] ml-0.5 animate-pulse rounded-sm" />
                         </div>
@@ -561,7 +561,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0">
                           <Bot className="w-4 h-4 text-[#2f6bff]" />
                         </div>
-                        <div className="bg-white border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm">
+                        <div className="bg-card border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm">
                           <TypingDots />
                         </div>
                       </div>
@@ -574,7 +574,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
             </ScrollArea>
 
             {/* Input area */}
-            <div className="px-6 py-4 border-t border-[var(--ink-line)] bg-white">
+            <div className="px-6 py-4 border-t border-[var(--ink-line)] bg-card">
               <div className="max-w-3xl mx-auto">
                 <div className="flex items-end gap-3 bg-muted rounded-2xl border border-[var(--ink-line)] px-4 py-3 focus-within:border-[#1e4fcc] transition-colors">
                   <Textarea
@@ -592,8 +592,8 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     className={cn(
                       "w-9 h-9 rounded-xl shrink-0 transition-all",
                       input.trim() && !streaming
-                        ? "bg-[#2f6bff] hover:bg-[#245be0] text-[#0c111b] shadow-sm"
-                        : "bg-[#e7e1d3] text-[#8c8c8b] cursor-not-allowed"
+                        ? "bg-[var(--accent-solid)] hover:bg-[var(--accent-hover)] text-white shadow-sm"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
                     disabled={!input.trim() || streaming}
                     onClick={() => void sendMessage(input)}

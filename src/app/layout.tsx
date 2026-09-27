@@ -87,7 +87,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var s=localStorage.getItem('elite-crm-storage');var t=s?JSON.parse(s):null;var th=t&&t.state&&t.state.theme;document.documentElement.classList.toggle('dark',th==='dark');}catch(e){}})();",
+              "(function(){try{var app=location.pathname==='/';var s=localStorage.getItem('elite-crm-storage');var t=s?JSON.parse(s):null;var th=t&&t.state&&t.state.theme;document.documentElement.classList.toggle('dark',app&&th==='dark');}catch(e){}})();",
           }}
         />
         <script

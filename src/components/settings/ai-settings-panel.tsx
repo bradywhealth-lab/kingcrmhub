@@ -153,7 +153,7 @@ export function AISettingsPanel() {
 
   if (loading) {
     return (
-      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-card shadow-sm">
         <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
           <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
           Loading AI settings…
@@ -165,7 +165,7 @@ export function AISettingsPanel() {
   return (
     <div className="space-y-6">
       {/* Current Status */}
-      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-card shadow-sm">
         <CardHeader>
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--teal)] to-[var(--teal-deep)]">
@@ -184,7 +184,7 @@ export function AISettingsPanel() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Current Provider Badge */}
-          <div className="flex items-center gap-3 rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4">
+          <div className="flex items-center gap-3 rounded-lg border border-[var(--ink-line)] bg-muted p-4">
             <Bot className="h-5 w-5 text-[var(--teal-deep)]" />
             <div className="flex-1">
               <p className="text-sm font-medium text-foreground">
@@ -219,7 +219,7 @@ export function AISettingsPanel() {
               onValueChange={(value) => void saveProvider(value)}
               disabled={saving}
             >
-              <SelectTrigger className="border-[var(--ink-line)] bg-[var(--paper)]">
+              <SelectTrigger className="border-[var(--ink-line)] bg-muted">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -296,12 +296,12 @@ export function AISettingsPanel() {
                       }
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      className="border-[var(--ink-line)] bg-[var(--paper)] pr-10"
+                      className="border-[var(--ink-line)] bg-muted pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowKey(!showKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -328,7 +328,7 @@ export function AISettingsPanel() {
           {selectedProvider === 'groq' && (
             <>
               <Separator />
-              <div className="rounded-lg border border-[var(--ink-line)] bg-[var(--paper)] p-4 space-y-2">
+              <div className="rounded-lg border border-[var(--ink-line)] bg-muted p-4 space-y-2">
                 <p className="text-sm font-medium text-foreground">Free Tier Details</p>
                 <ul className="text-xs text-muted-foreground space-y-1">
                   <li>• Standard tier AI assistant included — powered by Groq inference when a platform or org key is available</li>

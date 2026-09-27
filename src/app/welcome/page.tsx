@@ -78,7 +78,7 @@ export default function PublicLandingPage() {
             Bought the prompts? Claim free
           </Link>
         </div>
-        <p className="mt-5 text-[13px] font-semibold text-[#0B0B0C]/45">No per-seat fees · Automations on every plan · Free for prompt-pack owners</p>
+        <p className="mt-5 text-[13px] font-semibold text-[#0B0B0C]/60">No per-seat fees · Automations on every plan · Free for prompt-pack owners</p>
       </section>
 
       {/* PRODUCT PREVIEW */}
@@ -91,14 +91,14 @@ export default function PublicLandingPage() {
           <div className="grid grid-cols-[180px_1fr] max-sm:grid-cols-1">
             <div className="border-r border-[#0B0B0C]/8 bg-[#F6F6F4] p-4 max-sm:hidden">
               {['Overview', "Today's plays", 'Follow-ups', 'Invoices'].map((n, i) => (
-                <div key={n} className={`mb-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold ${i === 0 ? 'border border-[#0B0B0C]/10 bg-white text-[#0B0B0C]' : 'text-[#0B0B0C]/55'}`}>{n}</div>
+                <div key={n} className={`mb-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold ${i === 0 ? 'border border-[#0B0B0C]/10 bg-white text-[#0B0B0C]' : 'text-[#0B0B0C]/60'}`}>{n}</div>
               ))}
             </div>
             <div className="p-5">
               <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2">
                 {[['Clients', '5'], ['Pipeline', '$300k'], ['Score', '82'], ['Due', '7']].map(([l, v], i) => (
                   <div key={l} className={`rounded-xl border p-3 ${i === 1 ? 'border-[color:var(--x)] bg-[#2F6BFF]/8' : 'border-[#0B0B0C]/10'}`} style={i === 1 ? { borderColor: COBALT } : undefined}>
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#0B0B0C]/45">{l}</div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#0B0B0C]/60">{l}</div>
                     <div className="font-display mt-1 text-2xl font-bold">{v}</div>
                   </div>
                 ))}
@@ -172,14 +172,16 @@ export default function PublicLandingPage() {
       <footer className="border-t border-[#0B0B0C]/10 px-5 py-8 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <span className="font-display text-lg font-extrabold">KING<span style={{ color: COBALT }}>.</span></span>
-          <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#0B0B0C]/55">
+          <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#0B0B0C]/60">
             <Link href="/pricing" className="hover:text-[#0B0B0C]">Pricing</Link>
+            <Link href="/compare" className="hover:text-[#0B0B0C]">Compare</Link>
             <Link href="/claim" className="hover:text-[#0B0B0C]">Claim</Link>
+            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="hover:text-[#0B0B0C]">Amazon Planner</a>
             <Link href="/terms" className="hover:text-[#0B0B0C]">Terms</Link>
             <Link href="/privacy" className="hover:text-[#0B0B0C]">Privacy</Link>
             <Link href="/auth" className="hover:text-[#0B0B0C]">Log in</Link>
           </nav>
-          <span className="text-sm text-[#0B0B0C]/45">© 2026 King CRM Hub</span>
+          <span className="text-sm text-[#0B0B0C]/60">© 2026 King CRM Hub</span>
         </div>
       </footer>
     </main>

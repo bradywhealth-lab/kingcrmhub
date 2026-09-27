@@ -79,7 +79,7 @@ export function AddLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border-[var(--ink-line)] bg-white">
+      <DialogContent className="max-w-lg border-[var(--ink-line)] bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <UserPlus className="h-5 w-5 text-[#1e4fcc]" />

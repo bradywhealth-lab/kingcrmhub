@@ -60,13 +60,15 @@
 :root {
   --radius: 0.75rem;
 
-  /* Cobalt accent scale */
-  --accent-solid: #2f6bff;
+  /* Cobalt accent scale.
+     --accent-solid sits behind WHITE text (buttons, pills, badges), so it is
+     darkened to clear WCAG AA (white on #2563eb ≈ 4.6:1). */
+  --accent-solid: #2563eb;
   --accent-ink: #ffffff;      /* text on a cobalt fill */
   --accent-text: #1e4fcc;     /* cobalt text on light surfaces (AA) */
   --accent-soft: rgba(47, 107, 255, 0.12);
   --accent-strong: rgba(47, 107, 255, 0.28);
-  --accent-hover: #245be0;
+  --accent-hover: #1d4ed8;
 
   /* Ink + paper */
   --ink: #0b0b0c;
@@ -81,8 +83,8 @@
   --popover: #ffffff;
   --popover-foreground: #0b0b0c;
 
-  /* Primary = Cobalt */
-  --primary: #2f6bff;
+  /* Primary = Cobalt (AA behind white text) */
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
 
   /* Secondary = Ink */
@@ -98,7 +100,7 @@
   /* Semantic */
   --success: #12855b;
   --success-light: #ecfdf5;
-  --warning: #b26a00;
+  --warning: #965900;
   --warning-light: #fff7ed;
   --destructive: #dc2626;
   --destructive-light: #fef2f2;
@@ -156,12 +158,12 @@
 }
 
 .dark {
-  --accent-solid: #3b82f6;
+  --accent-solid: #2563eb;
   --accent-ink: #ffffff;
   --accent-text: #93b4ff;
   --accent-soft: rgba(59, 130, 246, 0.16);
   --accent-strong: rgba(59, 130, 246, 0.34);
-  --accent-hover: #5b95f7;
+  --accent-hover: #1d4ed8;
 
   --ink: #000000;
   --ink-2: #0c0c0e;
@@ -174,7 +176,7 @@
   --popover: #141416;
   --popover-foreground: #f2f2f3;
 
-  --primary: #3b82f6;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
   --secondary: #f2f2f3;
   --secondary-foreground: #0b0b0c;

@@ -107,7 +107,9 @@ function ClaimPageInner() {
 
   const INK = '#0C111B'
   const PAPER = '#F4F0E6'
-  const TEAL = '#2f6bff'
+  // Brighter cobalt so the accent clears WCAG AA on the ink surface for both
+  // the sign-in link text and the ink-on-accent CTA label (cubic review).
+  const TEAL = '#4080ff'
   // Truthful window copy: the 30-day clock starts at VERIFICATION (the server
   // mints expiresAt = verification + 30d — cubic P2 round 1). We never promise
   // a date that assumes signup-day start; buyers who delay lose days, not the

@@ -174,7 +174,7 @@ export function AutomationView({ onCreateSuccess }: AutomationViewProps) {
           { title: "Runs This Month", value: 1234, icon: Activity },
           { title: "AI Accuracy", value: "94%", icon: Brain },
         ].map((stat) => (
-          <Card key={stat.title} className="bg-white border-[#E2DDD4] shadow-sm">
+          <Card key={stat.title} className="bg-card border-[#E2DDD4] shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-[#3B8595]/20 flex items-center justify-center">
@@ -190,7 +190,7 @@ export function AutomationView({ onCreateSuccess }: AutomationViewProps) {
         ))}
       </div>
 
-      <Card className="bg-white border-[#E2DDD4] shadow-sm">
+      <Card className="bg-card border-[#E2DDD4] shadow-sm">
         <CardContent className="p-4">
           <p className="text-sm font-semibold text-foreground mb-3">Current automations</p>
           {loadingAutomations ? (

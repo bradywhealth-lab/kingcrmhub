@@ -66,7 +66,7 @@ export const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[]
 ]
 
 const STATUS_COLUMNS = [
-  { key: 'todo' as const, label: 'To Do', color: 'bg-[#0c111b]/8 text-[#0c111b]' },
+  { key: 'todo' as const, label: 'To Do', color: 'bg-[#0c111b]/8 text-foreground' },
   { key: 'in_progress' as const, label: 'In Progress', color: 'bg-[#1e4fcc]/12 text-[#1e4fcc]' },
   { key: 'done' as const, label: 'Done', color: 'bg-[#2f6bff]/12 text-[#1e4fcc]' },
   { key: 'blocked' as const, label: 'Blocked', color: 'bg-amber-100 text-amber-700' },
@@ -156,7 +156,7 @@ export function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): 
 function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; company: string } | null }) {
   if (!lead) return null
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-[#0c111b]/50">
+    <span className="inline-flex items-center gap-1 text-[11px] text-foreground/50">
       <Building className="h-3 w-3" />
       {lead.firstName} {lead.lastName}
       {lead.company ? ` · ${lead.company}` : ''}
@@ -170,7 +170,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
     <Card
       draggable
       onDragStart={(e) => { e.dataTransfer.setData('text/plain', task.id); e.dataTransfer.effectAllowed = 'move' }}
-      className={`group border-[rgba(31,42,54,0.08)] bg-white shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow ${isDone ? 'opacity-60' : ''}`}
+      className={`group border-[rgba(31,42,54,0.08)] bg-card shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow ${isDone ? 'opacity-60' : ''}`}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
@@ -180,15 +180,15 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
               isDone
                 ? 'border-[#2f6bff] bg-[#2f6bff] text-white'
-                : 'border-[#0c111b]/20 hover:border-[#2f6bff]/50'
+                : 'border-foreground/20 hover:border-[#2f6bff]/50'
             }`}
           >
             {isDone && <Check className="h-3 w-3" />}
           </button>
           <div className="min-w-0 flex-1">
-            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-[#0c111b]/40 line-through' : 'text-[#0c111b]'}`}>{task.title}</p>
+            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-foreground/40 line-through' : 'text-foreground'}`}>{task.title}</p>
             {task.description && (
-              <p className="mt-1 text-xs text-[#0c111b]/55 line-clamp-2">{task.description}</p>
+              <p className="mt-1 text-xs text-foreground/55 line-clamp-2">{task.description}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {isDone && task.completedAt && (
@@ -202,7 +202,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onOpenPipelineItem?.(task.pipelineItem!.id) }}
                   aria-label={`Open pipeline item ${task.pipelineItem.title}`}
-                  className="inline-flex items-center gap-1 text-[11px] text-[#1e4fcc] hover:text-[#0c111b] hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#1e4fcc] hover:text-foreground hover:underline"
                 >
                   <Building className="h-3 w-3" />
                   {task.pipelineItem.title}
@@ -210,7 +210,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
               )}
               <LeadBadge lead={task.lead} />
               {task.assignedTo && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[#0c111b]/50">
+                <span className="inline-flex items-center gap-1 text-[11px] text-foreground/50">
                   <User className="h-3 w-3" />
                   {task.assignedTo.name ?? task.assignedTo.email}
                 </span>
@@ -226,7 +226,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? 'bg-slate-300'}`} />
           )}
           {!isDone && task.dueDate && (
-            <span className="shrink-0 text-[11px] tabular-nums text-[#0c111b]/45">
+            <span className="shrink-0 text-[11px] tabular-nums text-foreground/45">
               {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -240,17 +240,17 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
   const timeStr = formatAppointmentTime(appt.startTime, appt.endTime, appt.timezone || 'America/New_York')
 
   return (
-    <Card className="border-[rgba(31,42,54,0.06)] bg-[#f6f9ff] shadow-none">
+    <Card className="border-[rgba(31,42,54,0.06)] bg-muted shadow-none">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1e4fcc]/10">
             <Calendar className="h-4 w-4 text-[#1e4fcc]" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[#0c111b]">{appt.title}</p>
-            <p className="mt-0.5 text-xs text-[#0c111b]/55">{timeStr}</p>
+            <p className="text-sm font-medium text-foreground">{appt.title}</p>
+            <p className="mt-0.5 text-xs text-foreground/55">{timeStr}</p>
             {appt.location && (
-              <p className="mt-0.5 text-[11px] text-[#0c111b]/40">{appt.location}</p>
+              <p className="mt-0.5 text-[11px] text-foreground/40">{appt.location}</p>
             )}
             <div className="mt-1.5">
               <LeadBadge lead={appt.lead} />
@@ -275,9 +275,9 @@ function EmptyState({ tab }: { tab: FilterTab }) {
   const m = messages[tab]
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <CheckSquare className="h-12 w-12 text-[#0c111b]/12" />
-      <p className="mt-4 text-sm font-medium text-[#0c111b]/60">{m.title}</p>
-      <p className="mt-1 text-xs text-[#0c111b]/40 max-w-xs">{m.body}</p>
+      <CheckSquare className="h-12 w-12 text-foreground/12" />
+      <p className="mt-4 text-sm font-medium text-foreground/60">{m.title}</p>
+      <p className="mt-1 text-xs text-foreground/40 max-w-xs">{m.body}</p>
     </div>
   )
 }
@@ -499,7 +499,7 @@ export function TasksView({
     <div className="p-6 lg:p-8 space-y-6">
       {/* Header with filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-white p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-card p-1 shadow-sm">
           {FILTER_TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -507,7 +507,7 @@ export function TasksView({
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 tab === id
                   ? 'bg-[#2f6bff]/14 text-[#1e4fcc]'
-                  : 'text-[#0c111b]/55 hover:text-[#0c111b]'
+                  : 'text-foreground/55 hover:text-foreground'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -517,12 +517,12 @@ export function TasksView({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-xl border border-[rgba(31,42,54,0.08)] bg-white p-0.5">
+          <div className="flex items-center rounded-xl border border-[rgba(31,42,54,0.08)] bg-card p-0.5">
             <button
               onClick={() => setViewMode('list')}
               aria-label="List view"
               aria-pressed={viewMode === 'list' || tab === 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-foreground' : 'text-foreground/40 hover:text-foreground'}`}
             >
               <List className="h-4 w-4" />
             </button>
@@ -532,7 +532,7 @@ export function TasksView({
               aria-disabled={tab === 'completed'}
               disabled={tab === 'completed'}
               aria-pressed={viewMode === 'kanban' && tab !== 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-[#0c111b]' : tab === 'completed' ? 'cursor-not-allowed text-[#0c111b]/25' : 'text-[#0c111b]/40 hover:text-[#0c111b]'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-foreground' : tab === 'completed' ? 'cursor-not-allowed text-foreground/25' : 'text-foreground/40 hover:text-foreground'}`}
             >
               <Columns className="h-4 w-4" />
             </button>
@@ -566,11 +566,11 @@ export function TasksView({
                   <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
                     {col.label}
                   </span>
-                  <span className="text-xs text-[#0c111b]/35 tabular-nums">{col.tasks.length}</span>
+                  <span className="text-xs text-foreground/35 tabular-nums">{col.tasks.length}</span>
                 </div>
                 <div className="space-y-3">
                   {col.tasks.length === 0 ? (
-                    <p className="py-6 text-center text-xs text-[#0c111b]/25">No tasks</p>
+                    <p className="py-6 text-center text-xs text-foreground/25">No tasks</p>
                   ) : (
                     col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />)
                   )}
@@ -581,7 +581,7 @@ export function TasksView({
 
           {filteredAppointments.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Appointments</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/40">Appointments</h2>
               <div className="space-y-3">
                 {filteredAppointments.map((appt) => (
                   <AppointmentCard key={appt.id} appt={appt} />
@@ -597,7 +597,7 @@ export function TasksView({
         <div className="space-y-8">
           {filteredTasks.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Tasks</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/40">Tasks</h2>
               <div className="space-y-3">
                 {filteredTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />
@@ -608,7 +608,7 @@ export function TasksView({
 
           {filteredAppointments.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[#0c111b]/40">Appointments</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/40">Appointments</h2>
               <div className="space-y-3">
                 {filteredAppointments.map((appt) => (
                   <AppointmentCard key={appt.id} appt={appt} />
@@ -627,13 +627,13 @@ export function TasksView({
             aria-modal="true"
             aria-labelledby="create-task-title"
             onKeyDown={(e) => { if (e.key === 'Escape') setShowCreate(false) }}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[rgba(31,42,54,0.08)]"
+            className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl border border-[rgba(31,42,54,0.08)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="create-task-title" className="text-lg font-semibold text-[#0c111b]">Create Task</h2>
+            <h2 id="create-task-title" className="text-lg font-semibold text-foreground">Create Task</h2>
             <div className="mt-4 space-y-4">
               <div>
-                <label htmlFor="task-title" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Title</label>
+                <label htmlFor="task-title" className="block text-xs font-medium text-foreground/60 mb-1.5">Title</label>
                 <Input
                   id="task-title"
                   autoFocus
@@ -644,12 +644,12 @@ export function TasksView({
                 />
               </div>
               <div>
-                <label htmlFor="task-priority" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Priority</label>
+                <label htmlFor="task-priority" className="block text-xs font-medium text-foreground/60 mb-1.5">Priority</label>
                 <select
                   id="task-priority"
                   value={createPriority}
                   onChange={(e) => setCreatePriority(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-white px-3 text-sm text-[#0c111b] focus:outline-none focus:ring-2 focus:ring-[#2f6bff]/30"
+                  className="w-full h-10 rounded-xl border border-[rgba(31,42,54,0.08)] bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2f6bff]/30"
                 >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
@@ -658,7 +658,7 @@ export function TasksView({
                 </select>
               </div>
               <div>
-                <label htmlFor="task-due" className="block text-xs font-medium text-[#0c111b]/60 mb-1.5">Due date</label>
+                <label htmlFor="task-due" className="block text-xs font-medium text-foreground/60 mb-1.5">Due date</label>
                 <Input
                   id="task-due"
                   type="date"

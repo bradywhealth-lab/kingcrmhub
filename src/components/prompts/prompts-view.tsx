@@ -154,7 +154,7 @@ export function PromptsView({
                   key={p.id}
                   className={
                     p.unlocked
-                      ? 'border-[rgba(31,42,54,0.1)] bg-white'
+                      ? 'border-[rgba(31,42,54,0.1)] bg-card'
                       : 'border-[rgba(31,42,54,0.08)] bg-[rgba(31,42,54,0.03)]'
                   }
                 >
@@ -171,7 +171,7 @@ export function PromptsView({
 
                     {p.unlocked && p.body ? (
                       <>
-                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-xl bg-[var(--paper)] p-3 font-mono text-[11px] leading-5 text-[var(--ink)]">
+                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-xl bg-muted p-3 font-mono text-[11px] leading-5 text-[var(--ink)]">
                           {p.body}
                         </pre>
                         <div className="flex flex-wrap gap-2">

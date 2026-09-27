@@ -304,6 +304,16 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'elite-crm-storage',
+      // v1: the Regal redesign flips the default theme to light. Reset any
+      // pre-redesign persisted theme (the old default was 'dark') once so the
+      // light-default rollout reaches returning users too.
+      version: 1,
+      migrate: (persisted, version) => {
+        if (version < 1 && persisted && typeof persisted === 'object') {
+          return { ...(persisted as Record<string, unknown>), theme: 'light' }
+        }
+        return persisted as unknown
+      },
       partialize: (state) => ({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,

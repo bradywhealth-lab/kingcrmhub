@@ -190,7 +190,7 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
 
 function ScoreBadge({ score }: { score: number }) {
   const color = score >= 80 ? "bg-gradient-to-r from-[#2f6bff] to-[#1e4fcc] text-foreground" : 
-                score >= 60 ? "bg-[#2f6bff] text-[#0c111b]" : "bg-[#0c111b] text-white"
+                score >= 60 ? "bg-[#2f6bff] text-foreground" : "bg-[#0c111b] text-white"
   return (
     <div className={cn("px-2 py-0.5 rounded text-xs font-semibold", color)}>
       {score}
@@ -302,8 +302,13 @@ function DashboardView() {
   const liveSources = formatSourceBreakdown(stats?.sourceBreakdown)
   const visibleInsights = insights.filter((i) => !i.dismissed).slice(0, 4)
   const visibleActivities = activities.slice(0, 5)
-  const greetingHour = new Date().getHours()
-  const greeting = greetingHour < 12 ? "Good morning" : greetingHour < 18 ? "Good afternoon" : "Good evening"
+  // Compute the greeting AFTER mount so it reflects the user's local time, not
+  // the server's timezone during prerender (cubic review).
+  const [greeting, setGreeting] = useState("Welcome back")
+  useEffect(() => {
+    const h = new Date().getHours()
+    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening")
+  }, [])
 
   return (
     <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -313,7 +318,7 @@ function DashboardView() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground" suppressHydrationWarning>
             Home · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-foreground" suppressHydrationWarning>{greeting}</h1>
+          <h1 className="mt-1 text-3xl font-bold text-foreground">{greeting}</h1>
         </div>
       </div>
 
@@ -949,7 +954,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            className="border-[#1e4fcc] text-[#0c111b] hover:bg-muted gap-2"
+            className="border-[#1e4fcc] text-foreground hover:bg-muted gap-2"
             onClick={onScrape}
           >
             <Globe className="w-4 h-4" />
@@ -1227,7 +1232,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
 
                   {assistantPlaybook && (
                     <div className="space-y-4">
-                      <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-4">
+                      <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-card p-4">
                         <p className="text-xs text-muted-foreground">Recommended Offer</p>
                         <p className="text-sm font-semibold text-foreground mt-1">
                           {assistantPlaybook.recommendedPackage.name}
@@ -1246,7 +1251,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                           <p className="text-xs text-muted-foreground mb-2">Backup Offers</p>
                           <div className="space-y-2">
                             {assistantPlaybook.backupPackages.map((pkg, idx) => (
-                              <div key={`${pkg.name}-${idx}`} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
+                              <div key={`${pkg.name}-${idx}`} className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-card p-3">
                                 <p className="text-sm font-medium text-foreground">{pkg.name}</p>
                                 <p className="text-xs text-muted-foreground mt-1">{pkg.rationale}</p>
                               </div>
@@ -1256,7 +1261,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
+                        <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-card p-3">
                           <p className="text-xs text-muted-foreground mb-2">Qualification Summary</p>
                           <ul className="text-sm text-foreground space-y-1">
                             {assistantPlaybook.qualificationSummary.map((item, idx) => (
@@ -1264,7 +1269,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                             ))}
                           </ul>
                         </div>
-                        <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3">
+                        <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-card p-3">
                           <p className="text-xs text-muted-foreground mb-2">Objection Handling</p>
                           <ul className="text-sm text-foreground space-y-1">
                             {assistantPlaybook.objectionHandling.map((item, idx) => (
@@ -1274,7 +1279,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                         </div>
                       </div>
 
-                      <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3 space-y-2">
+                      <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-card p-3 space-y-2">
                         <p className="text-xs text-muted-foreground">Follow-up Scripts</p>
                         <p className="text-sm text-foreground"><span className="font-medium text-foreground">Call opening:</span> {assistantPlaybook.followUpScripts.callOpening}</p>
                         <p className="text-sm text-foreground"><span className="font-medium text-foreground">SMS:</span> {assistantPlaybook.followUpScripts.sms}</p>
@@ -1283,7 +1288,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       </div>
 
                       {assistantPlaybook.citations?.length > 0 && (
-                        <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-white p-3 space-y-2">
+                        <div className="rounded-lg border border-[rgba(31,42,54,0.08)] bg-card p-3 space-y-2">
                           <p className="text-xs text-muted-foreground">Grounding Citations</p>
                           {assistantPlaybook.citations.slice(0, 4).map((c, idx) => (
                             <div key={`${c.documentId}-${c.chunkIndex}-${idx}`} className="rounded border border-[#1e4fcc] bg-background p-2">
@@ -1503,7 +1508,7 @@ function PipelineStageColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "shrink-0 w-[300px] bg-white rounded-lg border shadow-sm transition-colors",
+        "shrink-0 w-[300px] bg-card rounded-lg border shadow-sm transition-colors",
         isOver ? "border-[#1e4fcc] bg-muted" : "border-[rgba(31,42,54,0.08)]"
       )}
     >

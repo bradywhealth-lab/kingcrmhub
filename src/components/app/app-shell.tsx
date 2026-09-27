@@ -76,7 +76,7 @@ export function AppShell({
           </button>
 
           {/* Desktop pill nav */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-1 xl:flex">
             {primary.map((item) => {
               const active = activeView === item.id
               return (
@@ -98,7 +98,7 @@ export function AppShell({
                 <DropdownMenuTrigger asChild>
                   <button className={cn(
                     "flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-                    overflow.some((o) => o.id === activeView) ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                    (overflow.some((o) => o.id === activeView) || activeView === "settings") ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}>
                     More <ChevronDown className="h-3.5 w-3.5" />
                   </button>
@@ -121,15 +121,16 @@ export function AppShell({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Open navigation"
+            aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={mobileNavOpen}
             onClick={() => setMobileNavOpen((v) => !v)}
-            className="ml-auto h-10 w-10 rounded-xl text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
+            className="ml-auto h-10 w-10 rounded-xl text-white/80 hover:bg-white/10 hover:text-white xl:hidden"
           >
             {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
           {/* Right cluster */}
-          <div className="ml-auto hidden items-center gap-2 lg:flex">
+          <div className="ml-auto hidden items-center gap-2 xl:flex">
             <div className="relative w-[220px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               <div className="flex h-9 items-center rounded-xl border border-white/15 bg-white/5 pl-9 pr-2 text-sm text-white/50">
@@ -146,7 +147,7 @@ export function AppShell({
           </div>
 
           {/* Mobile right cluster (compact) */}
-          <div className="flex items-center gap-1.5 lg:hidden">
+          <div className="flex items-center gap-1.5 xl:hidden">
             <ThemeToggle theme={theme} setTheme={setTheme} />
             <Button onClick={onAddLead} size="icon" aria-label="New" className="h-9 w-9 rounded-xl bg-[var(--accent-solid)] text-white hover:bg-[var(--accent-hover)]">
               <Plus className="h-4 w-4" />
@@ -162,7 +163,7 @@ export function AppShell({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="overflow-hidden border-t border-white/10 lg:hidden"
+              className="overflow-hidden border-t border-white/10 xl:hidden"
             >
               <div className="grid grid-cols-2 gap-1.5 p-3">
                 {APP_NAV_ITEMS.map((item) => {

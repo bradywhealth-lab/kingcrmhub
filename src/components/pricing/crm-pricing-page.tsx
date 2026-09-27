@@ -268,7 +268,7 @@ export function CrmPricingPage() {
               <div
                 key={plan.id}
                 className={`relative flex flex-col rounded-3xl border-2 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg ${plan.color} ${
-                  plan.popular ? "ring-2 ring-[#2f6bff]/30 shadow-[0_8px_32px_rgba(24,184,151,0.18)]" : ""
+                  plan.popular ? "ring-2 ring-[#2f6bff]/30 shadow-[0_8px_32px_rgba(37,99,235,0.18)]" : ""
                 }`}
               >
                 {plan.popular && (

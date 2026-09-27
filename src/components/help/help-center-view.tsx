@@ -38,14 +38,14 @@ const troubleshooting = [
 
 export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: () => void }) {
   return (
-    <div className="min-h-screen space-y-6 bg-[#faf7ee] p-6">
+    <div className="min-h-screen space-y-6 bg-background p-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Help Center</h1>
         <p className="text-muted-foreground">Learn the app fast, get value fast, and know what to do next.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-[var(--ink-line)] bg-white shadow-sm">
+        <Card className="border-[var(--ink-line)] bg-card shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground"><Compass className="h-5 w-5 text-[#1e4fcc]" /> Getting started in 10 minutes</CardTitle>
             <CardDescription>Follow this order so you unlock the real value of the CRM.</CardDescription>
@@ -59,7 +59,7 @@ export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: ()
           </CardContent>
         </Card>
 
-        <Card className="border-[var(--ink-line)] bg-white shadow-sm">
+        <Card className="border-[var(--ink-line)] bg-card shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground"><Sparkles className="h-5 w-5 text-[#1e4fcc]" /> Quick actions</CardTitle>
             <CardDescription>Use these when the workspace needs setup or the AI assistant is not helping enough.</CardDescription>
@@ -81,7 +81,7 @@ export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: ()
         </Card>
       </div>
 
-      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-card shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground"><Bot className="h-5 w-5 text-[#1e4fcc]" /> Feature guides</CardTitle>
           <CardDescription>Focused advice for using the product well, not generic filler.</CardDescription>
@@ -96,7 +96,7 @@ export function HelpCenterView({ onJumpToSettingsAI }: { onJumpToSettingsAI?: ()
         </CardContent>
       </Card>
 
-      <Card className="border-[var(--ink-line)] bg-white shadow-sm">
+      <Card className="border-[var(--ink-line)] bg-card shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground"><LifeBuoy className="h-5 w-5 text-[#1e4fcc]" /> Troubleshooting</CardTitle>
           <CardDescription>Most common reasons the CRM feels broken or underpowered.</CardDescription>
