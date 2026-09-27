@@ -82,6 +82,14 @@ export default function RootLayout({
       className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
     >
       <body className="antialiased bg-background text-foreground">
+        {/* No-flash theme: apply the persisted dark/light preference before paint
+            so every route (auth, landing, workspace-loading, app) is consistent. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var s=localStorage.getItem('elite-crm-storage');var t=s?JSON.parse(s):null;var th=t&&t.state&&t.state.theme;document.documentElement.classList.toggle('dark',th==='dark');}catch(e){}})();",
+          }}
+        />
         <script
           type="application/ld+json"
           // Static, build-time JSON-LD from a typed builder (no user input).

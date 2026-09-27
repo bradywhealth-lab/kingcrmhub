@@ -302,6 +302,8 @@ function DashboardView() {
   const liveSources = formatSourceBreakdown(stats?.sourceBreakdown)
   const visibleInsights = insights.filter((i) => !i.dismissed).slice(0, 4)
   const visibleActivities = activities.slice(0, 5)
+  const greetingHour = new Date().getHours()
+  const greeting = greetingHour < 12 ? "Good morning" : greetingHour < 18 ? "Good afternoon" : "Good evening"
 
   return (
     <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -311,12 +313,7 @@ function DashboardView() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground" suppressHydrationWarning>
             Home · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-foreground">Good morning</h1>
-        </div>
-        <div className="flex overflow-hidden rounded-xl border border-border">
-          {["This week", "Month", "Quarter"].map((t, i) => (
-            <span key={t} className={cn("px-4 py-2 text-sm font-semibold", i === 0 ? "bg-[var(--ink)] text-white" : "bg-card text-muted-foreground")}>{t}</span>
-          ))}
+          <h1 className="mt-1 text-3xl font-bold text-foreground" suppressHydrationWarning>{greeting}</h1>
         </div>
       </div>
 
