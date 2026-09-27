@@ -179,8 +179,8 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
               isDone
-                ? 'border-[#2f6bff] bg-[var(--accent-solid)] text-white'
-                : 'border-foreground/20 hover:border-[#2f6bff]/50'
+                ? 'border-[var(--accent-solid)] bg-[var(--accent-solid)] text-white'
+                : 'border-foreground/20 hover:border-[var(--accent-solid)]/50'
             }`}
           >
             {isDone && <Check className="h-3 w-3" />}
@@ -506,7 +506,7 @@ export function TasksView({
               onClick={() => setTab(id)}
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 tab === id
-                  ? 'bg-[#2f6bff]/14 text-[var(--accent-text)]'
+                  ? 'bg-[var(--accent-soft)] text-[var(--accent-text)]'
                   : 'text-foreground/55 hover:text-foreground'
               }`}
             >

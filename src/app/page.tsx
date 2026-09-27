@@ -358,7 +358,7 @@ function DashboardView() {
                 </div>
                 <div className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  stat.color === "gold" && "bg-[#2f6bff]/20",
+                  stat.color === "gold" && "bg-[var(--accent-soft)]",
                   stat.color === "black" && "bg-[#0c111b]",
                   stat.color === "emerald" && "bg-emerald-100",
                 )}>
@@ -962,7 +962,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           </Button>
           <Button 
             variant="outline" 
-            className="border-[var(--accent-solid)] text-[var(--accent-text)] hover:bg-[#2f6bff]/10 gap-2"
+            className="border-[var(--accent-solid)] text-[var(--accent-text)] hover:bg-[var(--accent-soft)] gap-2"
             onClick={onUploadCSV}
           >
             <Upload className="w-4 h-4" />
@@ -1084,7 +1084,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[var(--accent-text)] hover:bg-[#2f6bff]/10"
+                        className="text-[var(--accent-text)] hover:bg-[var(--accent-soft)]"
                         onClick={(e) => {
                           e.stopPropagation()
                           void rescoreLead(lead.id)
@@ -1845,7 +1845,7 @@ function AutomationView() {
           <Card key={stat.title} className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#2f6bff]/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
                   <stat.icon className="w-5 h-5 text-[var(--accent-text)]" />
                 </div>
                 <div>
