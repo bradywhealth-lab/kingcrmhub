@@ -87,7 +87,7 @@ export function WorkspaceOverlays({
         <DialogContent className="max-w-lg border-[var(--ink-line)] bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground">
-              <Upload className="h-5 w-5 text-[#1e4fcc]" />
+              <Upload className="h-5 w-5 text-[var(--accent-text)]" />
               Import Leads from CSV
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -96,7 +96,7 @@ export function WorkspaceOverlays({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="upload-zone rounded-lg p-8 text-center">
-              <FileSpreadsheet className="mx-auto mb-4 h-12 w-12 text-[#1e4fcc]" />
+              <FileSpreadsheet className="mx-auto mb-4 h-12 w-12 text-[var(--accent-text)]" />
               <p className="mb-2 text-sm text-muted-foreground">Drag and drop your CSV file here, or</p>
               <Label htmlFor="global-csv-upload" className="btn-gold inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2">
                 <Upload className="h-4 w-4" />
@@ -121,7 +121,7 @@ export function WorkspaceOverlays({
               </ul>
             </div>
             {uploading && (
-              <div className="flex items-center justify-center gap-2 text-[#1e4fcc]">
+              <div className="flex items-center justify-center gap-2 text-[var(--accent-text)]">
                 <RefreshCw className="h-4 w-4 animate-spin" />
                 <span className="text-sm">Processing...</span>
               </div>
@@ -134,7 +134,7 @@ export function WorkspaceOverlays({
         <DialogContent className="max-w-2xl border-[var(--ink-line)] bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground">
-              <Globe className="h-5 w-5 text-[#1e4fcc]" />
+              <Globe className="h-5 w-5 text-[var(--accent-text)]" />
               Scrape Leads from Websites & Directories
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">

@@ -179,7 +179,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
               isDone
-                ? 'border-[#2f6bff] bg-[#2f6bff] text-white'
+                ? 'border-[#2f6bff] bg-[var(--accent-solid)] text-white'
                 : 'border-foreground/20 hover:border-[#2f6bff]/50'
             }`}
           >
@@ -192,7 +192,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {isDone && task.completedAt && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[#2f6bff]">
+                <span className="inline-flex items-center gap-1 text-[11px] text-[var(--accent-text)]">
                   <Check className="h-3 w-3" />
                   Completed {new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
@@ -202,7 +202,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onOpenPipelineItem?.(task.pipelineItem!.id) }}
                   aria-label={`Open pipeline item ${task.pipelineItem.title}`}
-                  className="inline-flex items-center gap-1 text-[11px] text-[#1e4fcc] hover:text-foreground hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] text-[var(--accent-text)] hover:text-foreground hover:underline"
                 >
                   <Building className="h-3 w-3" />
                   {task.pipelineItem.title}
@@ -216,7 +216,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
                 </span>
               )}
               {task.source === 'auto_spawn' && (
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#2f6bff]/30 text-[#1e4fcc]">
+                <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#2f6bff]/30 text-[var(--accent-text)]">
                   auto
                 </Badge>
               )}
@@ -244,7 +244,7 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1e4fcc]/10">
-            <Calendar className="h-4 w-4 text-[#1e4fcc]" />
+            <Calendar className="h-4 w-4 text-[var(--accent-text)]" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">{appt.title}</p>
@@ -257,7 +257,7 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
             </div>
           </div>
           {appt.status === 'completed' && (
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#2f6bff]/30 text-[#1e4fcc]">done</Badge>
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[#2f6bff]/30 text-[var(--accent-text)]">done</Badge>
           )}
         </div>
       </CardContent>
@@ -506,7 +506,7 @@ export function TasksView({
               onClick={() => setTab(id)}
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 tab === id
-                  ? 'bg-[#2f6bff]/14 text-[#1e4fcc]'
+                  ? 'bg-[#2f6bff]/14 text-[var(--accent-text)]'
                   : 'text-foreground/55 hover:text-foreground'
               }`}
             >
@@ -541,7 +541,7 @@ export function TasksView({
           <Button
             onClick={() => setShowCreate(true)}
             size="sm"
-            className="rounded-xl bg-[#2f6bff] text-white hover:bg-[#245be0] h-9 px-4 gap-1.5"
+            className="rounded-xl bg-[var(--accent-solid)] text-white hover:bg-[#245be0] h-9 px-4 gap-1.5"
           >
             <Plus className="h-4 w-4" />
             Create Task
@@ -672,7 +672,7 @@ export function TasksView({
               <Button
                 onClick={handleCreateTask}
                 disabled={!createTitle.trim() || createSaving}
-                className="rounded-xl bg-[#2f6bff] text-white hover:bg-[#245be0]"
+                className="rounded-xl bg-[var(--accent-solid)] text-white hover:bg-[#245be0]"
               >
                 {createSaving ? 'Creating...' : 'Create Task'}
               </Button>
