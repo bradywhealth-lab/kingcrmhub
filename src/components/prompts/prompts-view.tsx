@@ -139,7 +139,7 @@ export function PromptsView({
               {!tierUnlocked && (
                 <Button
                   size="sm"
-                  className="ml-auto bg-[var(--teal)] text-foreground hover:opacity-90"
+                  className="ml-auto bg-[var(--teal)] text-[var(--ink)] hover:opacity-90"
                   onClick={onUpgrade}
                 >
                   {tier === 'pro' ? 'Unlock with Pro' : 'Unlock with Studio'}
@@ -190,7 +190,7 @@ export function PromptsView({
                           </Button>
                           <Button
                             size="sm"
-                            className="bg-[var(--teal)] text-foreground hover:opacity-90"
+                            className="bg-[var(--teal)] text-[var(--ink)] hover:opacity-90"
                             onClick={() => void runInAssistant(p)}
                           >
                             Run in AI Assistant

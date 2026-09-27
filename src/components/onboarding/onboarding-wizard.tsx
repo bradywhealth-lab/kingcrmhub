@@ -218,7 +218,7 @@ function WelcomeStep({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
         <Button
           onClick={onNext}
-          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-foreground shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
+          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
         >
           Get started
           <ArrowRight className="ml-2 h-4 w-4" />
@@ -307,7 +307,7 @@ function OrganizationStep({
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-foreground shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Saving…" : "Save & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -410,7 +410,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-foreground shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Adding offer…" : "Add offer & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -524,7 +524,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-foreground shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Adding client…" : "Add client & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -608,7 +608,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         <Button
           onClick={() => void handleEnable()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-foreground shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
         >
           {saving ? "Enabling…" : "Enable automation & finish"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -689,7 +689,7 @@ function DoneStep({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
         <Button
           onClick={onFinish}
-          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-foreground shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
+          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
         >
           Go to dashboard
           <ArrowRight className="ml-2 h-4 w-4" />
