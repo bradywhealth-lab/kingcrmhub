@@ -24,7 +24,7 @@ export const APP_NAV_ITEMS = [
   { id: "social", icon: Share2, label: "Social" },
 ] as const
 
-const PRIMARY_COUNT = 6
+const PRIMARY_COUNT = 4
 
 function getInitials(name: string | null | undefined) {
   if (!name) return "KC"
@@ -70,13 +70,16 @@ export function AppShell({
       {/* ===== TOP NAVIGATION ===== */}
       <header className="sticky top-0 z-40 bg-[var(--ink)] text-white">
         <div className="flex h-[60px] items-center gap-3 px-4 sm:px-6">
-          {/* Logo */}
-          <button onClick={() => navigate("dashboard")} className="mr-2 shrink-0 font-display text-xl font-extrabold tracking-tight text-white">
-            KING<span className="text-[var(--accent-solid)]">.</span>
+          {/* Brand lockup */}
+          <button onClick={() => navigate("dashboard")} className="mr-1 flex shrink-0 items-center gap-2.5" aria-label="King CRM Hub — home">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent-solid)] font-display text-sm font-extrabold text-white">K</span>
+            <span className="hidden font-display text-lg font-bold tracking-tight text-white sm:inline">
+              King <span className="text-white/55">CRM Hub</span>
+            </span>
           </button>
 
           {/* Desktop pill nav */}
-          <nav className="hidden items-center gap-1 xl:flex">
+          <nav className="hidden items-center gap-1 lg:flex">
             {primary.map((item) => {
               const active = activeView === item.id
               return (
@@ -84,7 +87,7 @@ export function AppShell({
                   key={item.id}
                   onClick={() => navigate(item.id)}
                   className={cn(
-                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                    "flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-colors",
                     active ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
@@ -97,7 +100,7 @@ export function AppShell({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className={cn(
-                    "flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                    "flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors",
                     (overflow.some((o) => o.id === activeView) || activeView === "settings") ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}>
                     More <ChevronDown className="h-3.5 w-3.5" />
@@ -124,20 +127,24 @@ export function AppShell({
             aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={mobileNavOpen}
             onClick={() => setMobileNavOpen((v) => !v)}
-            className="ml-auto h-10 w-10 rounded-xl text-white/80 hover:bg-white/10 hover:text-white xl:hidden"
+            className="ml-auto h-10 w-10 rounded-xl text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
           >
             {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
           {/* Right cluster */}
-          <div className="ml-auto hidden items-center gap-2 xl:flex">
-            <div className="relative w-[220px]">
+          <div className="ml-auto hidden items-center gap-2 lg:flex">
+            {/* Full search on xl+, compact icon on lg */}
+            <div className="relative hidden w-[220px] xl:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               <div className="flex h-9 items-center rounded-xl border border-white/15 bg-white/5 pl-9 pr-2 text-sm text-white/50">
                 Search
                 <kbd className="ml-auto rounded border border-white/15 px-1.5 py-0.5 font-mono text-[11px] text-white/40">⌘K</kbd>
               </div>
             </div>
+            <button aria-label="Search" className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white xl:hidden">
+              <Search className="h-4 w-4" />
+            </button>
             <ThemeToggle theme={theme} setTheme={setTheme} />
             <NotificationsBell open={notificationsOpen} setOpen={setNotificationsOpen} unreadCount={unreadCount} />
             <Button onClick={onAddLead} className="h-9 gap-2 rounded-xl bg-[var(--accent-solid)] px-4 font-semibold text-white hover:bg-[var(--accent-hover)]">
@@ -147,7 +154,7 @@ export function AppShell({
           </div>
 
           {/* Mobile right cluster (compact) */}
-          <div className="flex items-center gap-1.5 xl:hidden">
+          <div className="flex items-center gap-1.5 lg:hidden">
             <ThemeToggle theme={theme} setTheme={setTheme} />
             <Button onClick={onAddLead} size="icon" aria-label="New" className="h-9 w-9 rounded-xl bg-[var(--accent-solid)] text-white hover:bg-[var(--accent-hover)]">
               <Plus className="h-4 w-4" />
@@ -163,7 +170,7 @@ export function AppShell({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="overflow-hidden border-t border-white/10 xl:hidden"
+              className="overflow-hidden border-t border-white/10 lg:hidden"
             >
               <div className="grid grid-cols-2 gap-1.5 p-3">
                 {APP_NAV_ITEMS.map((item) => {
