@@ -143,7 +143,7 @@ function MessageBubble({ message }: { message: Message }) {
         {isUser ? (
           <span className="text-xs font-bold text-[var(--accent-ink)]">U</span>
         ) : (
-          <Bot className="w-4 h-4 text-[#2f6bff]" />
+          <Bot className="w-4 h-4 text-[var(--cobalt-light)]" />
         )}
       </div>
 
@@ -385,14 +385,14 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
         <div className="p-4 border-b border-[var(--ink-line)] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-[#2f6bff]" />
+              <Bot className="w-4 h-4 text-[var(--cobalt-light)]" />
             </div>
             <span className="font-semibold text-foreground text-sm">AI Assistant</span>
           </div>
           <Button
             size="icon"
             variant="ghost"
-            className="w-8 h-8 text-muted-foreground hover:text-[#1e4fcc] hover:bg-muted"
+            className="w-8 h-8 text-muted-foreground hover:text-[var(--accent-text)] hover:bg-muted"
             onClick={createNewChat}
             title="New chat"
           >
@@ -523,7 +523,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         >
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium text-foreground">{sp.label}</p>
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#1e4fcc] shrink-0 mt-0.5 transition-colors" />
+                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[var(--accent-text)] shrink-0 mt-0.5 transition-colors" />
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{sp.prompt}</p>
                         </button>
@@ -549,17 +549,17 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         className="flex items-start gap-3"
                       >
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0 mt-0.5">
-                          <Bot className="w-4 h-4 text-[#2f6bff]" />
+                          <Bot className="w-4 h-4 text-[var(--cobalt-light)]" />
                         </div>
                         <div className="max-w-[75%] px-4 py-3 bg-card border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                           {streamingContent}
-                          <span className="inline-block w-1.5 h-4 bg-[#2f6bff] ml-0.5 animate-pulse rounded-sm" />
+                          <span className="inline-block w-1.5 h-4 bg-[var(--accent-solid)] ml-0.5 animate-pulse rounded-sm" />
                         </div>
                       </motion.div>
                     ) : (
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-lg bg-[#0c111b] flex items-center justify-center shrink-0">
-                          <Bot className="w-4 h-4 text-[#2f6bff]" />
+                          <Bot className="w-4 h-4 text-[var(--cobalt-light)]" />
                         </div>
                         <div className="bg-card border border-[var(--ink-line)] rounded-2xl rounded-tl-sm shadow-sm">
                           <TypingDots />

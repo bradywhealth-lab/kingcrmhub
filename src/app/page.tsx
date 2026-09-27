@@ -155,10 +155,10 @@ function formatSourceBreakdown(data: DashboardStats["sourceBreakdown"] | undefin
 }
 
 function getActivityVisual(type: string) {
-  if (type === "email") return { icon: Mail, className: "bg-[#2f6bff]/12 text-[#1e4fcc]" }
+  if (type === "email") return { icon: Mail, className: "bg-[var(--accent-soft)] text-[var(--accent-text)]" }
   if (type === "call" || type === "sms") return { icon: Phone, className: "bg-emerald-100 text-emerald-600" }
   if (type === "meeting") return { icon: Calendar, className: "bg-purple-100 text-purple-600" }
-  if (type.startsWith("ai")) return { icon: Brain, className: "bg-[#2f6bff]/20 text-[#1e4fcc]" }
+  if (type.startsWith("ai")) return { icon: Brain, className: "bg-[var(--accent-soft)] text-[var(--accent-text)]" }
   return { icon: Activity, className: "bg-gray-100 text-muted-foreground" }
 }
 
@@ -358,13 +358,13 @@ function DashboardView() {
                 </div>
                 <div className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  stat.color === "gold" && "bg-[#2f6bff]/20",
+                  stat.color === "gold" && "bg-[var(--accent-soft)]",
                   stat.color === "black" && "bg-[#0c111b]",
                   stat.color === "emerald" && "bg-emerald-100",
                 )}>
                   <stat.icon className={cn(
                     "w-5 h-5",
-                    stat.color === "gold" && "text-[#1e4fcc]",
+                    stat.color === "gold" && "text-[var(--accent-text)]",
                     stat.color === "black" && "text-white",
                     stat.color === "emerald" && "text-emerald-600",
                   )} />
@@ -464,7 +464,7 @@ function DashboardView() {
         <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#1e4fcc]" />
+              <Sparkles className="w-5 h-5 text-[var(--accent-text)]" />
               <CardTitle className="text-foreground">AI Insights</CardTitle>
             </div>
             <CardDescription className="text-muted-foreground">Smart recommendations based on your workspace activity</CardDescription>
@@ -493,8 +493,8 @@ function DashboardView() {
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "text-xs font-medium uppercase",
-                        insight.type === "prediction" && "text-[#1e4fcc]",
-                        insight.type === "recommendation" && "text-[#1e4fcc]",
+                        insight.type === "prediction" && "text-[var(--accent-text)]",
+                        insight.type === "recommendation" && "text-[var(--accent-text)]",
                         insight.type === "trend" && "text-emerald-600",
                         insight.type === "alert" && "text-amber-600",
                       )}>
@@ -520,7 +520,7 @@ function DashboardView() {
         <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[#1e4fcc]" />
+              <Activity className="w-5 h-5 text-[var(--accent-text)]" />
               <CardTitle className="text-foreground">Recent Activity</CardTitle>
             </div>
             <CardDescription className="text-muted-foreground">Latest actions and updates</CardDescription>
@@ -557,7 +557,7 @@ function DashboardView() {
         <Card className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-[#1e4fcc]" />
+              <Bot className="w-5 h-5 text-[var(--accent-text)]" />
               <CardTitle className="text-foreground">AI Daily Assistant</CardTitle>
             </div>
             <CardDescription className="text-muted-foreground">{myDay.summary}</CardDescription>
@@ -962,7 +962,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
           </Button>
           <Button 
             variant="outline" 
-            className="border-[#1e4fcc] text-[#1e4fcc] hover:bg-[#2f6bff]/10 gap-2"
+            className="border-[var(--accent-solid)] text-[var(--accent-text)] hover:bg-[var(--accent-soft)] gap-2"
             onClick={onUploadCSV}
           >
             <Upload className="w-4 h-4" />
@@ -1084,7 +1084,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[#1e4fcc] hover:bg-[#2f6bff]/10"
+                        className="text-[var(--accent-text)] hover:bg-[var(--accent-soft)]"
                         onClick={(e) => {
                           e.stopPropagation()
                           void rescoreLead(lead.id)
@@ -1179,7 +1179,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">AI Recommended Action</Label>
-                    <p className="text-[#1e4fcc]">{selectedLead.aiNextAction}</p>
+                    <p className="text-[var(--accent-text)]">{selectedLead.aiNextAction}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">Status</Label>
@@ -1193,7 +1193,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
               <Card className="bg-background border-[rgba(31,42,54,0.08)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <Bot className="w-4 h-4 text-[#1e4fcc]" />
+                    <Bot className="w-4 h-4 text-[var(--accent-text)]" />
                     AI Offer Assistant
                   </CardTitle>
                   <CardDescription>
@@ -1241,7 +1241,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                           </span>
                         </p>
                         <p className="text-sm text-muted-foreground mt-2">{assistantPlaybook.recommendedPackage.rationale}</p>
-                        <p className="text-sm text-[#1e4fcc] mt-2">
+                        <p className="text-sm text-[var(--accent-text)] mt-2">
                           Service suggestion: {assistantPlaybook.suggestedPlanType}
                         </p>
                       </div>
@@ -1477,7 +1477,7 @@ function SortableItem({ item }: { item: PipelineItem }) {
           
           <div className="flex items-center justify-between">
             {item.aiWinProbability && (
-              <Badge variant="outline" className="text-xs border-[#1e4fcc]/50 text-[#1e4fcc]">
+              <Badge variant="outline" className="text-xs border-[#1e4fcc]/50 text-[var(--accent-text)]">
                 {Math.round(item.aiWinProbability * 100)}% win
               </Badge>
             )}
@@ -1622,7 +1622,7 @@ function PipelineView() {
         <div className="flex items-center gap-4">
           <Card className="bg-card border-[rgba(31,42,54,0.08)] px-4 py-2 shadow-sm">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-[#1e4fcc]" />
+              <DollarSign className="w-4 h-4 text-[var(--accent-text)]" />
               <span className="text-lg font-semibold text-foreground">${totalValue.toLocaleString()}</span>
               <span className="text-sm text-muted-foreground">{saving ? "saving…" : "live total"}</span>
             </div>
@@ -1660,7 +1660,7 @@ function PipelineView() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-[#1e4fcc]"
+                      className="h-6 w-6 text-muted-foreground hover:text-[var(--accent-text)]"
                       onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
                     >
                       <Plus className="w-3 h-3" />
@@ -1845,8 +1845,8 @@ function AutomationView() {
           <Card key={stat.title} className="bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#2f6bff]/20 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-[#1e4fcc]" />
+                <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-[var(--accent-text)]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stat.value}</p>
@@ -1880,7 +1880,7 @@ function AutomationView() {
                       <Badge variant="outline" className={automation.isActive ? 'border-emerald-500 text-emerald-600' : 'border-gray-400 text-muted-foreground'}>
                         {automation.isActive ? 'active' : 'paused'}
                       </Badge>
-                      <Badge variant="outline" className="border-[#1e4fcc]/60 text-[#1e4fcc] capitalize">
+                      <Badge variant="outline" className="border-[#1e4fcc]/60 text-[var(--accent-text)] capitalize">
                         {automation.trigger.replaceAll('_', ' ')}
                       </Badge>
                     </div>
@@ -2291,7 +2291,7 @@ function SocialMediaView() {
           <p className="text-muted-foreground">Elite AI content studio with queue, scheduling, and media prompt generation</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-[#1e4fcc] text-[#1e4fcc] gap-2" onClick={() => setShowMediaDialog(true)}>
+          <Button variant="outline" className="border-[var(--accent-solid)] text-[var(--accent-text)] gap-2" onClick={() => setShowMediaDialog(true)}>
             <ImageIcon className="w-4 h-4" />
             Generate Media
           </Button>
@@ -2313,7 +2313,7 @@ function SocialMediaView() {
           >
             <p className="text-sm font-semibold text-foreground">{pack.label}</p>
             <p className="text-xs text-muted-foreground mt-1">{pack.topic}</p>
-            <p className="text-xs text-[#1e4fcc] mt-2">CTA: {pack.cta}</p>
+            <p className="text-xs text-[var(--accent-text)] mt-2">CTA: {pack.cta}</p>
           </motion.button>
         ))}
       </div>
@@ -2454,10 +2454,10 @@ function SocialMediaView() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize border-[#1e4fcc]/60 text-[#1e4fcc]">{item.platform}</Badge>
+                      <Badge variant="outline" className="capitalize border-[#1e4fcc]/60 text-[var(--accent-text)]">{item.platform}</Badge>
                       <Badge variant="outline" className={cn(
                         item.status === 'published' && 'border-emerald-500 text-emerald-600',
-                        item.status === 'scheduled' && 'border-[#2f6bff] text-[#1e4fcc]',
+                        item.status === 'scheduled' && 'border-[#2f6bff] text-[var(--accent-text)]',
                         item.status === 'draft' && 'border-gray-400 text-muted-foreground'
                       )}>{item.status}</Badge>
                     </div>
@@ -2497,7 +2497,7 @@ function SocialMediaView() {
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
         <DialogContent className="bg-card border-[rgba(31,42,54,0.08)] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#1e4fcc]" />Generate Social Content</DialogTitle>
+            <DialogTitle className="text-foreground flex items-center gap-2"><Sparkles className="w-5 h-5 text-[var(--accent-text)]" />Generate Social Content</DialogTitle>
             <DialogDescription>Create premium content with AI and save directly to queue.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -2575,7 +2575,7 @@ function SocialMediaView() {
       <Dialog open={showMediaDialog} onOpenChange={setShowMediaDialog}>
         <DialogContent className="bg-card border-[rgba(31,42,54,0.08)] max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[#1e4fcc]" />Generate Media Prompt</DialogTitle>
+            <DialogTitle className="text-foreground flex items-center gap-2"><ImageIcon className="w-5 h-5 text-[var(--accent-text)]" />Generate Media Prompt</DialogTitle>
             <DialogDescription>Create image prompts and caption/CTA for high-performing visuals.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
