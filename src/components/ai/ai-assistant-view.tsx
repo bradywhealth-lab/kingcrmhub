@@ -137,11 +137,11 @@ function MessageBubble({ message }: { message: Message }) {
       <div
         className={cn(
           "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
-          isUser ? "bg-[#2f6bff]" : "bg-[#0c111b]"
+          isUser ? "bg-[var(--accent-solid)]" : "bg-[#0c111b]"
         )}
       >
         {isUser ? (
-          <span className="text-xs font-bold text-foreground">U</span>
+          <span className="text-xs font-bold text-[var(--accent-ink)]">U</span>
         ) : (
           <Bot className="w-4 h-4 text-[#2f6bff]" />
         )}

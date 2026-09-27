@@ -74,7 +74,7 @@ export function ClaimBanner() {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-[color:var(--cobalt-dark)]/25 bg-[color:var(--cobalt)]/10 px-4 py-3 sm:px-6 lg:px-8">
       <div className="flex items-start gap-2.5 text-sm text-[color:var(--foreground)]">
-        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--cobalt-dark)]" />
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--accent-text)]" />
         <p>
           {label}{' '}
           <Link href="/pricing" className="font-semibold underline decoration-[color:var(--cobalt-dark)]/40 underline-offset-2">

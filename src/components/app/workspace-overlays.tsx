@@ -259,7 +259,7 @@ export function WorkspaceOverlays({
                       variant="outline"
                       className={cn(
                         job.status === "completed" && "border-emerald-500 text-emerald-600",
-                        job.status === "running" && "border-[#2f6bff] text-[#1e4fcc]",
+                        job.status === "running" && "border-[var(--accent-solid)] text-[var(--accent-text)]",
                         job.status === "failed" && "border-red-500 text-red-600",
                       )}
                     >

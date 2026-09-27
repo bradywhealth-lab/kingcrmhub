@@ -67,8 +67,8 @@ export const FILTER_TABS: { id: FilterTab; label: string; icon: typeof Clock }[]
 
 const STATUS_COLUMNS = [
   { key: 'todo' as const, label: 'To Do', color: 'bg-[#0c111b]/8 text-foreground' },
-  { key: 'in_progress' as const, label: 'In Progress', color: 'bg-[#1e4fcc]/12 text-[#1e4fcc]' },
-  { key: 'done' as const, label: 'Done', color: 'bg-[#2f6bff]/12 text-[#1e4fcc]' },
+  { key: 'in_progress' as const, label: 'In Progress', color: 'bg-[var(--accent-soft)] text-[var(--accent-text)]' },
+  { key: 'done' as const, label: 'Done', color: 'bg-[var(--accent-soft)] text-[var(--accent-text)]' },
   { key: 'blocked' as const, label: 'Blocked', color: 'bg-amber-100 text-amber-700' },
 ]
 

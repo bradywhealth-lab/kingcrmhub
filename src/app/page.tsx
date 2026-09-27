@@ -189,8 +189,8 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 80 ? "bg-gradient-to-r from-[#2f6bff] to-[#1e4fcc] text-foreground" : 
-                score >= 60 ? "bg-[#2f6bff] text-foreground" : "bg-[#0c111b] text-white"
+  const color = score >= 80 ? "bg-gradient-to-r from-[#2563eb] to-[#1e4fcc] text-white" : 
+                score >= 60 ? "bg-[#2563eb] text-white" : "bg-[#0c111b] text-white"
   return (
     <div className={cn("px-2 py-0.5 rounded text-xs font-semibold", color)}>
       {score}
@@ -202,7 +202,7 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     new: "bg-[#0c111b] text-white",
     contacted: "bg-gray-600 text-white",
-    qualified: "bg-[#2f6bff] text-foreground",
+    qualified: "bg-[#2563eb] text-white",
     proposal: "bg-[#1e4fcc] text-white",
     negotiation: "bg-[#1e4fcc] text-white",
     won: "bg-[#1e4fcc] text-white",
@@ -1041,7 +1041,7 @@ function LeadsView({ onAddLead, onUploadCSV, onScrape, refreshKey = 0 }: { onAdd
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9">
-                        <AvatarFallback className="bg-[#2f6bff] text-foreground text-sm font-medium">
+                        <AvatarFallback className="bg-[var(--accent-solid)] text-[var(--accent-ink)] text-sm font-medium">
                           {lead.firstName?.[0]}{lead.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -1483,7 +1483,7 @@ function SortableItem({ item }: { item: PipelineItem }) {
             )}
             {item.lead && (
               <Avatar className="w-6 h-6">
-                <AvatarFallback className="bg-[#2f6bff] text-foreground text-xs">
+                <AvatarFallback className="bg-[var(--accent-solid)] text-[var(--accent-ink)] text-xs">
                   {item.lead.firstName?.[0]}{item.lead.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>

@@ -58,9 +58,9 @@ function InviteAcceptanceContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] text-foreground">
+    <main className="min-h-screen bg-[var(--background)] text-foreground">
       <div className="mx-auto flex min-h-screen max-w-xl items-center justify-center px-6 py-16">
-        <Card className="w-full border-[var(--ink-line)] bg-white shadow-sm">
+        <Card className="w-full border-[var(--ink-line)] bg-card shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground">Accept Team Invitation</CardTitle>
             <CardDescription>Finish setting up your King CRM Hub account to join the workspace.</CardDescription>
@@ -68,7 +68,7 @@ function InviteAcceptanceContent() {
           <CardContent className="space-y-4">
             <div>
               <Label>Email</Label>
-              <Input className="mt-1 bg-[var(--paper)]" value={email} disabled />
+              <Input className="mt-1 bg-muted" value={email} disabled />
             </div>
             <div>
               <Label>Your name</Label>
@@ -91,9 +91,9 @@ function InviteAcceptanceContent() {
 
 function InviteAcceptanceFallback() {
   return (
-    <main className="min-h-screen bg-[var(--paper)] text-foreground">
+    <main className="min-h-screen bg-[var(--background)] text-foreground">
       <div className="mx-auto flex min-h-screen max-w-xl items-center justify-center px-6 py-16">
-        <Card className="w-full border-[var(--ink-line)] bg-white shadow-sm">
+        <Card className="w-full border-[var(--ink-line)] bg-card shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground">Accept Team Invitation</CardTitle>
             <CardDescription>Loading your invite details…</CardDescription>

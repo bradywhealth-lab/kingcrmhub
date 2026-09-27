@@ -167,6 +167,10 @@
 
   --ink: #000000;
   --ink-2: #0c0c0e;
+  /* Dark mode: --paper is a FOREGROUND token only (light text on dark
+     surfaces). It intentionally matches --foreground. Never use it as a
+     background — use --background / --card / --muted instead (cubic P1:
+     bg-[var(--paper)] + text-foreground = light-on-light, 1.0:1). */
   --paper: #f2f2f3;
 
   --background: #08080a;
