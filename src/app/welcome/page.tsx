@@ -36,7 +36,10 @@ export default function PublicLandingPage() {
       {/* TOP NAV */}
       <header className="sticky top-0 z-40 bg-[#0B0B0C] text-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-7 px-5 sm:px-8">
-          <span className="font-display text-xl font-extrabold tracking-tight">KING<span style={{ color: COBALT }}>.</span></span>
+          <span className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg font-display text-sm font-extrabold text-white" style={{ background: COBALT }}>K</span>
+            <span className="font-display text-lg font-bold tracking-tight">King <span style={{ color: 'rgba(255,255,255,0.55)' }}>CRM Hub</span></span>
+          </span>
           <nav aria-label="Primary" className="ml-2 hidden items-center gap-6 text-sm font-medium text-white/70 md:flex">
             <Link href="/pricing" className="transition-colors hover:text-white">Pricing</Link>
             <Link href="/claim" className="transition-colors hover:text-white">Claim</Link>
@@ -88,32 +91,14 @@ export default function PublicLandingPage() {
             <span className="flex gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-white/25" /><i className="h-2.5 w-2.5 rounded-full bg-white/25" /><i className="h-2.5 w-2.5 rounded-full bg-white/25" /></span>
             <span className="ml-3 font-mono text-xs text-white/50">app.kingcrmhub.net/home</span>
           </div>
-          <div className="grid grid-cols-[180px_1fr] max-sm:grid-cols-1">
-            <div className="border-r border-[#0B0B0C]/8 bg-[#F6F6F4] p-4 max-sm:hidden">
-              {['Overview', "Today's plays", 'Follow-ups', 'Invoices'].map((n, i) => (
-                <div key={n} className={`mb-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold ${i === 0 ? 'border border-[#0B0B0C]/10 bg-white text-[#0B0B0C]' : 'text-[#0B0B0C]/60'}`}>{n}</div>
-              ))}
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2">
-                {[['Clients', '5'], ['Pipeline', '$300k'], ['Score', '82'], ['Due', '7']].map(([l, v], i) => (
-                  <div key={l} className={`rounded-xl border p-3 ${i === 1 ? 'border-[color:var(--x)] bg-[#2F6BFF]/8' : 'border-[#0B0B0C]/10'}`} style={i === 1 ? { borderColor: COBALT } : undefined}>
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#0B0B0C]/60">{l}</div>
-                    <div className="font-display mt-1 text-2xl font-bold">{v}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 overflow-hidden rounded-xl border border-[#0B0B0C]/10">
-                {[['Emily Davis — send pricing', 'Proposal', '$75,000'], ['Alex Chen — book call', 'Qualified', '$50,000'], ['Lisa Anderson — qualify budget', 'New', '$30,000']].map((r, i) => (
-                  <div key={r[0]} className={`flex items-center gap-3 px-4 py-3 text-[13px] ${i > 0 ? 'border-t border-[#0B0B0C]/8' : ''}`}>
-                    <span className="flex-1 font-medium text-[#0B0B0C]">{r[0]}</span>
-                    <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: 'rgba(47,107,255,0.12)', color: '#1E4FCC' }}>{r[1]}</span>
-                    <span className="font-mono font-semibold">{r[2]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* Real product screenshot (actual redesigned dashboard) */}
+          <img
+            src="/screenshots/hero-dashboard.png"
+            alt="King CRM Hub dashboard showing today's plays, pipeline value, lead scores, and the follow-up queue"
+            className="block w-full"
+            width={1440}
+            height={900}
+          />
         </div>
       </section>
 
@@ -171,7 +156,10 @@ export default function PublicLandingPage() {
       {/* FOOTER */}
       <footer className="border-t border-[#0B0B0C]/10 px-5 py-8 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <span className="font-display text-lg font-extrabold">KING<span style={{ color: COBALT }}>.</span></span>
+          <span className="flex items-center gap-2.5">
+            <span className="grid h-7 w-7 place-items-center rounded-lg font-display text-xs font-extrabold text-white" style={{ background: COBALT }}>K</span>
+            <span className="font-display text-lg font-bold tracking-tight text-[#0B0B0C]">King <span className="text-[#0B0B0C]/50">CRM Hub</span></span>
+          </span>
           <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#0B0B0C]/60">
             <Link href="/pricing" className="hover:text-[#0B0B0C]">Pricing</Link>
             <Link href="/compare" className="hover:text-[#0B0B0C]">Compare</Link>
