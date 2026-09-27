@@ -20,7 +20,7 @@ export function AuthLoadingSkeleton() {
     <main
       aria-busy="true"
       aria-label="Loading sign in"
-      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,#f6f6f4_0%,#ffffff_100%)] px-4 py-6 lg:px-8 lg:py-8"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,var(--background)_0%,var(--card)_100%)] px-4 py-6 lg:px-8 lg:py-8"
     >
       <p role="status" aria-live="polite" className="sr-only">
         Loading sign in
