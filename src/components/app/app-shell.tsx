@@ -37,6 +37,7 @@ export function AppShell({
   currentUser,
   onAddLead,
   onSignOut,
+  onOpenPalette,
   children,
 }: {
   activeView: string
@@ -44,6 +45,10 @@ export function AppShell({
   currentUser: { name: string | null; role: string; organization?: { name: string; plan: string } } | null
   onAddLead: () => void
   onSignOut: () => void
+  /** Opens the command palette. The header search affordances are triggers for
+   *  it — a <button> with no handler is an a11y defect, not just a dead control
+   *  (cubic P2). */
+  onOpenPalette: () => void
   children: React.ReactNode
 }) {
   const { theme, setTheme } = useAppStore()
@@ -137,12 +142,16 @@ export function AppShell({
             {/* Full search on xl+, compact icon on lg */}
             <div className="relative hidden w-[220px] xl:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-              <div className="flex h-9 items-center rounded-xl border border-white/15 bg-white/5 pl-9 pr-2 text-sm text-white/50">
+              <button
+                type="button"
+                onClick={onOpenPalette}
+                className="flex h-9 w-full cursor-pointer items-center rounded-xl border border-white/15 bg-white/5 pl-9 pr-2 text-sm text-white/50 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white/80"
+              >
                 Search
                 <kbd className="ml-auto rounded border border-white/15 px-1.5 py-0.5 font-mono text-[11px] text-white/40">⌘K</kbd>
-              </div>
+              </button>
             </div>
-            <button aria-label="Search" className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white xl:hidden">
+            <button type="button" aria-label="Search" onClick={onOpenPalette} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white xl:hidden">
               <Search className="h-4 w-4" />
             </button>
             <ThemeToggle theme={theme} setTheme={setTheme} />

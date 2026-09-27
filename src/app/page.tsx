@@ -2768,6 +2768,7 @@ export default function EliteCRM() {
       currentUser={currentUser}
       onAddLead={() => setShowAddLeadDialog(true)}
       onSignOut={() => void signOut()}
+      onOpenPalette={() => setCommandPaletteOpen(true)}
     >
       {/* Resume-setup banner: visible after skip or while setup is incomplete */}
       <AnimatePresence>

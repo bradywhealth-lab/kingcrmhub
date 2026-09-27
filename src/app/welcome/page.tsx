@@ -158,7 +158,7 @@ export default function PublicLandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <span className="flex items-center gap-2.5">
             <span className="grid h-7 w-7 place-items-center rounded-lg font-display text-xs font-extrabold text-white" style={{ background: COBALT }}>K</span>
-            <span className="font-display text-lg font-bold tracking-tight text-[#0B0B0C]">King <span className="text-[#0B0B0C]/50">CRM Hub</span></span>
+            <span className="font-display text-lg font-bold tracking-tight text-[#0B0B0C]">King <span className="text-[#0B0B0C]/60">CRM Hub</span></span>
           </span>
           <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#0B0B0C]/60">
             <Link href="/pricing" className="hover:text-[#0B0B0C]">Pricing</Link>
