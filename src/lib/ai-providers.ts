@@ -186,9 +186,19 @@ export async function resolveAIConfig(
   // When falling back to a provider other than the stored one, force its default model.
   const groqKey = process.env.GROQ_API_KEY?.trim()
   if (groqKey) {
-    // Honour an explicit org-chosen Groq model; otherwise pin the best measured
-    // free model instead of letting anything auto-select.
-    const resolvedModel = (provider === 'groq' && model) ? model : GROQ_FREE_MODELS[0]
+    // A stored org model is only honoured on the PLATFORM key when it is one of
+    // the pinned free models. Orgs that chose Groq before this deploy still have
+    // the previous Groq default persisted in settings.aiModel (it was the old
+    // getDefaultModel('groq') result), and the provider now rejects that id — so
+    // replaying a stored slug here would keep those accounts failing (codex P1).
+    // The literal retired slug is deliberately not written here: this file is
+    // asserted to contain zero occurrences of it, so it cannot be re-added by
+    // copy-paste. Arbitrary org-chosen models remain honoured in the BYOK branch
+    // above, where the org's own key funds them.
+    const resolvedModel =
+      provider === 'groq' && model && (GROQ_FREE_MODELS as readonly string[]).includes(model)
+        ? model
+        : GROQ_FREE_MODELS[0]
     return {
       provider: 'groq',
       model: resolvedModel,
@@ -288,6 +298,13 @@ export function isFreeOpenRouterModel(model: string | null | undefined): boolean
   return model.endsWith(':free')
 }
 
+/** Remaining pinned Groq models after `current`, for platform-key failover. */
+function groqFailoverCandidates(current: string): string[] {
+  const idx = (GROQ_FREE_MODELS as readonly string[]).indexOf(current)
+  if (idx < 0) return [...GROQ_FREE_MODELS]
+  return [...GROQ_FREE_MODELS.slice(idx + 1)]
+}
+
 /**
  * Create a streaming chat completion using the resolved AI config.
  * Returns a ReadableStream of SSE events.
@@ -318,6 +335,20 @@ export async function createChatStream(
   try {
     return await attempt(config)
   } catch (err) {
+    // Platform Groq key: walk the remaining pinned models before giving up.
+    // The pinned list is best-first CANDIDATES — selecting only index 0 meant a
+    // model-specific 429/access error failed the whole free-tier request even
+    // though alternatives were listed (codex P2 + cubic P2). Deliberately NOT
+    // applied to BYOK keys: the org chose that model and funds it themselves.
+    if (config.provider === 'groq' && !config.byokKey) {
+      for (const nextModel of groqFailoverCandidates(config.model)) {
+        try {
+          return await attempt({ ...config, model: nextModel })
+        } catch {
+          continue
+        }
+      }
+    }
     // When the org's BYOK key is structurally valid but rejected at request
     // time (expired/revoked), retry once with the platform free tier so a bad
     // BYOK key cannot shadow the free default (P1).

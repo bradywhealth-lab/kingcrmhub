@@ -791,7 +791,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="relative mx-4 w-full max-w-[calc(100vw-2rem)] sm:max-w-xl overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_40px_100px_rgba(31,42,54,0.22)] backdrop-blur-xl"
+        className="relative mx-4 w-full max-w-[calc(100%-2rem)] sm:max-w-xl overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_40px_100px_rgba(31,42,54,0.22)] backdrop-blur-xl"
       >
         {/* Skip all button */}
         {!isDoneStep && (

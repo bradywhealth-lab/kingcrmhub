@@ -9,6 +9,7 @@ vi.mock('groq-sdk', () => ({ default: class { chat = { completions: { create: mo
 vi.mock('@/lib/db', () => ({ db: mockDb }))
 
 import {
+  createChatStream,
   getDefaultModel,
   isFreeOpenRouterModel,
   resolveAIConfig,
@@ -32,7 +33,10 @@ const JUNK_BYOK_FIXTURE = 'x'
 const ORIG_ENV: Record<string, string | undefined> = {}
 function setEnv(values: Record<string, string | undefined>) {
   for (const [key, value] of Object.entries(values)) {
-    ORIG_ENV[key] = process.env[key]
+    // Snapshot each key only the first time it is touched, so a setEnv call
+    // inside a test body cannot record another test's fixture as the "original"
+    // (cubic P3: afterEach would then restore fixtures instead of the real env).
+    if (!(key in ORIG_ENV)) ORIG_ENV[key] = process.env[key]
     if (value === undefined) delete process.env[key]
     else process.env[key] = value
   }
@@ -121,7 +125,12 @@ describe('free-tier AI routing — Groq pinned models win over the OpenRouter au
 
     const config = await resolveAIConfig('org-1')
 
-    expect(config.model).not.toBe('openrouter/free')
+    // Pin the exact coercion target (cubic P3): a bare not.toBe('openrouter/free')
+    // would also pass if this org were routed to a PAID slug or another
+    // auto-router alias — the precise regressions this migration-trap test exists
+    // to catch.
+    expect(config.model).toBe('qwen/qwen3.8-27b:free')
+    expect(config.provider).toBe('openrouter')
   })
 
   it('falls back to Groq when only the Groq key exists', async () => {
@@ -177,5 +186,113 @@ describe('retired model ids are gone from the provider source', () => {
     expect(isFreeOpenRouterModel('qwen/qwen3.8-27b:free')).toBe(true)
     expect(isFreeOpenRouterModel(null)).toBe(false)
     expect(isFreeOpenRouterModel(undefined)).toBe(false)
+  })
+})
+
+describe('platform Groq fallback is actually pinned (codex P1 + cubic P1/P2)', () => {
+  beforeEach(() => {
+    // mockReset, not clearAllMocks: clearAllMocks leaves queued
+    // mockRejectedValueOnce/mockResolvedValueOnce entries in place, so an
+    // unconsumed value from one test leaks into the next and changes its
+    // outcome. That leak is what made the BYOK test resolve instead of reject.
+    mockSdkCreate.mockReset()
+    vi.clearAllMocks()
+    setEnv({
+      GROQ_API_KEY: GROQ_PLATFORM_FIXTURE,
+      OPENROUTER_API_KEY: ROUTER_PLATFORM_FIXTURE,
+      OPENAI_API_KEY: undefined,
+      ANTHROPIC_API_KEY: undefined,
+    })
+  })
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(ORIG_ENV)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  })
+
+  it('coerces a persisted RETIRED Groq model instead of replaying it on the platform key', async () => {
+    // Orgs that chose Groq before this deploy have llama-3.3-70b-versatile stored
+    // in settings.aiModel (the old getDefaultModel('groq')). The provider rejects
+    // that id outright, and the platform key never paid for it — so the fallback
+    // must coerce to a pinned model, not honour the stored slug.
+    mockDb.organization.findUnique.mockResolvedValueOnce({
+      settings: { aiProvider: 'groq', aiModel: 'llama-3.3-70b-versatile' },
+    })
+
+    const config = await resolveAIConfig('org-1')
+
+    expect(config.provider).toBe('groq')
+    expect(config.model).toBe('openai/gpt-oss-120b')
+    expect(config.model).not.toBe('llama-3.3-70b-versatile')
+  })
+
+  it('coerces ANY stored model outside the pinned list on the platform Groq fallback', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({
+      settings: { aiProvider: 'groq', aiModel: 'some/unsupported-model' },
+    })
+
+    const config = await resolveAIConfig('org-1')
+
+    expect(['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b']).toContain(config.model)
+  })
+
+  it('still honours a stored model that IS in the pinned list', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({
+      settings: { aiProvider: 'groq', aiModel: 'openai/gpt-oss-20b' },
+    })
+
+    const config = await resolveAIConfig('org-1')
+
+    expect(config.model).toBe('openai/gpt-oss-20b')
+  })
+
+  it('fails over through the remaining pinned Groq models when the first one errors', async () => {
+    // The pinned list is best-first CANDIDATES; selecting only index 0 means one
+    // model-specific 429/access error fails the whole free-tier request
+    // (codex P2 + cubic P2). createChatStream must walk the rest of the list on
+    // the platform key.
+    const config = await resolveAIConfig('org-1')
+    expect(config.provider).toBe('groq')
+
+    mockSdkCreate
+      .mockRejectedValueOnce(new Error('429 Rate limit reached for model openai/gpt-oss-120b'))
+      .mockResolvedValueOnce(
+        (async function* () {
+          yield { choices: [{ delta: { content: 'answer from fallback model' } }] }
+        })(),
+      )
+
+    const stream = await createChatStream(config, [{ role: 'user', content: 'hi' }])
+    const reader = stream.getReader()
+    const decoder = new TextDecoder()
+    let text = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      text += decoder.decode(value, { stream: true })
+    }
+
+    expect(mockSdkCreate).toHaveBeenCalledTimes(2)
+    // Second attempt must be the NEXT pinned model, not a re-try of the same one.
+    expect((mockSdkCreate.mock.calls[1][0] as { model: string }).model).toBe('openai/gpt-oss-20b')
+    expect(text).toContain('answer from fallback model')
+    expect(text).not.toContain('error')
+  })
+
+  it('does NOT model-failover on a BYOK Groq key (the org chose that model deliberately)', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({
+      settings: { aiProvider: 'groq', aiApiKey: ORG_BYOK_FIXTURE, aiModel: 'openai/gpt-oss-20b' },
+    })
+    const config = await resolveAIConfig('org-1')
+    expect(config.byokKey).toBe(true)
+
+    mockSdkCreate.mockRejectedValueOnce(new Error('500 Internal Server Error'))
+
+    await expect(
+      createChatStream(config, [{ role: 'user', content: 'hi' }]),
+    ).rejects.toThrow('500 Internal Server Error')
+    expect(mockSdkCreate).toHaveBeenCalledTimes(1)
   })
 })

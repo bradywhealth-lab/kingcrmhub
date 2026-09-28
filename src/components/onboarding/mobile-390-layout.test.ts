@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join, sep } from 'node:path'
 
 const repoRoot = join(import.meta.dirname, '..', '..', '..')
 const src = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8')
@@ -39,16 +39,41 @@ describe('mobile 390px — dashboard chart cannot exceed the viewport', () => {
     expect(cls, 'needs min-w-0 so the grid/flex parent may shrink it').toContain('min-w-0')
   })
 
-  it('no ChartContainer call site anywhere ships a fixed height without an explicit width', () => {
-    // Guards the whole repo, not just the one site — learning-trends.tsx already
-    // does this correctly and must stay correct.
+  it('no ChartContainer call site ANYWHERE in src ships a fixed height without an explicit width', () => {
+    // Actually repo-wide: walk src/ and read every file containing a
+    // <ChartContainer call site. cubic P3 was right that the previous version
+    // claimed repo scope while only scanning src/app/page.tsx, so a regression in
+    // learning-trends.tsx (the in-repo working example) or any new chart page
+    // would have passed silently.
+    const root = join(repoRoot, 'src')
     const offenders: string[] = []
-    const re = /<ChartContainer[^>]*className="([^"]*)"/g
-    let match: RegExpExecArray | null
-    while ((match = re.exec(page)) !== null) {
-      const cls = match[1]
-      if (/h-\[\d+px\]/.test(cls) && !cls.includes('w-full')) offenders.push(cls)
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) walk(full)
+        else if (/\.(tsx|ts)$/.test(entry.name)) files.push(full)
+      }
     }
+    walk(root)
+
+    let scannedCallSites = 0
+    for (const file of files) {
+      const text = readFileSync(file, 'utf8')
+      if (!text.includes('<ChartContainer')) continue
+      const re = /<ChartContainer[^>]*className="([^"]*)"/g
+      let match: RegExpExecArray | null
+      while ((match = re.exec(text)) !== null) {
+        scannedCallSites++
+        const cls = match[1]
+        if (/h-\[\d+px\]/.test(cls) && !cls.includes('w-full')) {
+          offenders.push(`${file.replace(root + sep, '')}: ${cls}`)
+        }
+      }
+    }
+
+    // The guard must actually have found call sites, or it is vacuous.
+    expect(scannedCallSites, 'expected to scan real ChartContainer call sites').toBeGreaterThanOrEqual(2)
     expect(offenders, 'ChartContainer with fixed height but no explicit width overflows').toEqual([])
   })
 })
@@ -64,7 +89,12 @@ describe('mobile 390px — onboarding wizard is viewport-bounded', () => {
     // max-w-xl alone resolved to 507px on a 390px device because the layout
     // viewport had inflated. A viewport-relative cap makes the card immune to
     // whatever the widest child is.
-    expect(cardLine, 'card needs a viewport-relative max width').toMatch(/max-w-\[calc\(100vw-/)
+    // 100% not 100vw: the card's parent is `fixed inset-0`, so percentages
+    // resolve against the visual viewport, while 100vw also includes a classic
+    // vertical scrollbar's width and would clip the card + mx-4 on desktop
+    // windows narrower than the sm breakpoint (cubic P3).
+    expect(cardLine, 'card needs a viewport-relative max width').toMatch(/max-w-\[calc\(100%-/)
+    expect(cardLine, '100vw reintroduces scrollbar clipping').not.toContain('100vw')
   })
 
   it('the card body uses responsive horizontal padding so small screens get text width', () => {

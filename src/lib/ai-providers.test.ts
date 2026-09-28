@@ -83,7 +83,9 @@ describe('resolveAIConfig', () => {
     // Free tier now pins a real OpenRouter `:free` model instead of the catch-all
     // auto-router (`openrouter/free`), which returned reasoning-only/classifier replies.
     expect(config.model).toBe('qwen/qwen3.8-27b:free')
-    expect(config.label).toContain('OpenRouter')
+    // Pin the exact label (cubic P3): a bare toContain('OpenRouter') would pass
+    // on a regression back to auto-router branding.
+    expect(config.label).toBe('OpenRouter (free, pinned model)')
     expect(config.byokFailure).toBeDefined()
     expect(config.byokFailure).toContain('invalid or missing')
     expect(config.byokFailure).toContain('Open Settings')
