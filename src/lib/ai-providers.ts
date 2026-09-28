@@ -169,34 +169,42 @@ export async function resolveAIConfig(
   if (provider === 'openrouter' && process.env.OPENROUTER_API_KEY) {
     return {
       provider: 'openrouter',
-      model: isFreeOpenRouterModel(model) ? (model as string) : 'openrouter/free',
+      model: isFreeOpenRouterModel(model) ? (model as string) : OPENROUTER_FREE_MODEL,
       apiKey: process.env.OPENROUTER_API_KEY,
       label: 'OpenRouter Free (platform)',
       byokFailure,
     }
   }
 
-  // Free tier: OpenRouter (platform key) -> Groq (platform key) -> OpenAI (platform key) -> no provider
-  // When falling back to a different provider than stored, force default model
-  const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
-  if (openrouterKey) {
-    return {
-      provider: 'openrouter',
-      model: 'openrouter/free',
-      apiKey: openrouterKey,
-      label: 'OpenRouter Free (auto-routing)',
-      byokFailure,
-    }
-  }
-
+  // Free tier: Groq (pinned models) -> OpenRouter (pinned :free) -> OpenAI -> none.
+  //
+  // Groq is checked FIRST because it is the only free route measured returning
+  // real answers. Prod holds both GROQ_API_KEY and OPENROUTER_API_KEY, and the
+  // previous order tested OpenRouter first — so OpenRouter's auto-router always
+  // won and the working Groq key was unreachable. That ordering, not just the
+  // model id, is why free-tier replies were nonsense.
+  // When falling back to a provider other than the stored one, force its default model.
   const groqKey = process.env.GROQ_API_KEY?.trim()
   if (groqKey) {
-    const resolvedModel = (provider === 'groq' && model) ? model : 'llama-3.3-70b-versatile'
+    // Honour an explicit org-chosen Groq model; otherwise pin the best measured
+    // free model instead of letting anything auto-select.
+    const resolvedModel = (provider === 'groq' && model) ? model : GROQ_FREE_MODELS[0]
     return {
       provider: 'groq',
       model: resolvedModel,
       apiKey: groqKey,
-      label: 'Groq Llama 3.3 (free)',
+      label: 'Groq (free, pinned model)',
+      byokFailure,
+    }
+  }
+
+  const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
+  if (openrouterKey) {
+    return {
+      provider: 'openrouter',
+      model: OPENROUTER_FREE_MODEL,
+      apiKey: openrouterKey,
+      label: 'OpenRouter (free, pinned model)',
       byokFailure,
     }
   }
@@ -217,7 +225,7 @@ export async function resolveAIConfig(
   // No keys available at all
   return {
     provider: 'groq',
-    model: 'llama-3.3-70b-versatile',
+    model: GROQ_FREE_MODELS[0],
     apiKey: '',
     label: 'No AI provider configured',
   }
@@ -225,23 +233,59 @@ export async function resolveAIConfig(
 
 export function getDefaultModel(provider: AIProvider): string {
   switch (provider) {
-    case 'groq': return 'llama-3.3-70b-versatile'
+    case 'groq': return GROQ_FREE_MODELS[0]
     case 'openai': return 'gpt-4o'
     case 'anthropic': return 'claude-sonnet-4-20250514'
-    // `openrouter/free` is OpenRouter's Free Models Router — it only ever
-    // selects zero-cost models, so the default OpenRouter experience is free.
-    case 'openrouter': return 'openrouter/free'
+    // A pinned `:free` slug, never the catch-all auto-router (see
+    // isFreeOpenRouterModel) so the platform key stays zero-cost AND answers.
+    case 'openrouter': return OPENROUTER_FREE_MODEL
   }
 }
 
 /**
- * True when an OpenRouter model id is guaranteed zero-cost: either the
- * `openrouter/free` router or a specific `:free` catalog variant. Used to keep
- * the platform (default) OpenRouter key from ever funding a paid model.
+ * Pinned $0 Groq models, best-first.
+ *
+ * These are the only free routes measured returning real sentence answers on the
+ * platform key (OpsForge, 2026-09-28): gpt-oss-120b 376ms, gpt-oss-20b 313ms,
+ * qwen3.8-27b 278ms. Pinned rather than auto-routed so a sales prompt can never
+ * land on a coding model or a content-safety classifier.
+ */
+export const GROQ_FREE_MODELS = [
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'qwen/qwen3.8-27b',
+] as const
+
+/**
+ * Pinned $0 OpenRouter slug, used only when no Groq key exists.
+ *
+ * OpenRouter's zero-cost catalog was measured unreliable (429 provider
+ * rate-limit or "unavailable for free, use the paid slug"), which is why it
+ * sits behind Groq rather than in front of it.
+ */
+export const OPENROUTER_FREE_MODEL = 'qwen/qwen3.8-27b:free'
+
+/**
+ * True when an OpenRouter model id is guaranteed zero-cost: an explicit
+ * `:free` catalog slug only. Used to keep the platform (default) OpenRouter key
+ * from ever funding a paid model.
+ *
+ * OpenRouter's catch-all free ROUTER is deliberately excluded. It only ever
+ * selects zero-cost models, but it selects *arbitrary* ones per request, and
+ * that was measured returning reasoning-only replies from a coding model
+ * (`content: null`) and from a content-safety classifier — i.e. zero-cost but
+ * not an answer. Cost-safety and answer-quality are different guarantees, and
+ * a router satisfies only the first. Excluding it here also coerces any org
+ * whose stored model predates the pin.
  */
 export function isFreeOpenRouterModel(model: string | null | undefined): boolean {
   if (!model) return false
-  return model === 'openrouter/free' || model.endsWith(':free')
+  // Only an explicit `:free` catalog slug is guaranteed zero-cost. The
+  // catch-all auto-router is deliberately NOT accepted: it selects arbitrary
+  // models per request, which produced reasoning-only and safety-classifier
+  // replies instead of answers. Rejecting it here also coerces any org whose
+  // stored model predates this change.
+  return model.endsWith(':free')
 }
 
 /**

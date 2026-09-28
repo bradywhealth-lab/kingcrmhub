@@ -395,7 +395,7 @@ function DashboardView() {
                 <p className="text-xs text-gray-350">Add leads and track pipeline movements to see trends.</p>
               </div>
             ) : (
-              <ChartContainer config={chartConfig} className="h-[280px]">
+              <ChartContainer config={chartConfig} className="h-[280px] w-full min-w-0">
                 <AreaChart data={liveTrend}>
                   <defs>
                     <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">

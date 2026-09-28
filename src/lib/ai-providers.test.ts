@@ -80,8 +80,10 @@ describe('resolveAIConfig', () => {
     const config = await resolveAIConfig('org-1')
 
     expect(config.provider).toBe('openrouter')
-    expect(config.model).toBe('openrouter/free')
-    expect(config.label).toContain('OpenRouter Free')
+    // Free tier now pins a real OpenRouter `:free` model instead of the catch-all
+    // auto-router (`openrouter/free`), which returned reasoning-only/classifier replies.
+    expect(config.model).toBe('qwen/qwen3.8-27b:free')
+    expect(config.label).toContain('OpenRouter')
     expect(config.byokFailure).toBeDefined()
     expect(config.byokFailure).toContain('invalid or missing')
     expect(config.byokFailure).toContain('Open Settings')
@@ -161,7 +163,7 @@ describe('resolveAIConfig', () => {
     expect(config.byokFailure).toContain('invalid or missing')
   })
 
-  it('uses the OpenRouter platform key (free router) when org chose openrouter without BYOK', async () => {
+  it('uses the OpenRouter platform key (pinned free model) when org chose openrouter without BYOK', async () => {
     mockDb.organization.findUnique.mockResolvedValueOnce({
       settings: { aiProvider: 'openrouter' },
     })
@@ -169,7 +171,7 @@ describe('resolveAIConfig', () => {
     const config = await resolveAIConfig('org-1')
 
     expect(config.provider).toBe('openrouter')
-    expect(config.model).toBe('openrouter/free')
+    expect(config.model).toBe('qwen/qwen3.8-27b:free')
     expect(config.label).toBe('OpenRouter Free (platform)')
   })
 
@@ -183,28 +185,31 @@ describe('resolveAIConfig', () => {
     expect(config.model).toBe('meta-llama/llama-3.3-70b-instruct:free')
   })
 
-  it('never funds a PAID model on the platform (default) OpenRouter key — coerces to the free router', async () => {
+  it('never funds a PAID model on the platform (default) OpenRouter key — coerces to the pinned free model', async () => {
     mockDb.organization.findUnique.mockResolvedValueOnce({
       settings: { aiProvider: 'openrouter', aiModel: 'openai/gpt-4o' },
     })
 
     const config = await resolveAIConfig('org-1')
 
-    // No BYOK key → the platform key must not spend on a paid model.
+    // No BYOK key → the platform key must not spend on a paid model, and must
+    // not use the catch-all auto-router either. It coerces to the pinned :free slug.
     expect(config.provider).toBe('openrouter')
-    expect(config.model).toBe('openrouter/free')
+    expect(config.model).toBe('qwen/qwen3.8-27b:free')
   })
 
-  it('uses the Groq free tier when no OpenRouter key is set but Groq is', async () => {
+  it('uses the Groq free tier (pinned model) when no OpenRouter key is set but Groq is', async () => {
     setEnv({ OPENROUTER_API_KEY: undefined, GROQ_API_KEY: 'gsk-1234567890' })
     mockDb.organization.findUnique.mockResolvedValueOnce({
-      settings: { aiProvider: 'openai', aiApiKey: 'sk-placeholder' },
+      settings: { aiProvider: 'openai', aiApiKey: '***' },
     })
 
     const config = await resolveAIConfig('org-1')
 
     expect(config.provider).toBe('groq')
-    expect(config.model).toBe('llama-3.3-70b-versatile')
+    // Stale `llama-3.3-70b-versatile` (rejected by Groq) replaced with the pinned
+    // best-measured free model.
+    expect(config.model).toBe('openai/gpt-oss-120b')
     expect(config.byokFailure).toBeDefined()
   })
 
@@ -333,10 +338,10 @@ describe('friendlyProviderError', () => {
 describe('getDefaultModel', () => {
   it('returns the exact free-tier model ids', () => {
     const expected: Record<AIProvider, string> = {
-      groq: 'llama-3.3-70b-versatile',
+      groq: 'openai/gpt-oss-120b',
       openai: 'gpt-4o',
       anthropic: 'claude-sonnet-4-20250514',
-      openrouter: 'openrouter/free',
+      openrouter: 'qwen/qwen3.8-27b:free',
     }
     for (const [provider, model] of Object.entries(expected)) {
       expect(getDefaultModel(provider as AIProvider)).toBe(model)
