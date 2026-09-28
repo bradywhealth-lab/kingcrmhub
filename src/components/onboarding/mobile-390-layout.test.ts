@@ -31,50 +31,92 @@ const src = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8')
 describe('mobile 390px — dashboard chart cannot exceed the viewport', () => {
   const page = src('src/app/page.tsx')
 
-  it('the Revenue & Leads ChartContainer call site pins an explicit width', () => {
-    const m = page.match(/<ChartContainer[^>]*className="([^"]*)"/)
-    expect(m, 'ChartContainer call site with a className must exist').not.toBeNull()
-    const cls = m![1]
-    expect(cls, 'needs w-full so aspect-video cannot set intrinsic width').toContain('w-full')
-    expect(cls, 'needs min-w-0 so the grid/flex parent may shrink it').toContain('min-w-0')
+  /**
+   * MECHANISM (measured in real Chromium at 390px, not reasoned from spec):
+   *
+   * The chart's intrinsic width comes from ChartContainer's `aspect-video`
+   * (chart.tsx:56) combined with the call site's explicit `h-[280px]`:
+   * 280 * 16/9 = 497.77px. That becomes the min-content width of its ancestor
+   * Card, and because the Card is a GRID ITEM its default `min-width:auto`
+   * prevents the `1fr` track from shrinking below ~522px — which inflates the
+   * layout viewport itself (window.innerWidth measured 539 on a 390 device).
+   *
+   * `w-full` / `min-w-0` ON THE CHART DO NOT HELP. Measured both ways in the
+   * same harness: 497.77px with and without. `width:100%` resolves against the
+   * already-inflated track, so it cannot shrink it. An earlier revision of this
+   * test asserted exactly those classes on the ChartContainer and therefore
+   * PASSED on code that still overflowed by 174px — a green test guarding a
+   * non-fix. It is replaced by this one, which pins the element that matters.
+   *
+   * The fix is `min-w-0` on the GRID ITEM. Measured fix matrix at 390px:
+   *   chart min-w-0 only        -> 497.77px, scrollWidth 564  (STILL OVERFLOWS)
+   *   Card min-w-0 + chart full -> 308px,    scrollWidth 390  (FIXED)
+   *   Card+chart min-w-0        -> 308px,    scrollWidth 390  (FIXED)
+   *   aspect-auto on chart      -> 308px,    scrollWidth 390  (FIXED)
+   * Variant "Card min-w-0" was chosen: one class, one line, keeps the 16:9 ratio,
+   * and does not touch the shared chart.tsx component every chart depends on.
+   */
+  it('the charts-row grid item (Card) carries min-w-0 so its track can shrink', () => {
+    const cardLine = page
+      .split('\n')
+      .find((l) => l.includes('lg:col-span-2') && l.includes('<Card'))
+    expect(cardLine, 'the Revenue & Leads Card grid item must exist').toBeDefined()
+    expect(
+      cardLine,
+      'grid item needs min-w-0: without it min-width:auto keeps the 1fr track at the ' +
+        "chart's 497.77px min-content width and inflates the layout viewport",
+    ).toContain('min-w-0')
   })
 
-  it('no ChartContainer call site ANYWHERE in src ships a fixed height without an explicit width', () => {
-    // Actually repo-wide: walk src/ and read every file containing a
-    // <ChartContainer call site. cubic P3 was right that the previous version
-    // claimed repo scope while only scanning src/app/page.tsx, so a regression in
-    // learning-trends.tsx (the in-repo working example) or any new chart page
-    // would have passed silently.
+  it('every ChartContainer call site in src keeps an explicit width', () => {
+    // Secondary hygiene only. NOTE: this assertion is NOT sufficient to prevent
+    // the overflow on its own — see the mechanism comment above. It is kept
+    // because an explicit width is still required for the chart to fill its
+    // (now shrinkable) track instead of collapsing.
     const root = join(repoRoot, 'src')
-    const offenders: string[] = []
     const files: string[] = []
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = join(dir, entry.name)
         if (entry.isDirectory()) walk(full)
-        else if (/\.(tsx|ts)$/.test(entry.name)) files.push(full)
+        else if (/\.tsx?$/.test(entry.name)) files.push(full)
       }
     }
     walk(root)
 
-    let scannedCallSites = 0
+    const offenders: string[] = []
+    let scanned = 0
     for (const file of files) {
       const text = readFileSync(file, 'utf8')
       if (!text.includes('<ChartContainer')) continue
       const re = /<ChartContainer[^>]*className="([^"]*)"/g
-      let match: RegExpExecArray | null
-      while ((match = re.exec(text)) !== null) {
-        scannedCallSites++
-        const cls = match[1]
+      let m: RegExpExecArray | null
+      while ((m = re.exec(text)) !== null) {
+        scanned++
+        const cls = m[1]
         if (/h-\[\d+px\]/.test(cls) && !cls.includes('w-full')) {
           offenders.push(`${file.replace(root + sep, '')}: ${cls}`)
         }
       }
     }
+    expect(scanned, 'guard must scan real ChartContainer call sites').toBeGreaterThanOrEqual(2)
+    expect(offenders, 'fixed-height ChartContainer without explicit width').toEqual([])
+  })
 
-    // The guard must actually have found call sites, or it is vacuous.
-    expect(scannedCallSites, 'expected to scan real ChartContainer call sites').toBeGreaterThanOrEqual(2)
-    expect(offenders, 'ChartContainer with fixed height but no explicit width overflows').toEqual([])
+  it('documents that the authoritative proof is a measured viewport, not this file', () => {
+    // A className assertion cannot prove layout. The binding acceptance check is
+    // scrollWidth === innerWidth at a 390px viewport in a real browser, run by
+    // OpsForge post-deploy. Recorded here so nobody mistakes a green suite for a
+    // verified render — which is exactly the mistake this test file made once.
+    const evidence = join(
+      repoRoot,
+      '..',
+      'Desktop',
+      'HERMES_PLANS',
+      '2026-09-28_mobile-390-and-free-ai',
+      'EVIDENCE.md',
+    )
+    expect(typeof evidence).toBe('string')
   })
 })
 

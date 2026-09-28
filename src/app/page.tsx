@@ -382,7 +382,7 @@ function DashboardView() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <Card className="lg:col-span-2 bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="lg:col-span-2 min-w-0 bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <CardTitle className="text-foreground">Revenue & Leads</CardTitle>
             <CardDescription className="text-muted-foreground">Monthly performance overview</CardDescription>
