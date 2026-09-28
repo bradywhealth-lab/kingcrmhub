@@ -41,12 +41,16 @@ describe('mobile 390px — dashboard chart cannot exceed the viewport', () => {
    * prevents the `1fr` track from shrinking below ~522px — which inflates the
    * layout viewport itself (window.innerWidth measured 539 on a 390 device).
    *
-   * `w-full` / `min-w-0` ON THE CHART DO NOT HELP. Measured both ways in the
-   * same harness: 497.77px with and without. `width:100%` resolves against the
-   * already-inflated track, so it cannot shrink it. An earlier revision of this
-   * test asserted exactly those classes on the ChartContainer and therefore
-   * PASSED on code that still overflowed by 174px — a green test guarding a
-   * non-fix. It is replaced by this one, which pins the element that matters.
+   * DIVISION OF LABOUR (cubic P3 clarification): width alone cannot prevent
+   * the overflow — that is the GRID ITEM's job via `min-w-0`, because the track
+   * must be allowed to shrink below the chart's min-content width. `w-full` /
+   * `min-w-0` ON THE CHART are the FILL side: they make the chart occupy its
+   * (now-shrinkable) track instead of collapsing. Under the plain-1fr harness
+   * both were measured at 497.77px with and without — width classes on the chart
+   * alone left the track unable to shrink. An earlier revision of this test
+   * asserted exactly those chart classes as THE fix and therefore PASSED on code
+   * that still overflowed by 174px — a green test guarding a non-fix. It was
+   * replaced by one that pins the element whose job the fix actually is.
    *
    * The fix is `min-w-0` on the GRID ITEM. Measured fix matrix at 390px:
    *   chart min-w-0 only        -> 497.77px, scrollWidth 564  (STILL OVERFLOWS)
@@ -94,7 +98,11 @@ describe('mobile 390px — dashboard chart cannot exceed the viewport', () => {
       while ((m = re.exec(text)) !== null) {
         scanned++
         const cls = m[1]
-        if (/h-\[\d+px\]/.test(cls) && !cls.includes('w-full')) {
+        // cubic P2: fixed-height utilities come in more forms than arbitrary px
+        // brackets — h-72 (=18rem=288px; 288*16/9=512px overflows identically),
+        // h-96, sm:h-96, and h-[Npx]/h-[Nrem]. Miss any of them and this
+        // repo-wide guard stays green while the documented overflow returns.
+        if (/(?:h-\[\d+(?:px|rem|em)?\]|\bh-\d+\b)/.test(cls) && !cls.includes('w-full')) {
           offenders.push(`${file.replace(root + sep, '')}: ${cls}`)
         }
       }
@@ -103,21 +111,14 @@ describe('mobile 390px — dashboard chart cannot exceed the viewport', () => {
     expect(offenders, 'fixed-height ChartContainer without explicit width').toEqual([])
   })
 
-  it('documents that the authoritative proof is a measured viewport, not this file', () => {
-    // A className assertion cannot prove layout. The binding acceptance check is
-    // scrollWidth === innerWidth at a 390px viewport in a real browser, run by
-    // OpsForge post-deploy. Recorded here so nobody mistakes a green suite for a
-    // verified render — which is exactly the mistake this test file made once.
-    const evidence = join(
-      repoRoot,
-      '..',
-      'Desktop',
-      'HERMES_PLANS',
-      '2026-09-28_mobile-390-and-free-ai',
-      'EVIDENCE.md',
-    )
-    expect(typeof evidence).toBe('string')
-  })
+  // NOTE — what this file can and cannot prove (cubic P3):
+  // A className assertion cannot prove layout, and no in-repo test can verify the
+  // measured-evidence file (a LOCAL plan-folder artifact that does not exist on
+  // CI runners — an existsSync assertion here would fail the GitHub build).
+  // The binding acceptance check is scrollWidth === innerWidth at a 390px
+  // viewport against PRODUCTION, run post-deploy. Recorded so nobody mistakes a
+  // green suite for a verified render — which is exactly the mistake an earlier
+  // revision of this file made twice.
 })
 
 describe('mobile 390px — onboarding wizard is viewport-bounded', () => {
