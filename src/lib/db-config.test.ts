@@ -165,6 +165,32 @@ describe('isPoolExhaustionError', () => {
     expect(isPoolExhaustionError(Object.assign(new Error('x'), { code: 'P2025' }))).toBe(false) // record not found
   })
 
+  it('REGRESSION (codex P1): a Stripe-creating transaction that expires mid-run must NOT retry', () => {
+    // Real consequence, verified in source — src/app/api/billing/checkout/route.ts:
+    //   :104  return await withOrgRlsTransaction(organizationId, async () => {
+    //   :150      const customer = await client.customers.create({...})
+    //   :203      const sessionRes = await client.checkout.sessions.create({...})
+    // If a transaction that ALREADY created a Stripe customer/session later
+    // expires, Prisma reports that as P2028 too. Under the previous code-only
+    // classifier the whole callback would be re-run up to 3 times, creating
+    // duplicate Stripe customers and Checkout Sessions.
+    //
+    // Only the acquisition wording is retryable; every other P2028 must propagate.
+    const midRunExpiry = Object.assign(
+      new Error(
+        'Transaction already closed: A query cannot be executed on an expired transaction',
+      ),
+      { code: 'P2028' },
+    )
+    expect(isPoolExhaustionError(midRunExpiry)).toBe(false)
+
+    const acquisition = Object.assign(
+      new Error('Transaction API error: Unable to start a transaction in the given time.'),
+      { code: 'P2028' },
+    )
+    expect(isPoolExhaustionError(acquisition)).toBe(true)
+  })
+
   it('does NOT match generic or non-Error values', () => {
     expect(isPoolExhaustionError(new Error('connection refused'))).toBe(false)
     expect(isPoolExhaustionError(null)).toBe(false)
