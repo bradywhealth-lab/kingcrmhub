@@ -162,6 +162,24 @@ describe('db.ts transaction helpers retry pool exhaustion', () => {
   type FakeTx = { $executeRaw: ReturnType<typeof vi.fn> }
 
   /**
+   * db.ts calls $executeRaw as a TAGGED TEMPLATE:
+   *   tx.$executeRaw`SELECT set_config('app.current_organization_id', ${organizationId}, true)`
+   * so the mock receives (strings: TemplateStringsArray, ...values).
+   *
+   * cubic P2 (confidence 9) is right that `toHaveBeenCalledTimes(1)` alone proves
+   * only that SOME raw query ran — a wrong RLS key or a wrong org id would pass.
+   * Since RLS scoping is the security boundary for every org's data, this helper
+   * reconstructs the SQL and the bound arguments so both are asserted.
+   */
+  function readRawCalls(tx: FakeTx) {
+    return tx.$executeRaw.mock.calls.map(call => {
+      const strings = call[0] as TemplateStringsArray
+      const values = call.slice(1) as unknown[]
+      return { sql: strings.join('?'), values }
+    })
+  }
+
+  /**
    * `onAcquire` models what the REAL client does before running the callback:
    * if it throws, the transaction never started (the retryable case). If it
    * resolves, the callback IS invoked with the fake tx — so in-callback failures
@@ -210,11 +228,32 @@ describe('db.ts transaction helpers retry pool exhaustion', () => {
     // The caller callback must run exactly ONCE — the first attempt threw before
     // the callback was reached, so a retry cannot double-apply it.
     expect(callbackRuns).toBe(1)
-    // And the RLS org id must actually be set on the successful transaction.
-    // db.ts runs set_config('app.current_organization_id', ...) as the first
-    // statement inside the callback, so the failed attempt's tx never sees it.
-    expect(txns[1].$executeRaw).toHaveBeenCalledTimes(1)
-    expect(txns[0].$executeRaw).not.toHaveBeenCalled()
+    // And the RLS org id must actually be set on the successful transaction —
+    // asserting the SQL AND the bound argument, not merely that a query ran
+    // (cubic P2). db.ts runs set_config(...) as the first statement inside the
+    // callback, so the failed attempt's tx never sees it.
+    const rawCalls = readRawCalls(txns[1])
+    expect(rawCalls).toHaveLength(1)
+    expect(rawCalls[0].sql).toContain("set_config('app.current_organization_id'")
+    expect(rawCalls[0].sql).toContain(', ?, true)') // the org id is BOUND, not interpolated
+    expect(rawCalls[0].values).toEqual(['org_1'])
+    expect(readRawCalls(txns[0])).toHaveLength(0)
+  })
+
+  it('sets the session-token RLS key with the token bound as an argument', async () => {
+    // Same class as the org-id assertion above: a wrong key or an interpolated
+    // (unbound) token would be an RLS-scope defect that a call-count cannot see.
+    const { withSessionTokenRlsTransaction } = await loadDbModule()
+    const { txns } = stubTransaction()
+
+    const token = 'session_token_abc123'
+    await withSessionTokenRlsTransaction(token, async () => 'ok')
+
+    const rawCalls = readRawCalls(txns[0])
+    expect(rawCalls).toHaveLength(1)
+    expect(rawCalls[0].sql).toContain("set_config('app.current_session_token'")
+    expect(rawCalls[0].sql).toContain(', ?, true)')
+    expect(rawCalls[0].values).toEqual([token])
   })
 
   it('does NOT retry a mid-transaction error, so a write can never be duplicated', async () => {
