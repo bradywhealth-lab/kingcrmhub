@@ -791,7 +791,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="relative mx-4 w-full max-w-xl overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_40px_100px_rgba(31,42,54,0.22)] backdrop-blur-xl"
+        className="relative mx-4 w-full max-w-[calc(100%-2rem)] sm:max-w-xl overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_40px_100px_rgba(31,42,54,0.22)] backdrop-blur-xl"
       >
         {/* Skip all button */}
         {!isDoneStep && (
@@ -806,7 +806,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
 
         {/* Header - progress */}
         {!isDoneStep && currentStep > 0 && (
-          <div className="border-b border-[rgba(31,42,54,0.06)] px-8 py-5">
+          <div className="border-b border-[rgba(31,42,54,0.06)] px-5 py-5 sm:px-8">
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
               <div className="min-w-0 overflow-x-auto overscroll-x-contain">
                 <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
@@ -823,7 +823,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
 
         {/* Step header (for non-welcome, non-done steps) */}
         {currentStep > 0 && !isDoneStep && (
-          <div className="px-8 pt-6">
+          <div className="px-5 pt-6 sm:px-8">
             <div className="flex items-center gap-3">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-2xl"
@@ -840,7 +840,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         )}
 
         {/* Content */}
-        <div className={cn("px-8 pb-8", currentStep > 0 && !isDoneStep ? "pt-6" : "pt-8")}>
+        <div className={cn("px-5 pb-8 sm:px-8", currentStep > 0 && !isDoneStep ? "pt-6" : "pt-8")}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}

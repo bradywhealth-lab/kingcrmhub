@@ -382,7 +382,7 @@ function DashboardView() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <Card className="lg:col-span-2 bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
+        <Card className="lg:col-span-2 min-w-0 bg-card border-[rgba(31,42,54,0.08)] shadow-sm">
           <CardHeader>
             <CardTitle className="text-foreground">Revenue & Leads</CardTitle>
             <CardDescription className="text-muted-foreground">Monthly performance overview</CardDescription>
@@ -395,7 +395,7 @@ function DashboardView() {
                 <p className="text-xs text-gray-350">Add leads and track pipeline movements to see trends.</p>
               </div>
             ) : (
-              <ChartContainer config={chartConfig} className="h-[280px]">
+              <ChartContainer config={chartConfig} className="h-[280px] w-full min-w-0">
                 <AreaChart data={liveTrend}>
                   <defs>
                     <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
