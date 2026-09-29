@@ -23,8 +23,21 @@ let usingLocalSqlite = false
  * measured at 3.7-7.1s when the dashboard fires ~8 parallel requests, so every
  * waiter past 2s died with P2028 -> HTTP 500 (54 occurrences in 3h).
  */
-const TRANSACTION_MAX_WAIT_MS = Number(process.env.DB_TX_MAX_WAIT_MS) || 15_000
-const TRANSACTION_TIMEOUT_MS = Number(process.env.DB_TX_TIMEOUT_MS) || 30_000
+/**
+ * Positive-integer parse with fallback (cubic P2, confidence 8 — correct).
+ * `Number(raw) || fallback` accepts negatives: DB_TX_TIMEOUT_MS=-1 would make
+ * every RLS transaction expire immediately. Non-integers and 0 are rejected too.
+ */
+function positiveIntegerOrDefault(raw: string | undefined, fallback: number): number {
+  if (raw === undefined) return fallback
+  const trimmed = raw.trim()
+  if (!trimmed) return fallback
+  const value = Number(trimmed)
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback
+}
+
+const TRANSACTION_MAX_WAIT_MS = positiveIntegerOrDefault(process.env.DB_TX_MAX_WAIT_MS, 15_000)
+const TRANSACTION_TIMEOUT_MS = positiveIntegerOrDefault(process.env.DB_TX_TIMEOUT_MS, 30_000)
 
 // Re-exported for route-level use where a caller wants the same classification.
 export { isPoolExhaustionError, withPoolRetry }

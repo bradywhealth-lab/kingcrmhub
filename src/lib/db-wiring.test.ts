@@ -150,32 +150,139 @@ describe('db.ts transaction helpers retry pool exhaustion', () => {
     vi.stubEnv('DATABASE_URL', TEST_DSN)
   })
 
-  it('retries withOrgRlsTransaction on P2028 and succeeds on the second attempt', async () => {
-    const { withOrgRlsTransaction } = await loadDbModule()
-    const client = constructedClient()
+  /**
+   * A $transaction stub that actually INVOKES Prisma's callback with a fake
+   * transaction client, the way the real client does.
+   *
+   * cubic P2 (confidence 9) was right that the previous stubs ignored the callback
+   * entirely: the "successful retry" never ran the RLS set_config or the caller's
+   * callback, and the P2002 case never exercised a write. A stub that skips the
+   * callback would stay green even if db.ts stopped setting the RLS org id.
+   */
+  type FakeTx = { $executeRaw: ReturnType<typeof vi.fn> }
 
-    let attempt = 0
-    client.$transaction.mockImplementation(async () => {
-      attempt++
-      if (attempt === 1) throw Object.assign(new Error('Unable to start a transaction in the given time.'), { code: 'P2028' })
+  /**
+   * `onAcquire` models what the REAL client does before running the callback:
+   * if it throws, the transaction never started (the retryable case). If it
+   * resolves, the callback IS invoked with the fake tx — so in-callback failures
+   * (a real write error) are a separate, non-retryable path.
+   */
+  function stubTransaction(onAcquire?: (callIndex: number, tx: FakeTx) => Promise<void> | void) {
+    const client = constructedClient()
+    const txns: FakeTx[] = []
+    client.$transaction.mockImplementation(
+      async (
+        callback: (tx: FakeTx) => Promise<unknown>,
+        _options?: unknown,
+      ) => {
+        const tx: FakeTx = { $executeRaw: vi.fn() }
+        const callIndex = txns.length
+        txns.push(tx)
+        if (onAcquire) await onAcquire(callIndex, tx)
+        return callback(tx)
+      },
+    )
+    return { client, txns }
+  }
+
+  it('retries on acquisition failure and runs the RLS setup + caller callback exactly once', async () => {
+    const { withOrgRlsTransaction } = await loadDbModule()
+
+    const { txns } = stubTransaction(callIndex => {
+      if (callIndex === 0) {
+        // Acquisition failure: the transaction never started, so nothing ran.
+        throw Object.assign(
+          new Error('Transaction API error: Unable to start a transaction in the given time.'),
+          { code: 'P2028' },
+        )
+      }
+      // Successful acquisition: db.ts sets the RLS org id inside the callback.
+    })
+
+    let callbackRuns = 0
+    const result = await withOrgRlsTransaction('org_1', async () => {
+      callbackRuns++
       return 'recovered'
     })
 
-    await expect(withOrgRlsTransaction('org_1', async () => 'recovered')).resolves.toBe('recovered')
-    expect(attempt).toBe(2)
+    expect(result).toBe('recovered')
+    expect(txns).toHaveLength(2) // two acquisition attempts
+    // The caller callback must run exactly ONCE — the first attempt threw before
+    // the callback was reached, so a retry cannot double-apply it.
+    expect(callbackRuns).toBe(1)
+    // And the RLS org id must actually be set on the successful transaction.
+    // db.ts runs set_config('app.current_organization_id', ...) as the first
+    // statement inside the callback, so the failed attempt's tx never sees it.
+    expect(txns[1].$executeRaw).toHaveBeenCalledTimes(1)
+    expect(txns[0].$executeRaw).not.toHaveBeenCalled()
   })
 
-  it('does NOT retry a non-pool error, so a write can never be duplicated', async () => {
+  it('does NOT retry a mid-transaction error, so a write can never be duplicated', async () => {
     const { withOrgRlsTransaction } = await loadDbModule()
+
+    // Acquisition succeeds; the P2002 comes from the CALLER's callback — i.e. a
+    // real write already ran. This is exactly the case where retrying would
+    // duplicate the write, so it must propagate with no second attempt.
+    const { txns } = stubTransaction()
+
+    let callbackRuns = 0
+    await expect(
+      withOrgRlsTransaction('org_1', async () => {
+        callbackRuns++
+        throw Object.assign(new Error('unique constraint'), { code: 'P2002' })
+      }),
+    ).rejects.toThrow('unique constraint')
+
+    expect(txns).toHaveLength(1) // no retry
+    expect(callbackRuns).toBe(1) // ran once, never repeated
+  })
+
+  it('does NOT retry a P2028 that is a mid-run timeout rather than an acquisition failure', async () => {
+    const { withOrgRlsTransaction } = await loadDbModule()
+
+    // Same code, different wording: the transaction DID start, ran work, then
+    // expired. Retrying would repeat that work, so it must not be retried.
+    const { txns } = stubTransaction()
+
+    let callbackRuns = 0
+    await expect(
+      withOrgRlsTransaction('org_1', async () => {
+        callbackRuns++
+        throw Object.assign(
+          new Error('Transaction already closed: A query cannot be executed on an expired transaction'),
+          { code: 'P2028' },
+        )
+      }),
+    ).rejects.toThrow('Transaction already closed')
+
+    expect(txns).toHaveLength(1)
+    expect(callbackRuns).toBe(1)
+  })
+
+  it('raises maxWait above Prisma 2s default (production transactions measured 3.7-7.1s)', async () => {
+    await loadDbModule()
     const client = constructedClient()
+    stubTransaction()
+    const mod2 = await import('@/lib/db')
+    await mod2.withOrgRlsTransaction('org_1', async () => 'ok')
 
-    let attempt = 0
-    client.$transaction.mockImplementation(async () => {
-      attempt++
-      throw Object.assign(new Error('unique constraint'), { code: 'P2002' })
-    })
+    const options = client.$transaction.mock.calls[0][1] as { maxWait?: number; timeout?: number }
+    expect(options.maxWait).toBeGreaterThan(2000)
+    expect(options.timeout).toBeGreaterThan(options.maxWait)
+  })
 
-    await expect(withOrgRlsTransaction('org_1', async () => 'x')).rejects.toThrow('unique constraint')
-    expect(attempt).toBe(1)
+  it('rejects a negative DB_TX_TIMEOUT_MS instead of expiring every transaction', async () => {
+    // cubic P2 (confidence 8): `Number(raw) || fallback` accepted -1, which would
+    // make every RLS transaction expire immediately.
+    vi.stubEnv('DB_TX_TIMEOUT_MS', '-1')
+    vi.stubEnv('DB_TX_MAX_WAIT_MS', '-5')
+    const mod = await loadDbModule()
+    const client = constructedClient()
+    stubTransaction()
+    await mod.withOrgRlsTransaction('org_1', async () => 'ok')
+
+    const options = client.$transaction.mock.calls[0][1] as { maxWait?: number; timeout?: number }
+    expect(options.maxWait).toBe(15_000) // fallback, not -5
+    expect(options.timeout).toBe(30_000) // fallback, not -1
   })
 })

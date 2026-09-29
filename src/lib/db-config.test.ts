@@ -8,9 +8,16 @@ import {
 
 // ---------------------------------------------------------------------------
 // Grounded in production evidence (2026-09-29), not theory:
-//   docker logs --since 3h kingcrmhub | grep -c P2028            -> 54
-//   grep -c "too many clients|remaining connection slots"        -> 0
-//   docker logs --since 30m kingcrmhub | grep -c "prisma:query"  -> 1773 (~1/sec, 1 vCPU)
+//   docker logs --since 3h kingcrmhub  | grep -E -c  "P2028"       -> 54
+//   docker logs --since 3h kingcrmhub  | grep -E -ic "too many clients|remaining connection slots" -> 0
+//   docker logs --since 30m kingcrmhub | grep -E -c  "prisma:query" -> ~1.6/sec on 1 vCPU
+// NOTE: the `-E` matters. An earlier version of this comment quoted a BRE grep,
+// where `|` is a literal character, so that count proved nothing. Re-measured
+// with -E (and each phrase separately) the zero does hold. Never cite a BRE
+// alternation as evidence.
+// WINDOW CAVEAT: the container restarted 2026-09-29T22:46:02Z, so a fresh window
+// reads 0 P2028 only because no load has hit it yet. The 54 is from the
+// pre-restart container under real traffic.
 // The pooler (Supabase transaction mode) is NOT rejecting connections, so the
 // exhaustion is client-side: N concurrent transactions with 3.7-7.1s latencies
 // exceed Prisma's default $transaction maxWait of 2s and die as P2028 -> HTTP 500.
@@ -113,15 +120,43 @@ describe('resolvePgPoolConfig', () => {
 })
 
 describe('isPoolExhaustionError', () => {
-  it('matches Prisma P2028 by code', () => {
-    expect(isPoolExhaustionError(Object.assign(new Error('x'), { code: 'P2028' }))).toBe(true)
+  // cubic P2 (confidence 9), accepted: Prisma reports P2028 for Transaction API
+  // errors GENERALLY, including a transaction that timed out MID-RUN. Matching on
+  // the code alone would retry the whole callback — so a scrape handler would
+  // repeat its external fetches and a POST could double-apply. Only the
+  // acquisition wording is safe. These tests encode that narrower contract.
+
+  it('matches the acquisition failure logged in production (code + wording)', () => {
+    const err = Object.assign(
+      new Error('Transaction API error: Unable to start a transaction in the given time.'),
+      { code: 'P2028' },
+    )
+    expect(isPoolExhaustionError(err)).toBe(true)
   })
 
-  it('matches P2028 by message when the code is absent', () => {
-    expect(isPoolExhaustionError(new Error('Transaction API error: Unable to start a transaction in the given time.'))).toBe(true)
+  it('matches the acquisition wording even when the code is absent', () => {
+    expect(
+      isPoolExhaustionError(new Error('Unable to start a transaction in the given time')),
+    ).toBe(true)
   })
 
-  it('matches pg 57P03 (cannot_connect_now)', () => {
+  it('does NOT match a bare P2028 code — that may be a mid-run transaction timeout', () => {
+    // The over-broad version of this code returned true here, which is exactly the
+    // double-side-effect hazard cubic flagged.
+    expect(isPoolExhaustionError(Object.assign(new Error('x'), { code: 'P2028' }))).toBe(false)
+  })
+
+  it('does NOT match other P2028 wordings (write conflict, expired transaction)', () => {
+    for (const message of [
+      'Transaction already closed: A query cannot be executed on an expired transaction',
+      'Transaction API error: Transaction write conflict detected',
+      'P2028',
+    ]) {
+      expect(isPoolExhaustionError(Object.assign(new Error(message), { code: 'P2028' }))).toBe(false)
+    }
+  })
+
+  it('matches pg 57P03 (cannot_connect_now) — a pre-execution refusal', () => {
     expect(isPoolExhaustionError(Object.assign(new Error('x'), { code: '57P03' }))).toBe(true)
   })
 
@@ -134,7 +169,7 @@ describe('isPoolExhaustionError', () => {
     expect(isPoolExhaustionError(new Error('connection refused'))).toBe(false)
     expect(isPoolExhaustionError(null)).toBe(false)
     expect(isPoolExhaustionError(undefined)).toBe(false)
-    expect(isPoolExhaustionError('P2028')).toBe(false)
+    expect(isPoolExhaustionError('Unable to start a transaction in the given time')).toBe(false)
   })
 })
 
@@ -154,7 +189,8 @@ describe('withPoolRetry', () => {
     const out = await withPoolRetry(
       async () => {
         calls++
-        if (calls < 3) throw Object.assign(new Error('x'), { code: 'P2028' })
+        if (calls < 3)
+        throw Object.assign(new Error('Transaction API error: Unable to start a transaction in the given time.'), { code: 'P2028' })
         return 'recovered'
       },
       { sleep: async () => {} },
@@ -169,7 +205,10 @@ describe('withPoolRetry', () => {
       withPoolRetry(
         async () => {
           calls++
-          throw Object.assign(new Error(`boom ${calls}`), { code: 'P2028' })
+          throw Object.assign(
+            new Error(`Unable to start a transaction in the given time (boom ${calls})`),
+            { code: 'P2028' },
+          )
         },
         { attempts: 3, sleep: async () => {} },
       ),
@@ -203,7 +242,8 @@ describe('withPoolRetry', () => {
     const slept: number[] = []
     await withPoolRetry(
       async () => {
-        if (slept.length < 2) throw Object.assign(new Error('x'), { code: 'P2028' })
+        if (slept.length < 2)
+          throw Object.assign(new Error('Unable to start a transaction in the given time.'), { code: 'P2028' })
         return 'ok'
       },
       {
@@ -224,7 +264,7 @@ describe('withPoolRetry', () => {
     await expect(
       withPoolRetry(
         async () => {
-          throw Object.assign(new Error('x'), { code: 'P2028' })
+          throw Object.assign(new Error('Unable to start a transaction in the given time.'), { code: 'P2028' })
         },
         {
           attempts: 6,
@@ -245,7 +285,7 @@ describe('withPoolRetry', () => {
       withPoolRetry(
         async () => {
           calls++
-          throw Object.assign(new Error('x'), { code: 'P2028' })
+          throw Object.assign(new Error('Unable to start a transaction in the given time.'), { code: 'P2028' })
         },
         { attempts: 0, sleep: async () => {} },
       ),

@@ -107,30 +107,40 @@ export function resolvePgPoolConfig(env: DbEnv = process.env): PgPoolConfig {
 }
 
 /**
- * True only when the failure means "a transaction/connection could not be
- * ACQUIRED" — i.e. nothing ran yet, so a retry cannot duplicate a write.
+ * True only when the failure means a transaction/connection could not be
+ * ACQUIRED — i.e. nothing ran yet, so a retry cannot repeat a side effect.
  *
- * - Prisma `P2028`: "Unable to start a transaction in the given time"
- * - Postgres `57P03`: cannot_connect_now
+ * Deliberately narrower than `code === 'P2028'` (cubic P2, confidence 9 — correct):
+ * Prisma reports P2028 for Transaction API errors GENERALLY, which also covers a
+ * transaction that timed out MID-RUN. Retrying on the code alone would re-execute
+ * the caller's callback, so a scrape handler would repeat its external fetches
+ * and a POST could double-apply. Only the acquisition wording is safe:
  *
- * Deliberately narrow. Mid-transaction failures (unique constraint P2002,
- * not-found P2025, socket resets) are NOT retried: a write may already have
- * been applied.
+ *   "Transaction API error: Unable to start a transaction in the given time."
+ *
+ * — the exact string production logged 54x in 3h.
+ *
+ * Postgres `57P03` (cannot_connect_now) is likewise a pre-execution refusal.
+ *
+ * NOT retried: unique-constraint P2002, not-found P2025, socket resets, and any
+ * P2028 whose message is not the acquisition wording (e.g. "Transaction already
+ * closed", "write conflict").
  */
+const ACQUISITION_FAILURE_PATTERNS = [
+  'Unable to start a transaction in the given time',
+  'cannot_connect_now',
+] as const
+
 export function isPoolExhaustionError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
   const err = error as { code?: unknown; message?: unknown }
-
-  if (typeof err.code === 'string') {
-    if (err.code === 'P2028' || err.code === '57P03') return true
-  }
-
   const message = typeof err.message === 'string' ? err.message : ''
-  return (
-    message.includes('Unable to start a transaction in the given time') ||
-    message.includes('P2028') ||
-    message.includes('cannot_connect_now')
-  )
+
+  // 57P03 is unambiguous: the server refused the connection before anything ran.
+  if (err.code === '57P03') return true
+
+  // P2028 requires the acquisition wording. The code alone is NOT sufficient.
+  return ACQUISITION_FAILURE_PATTERNS.some(pattern => message.includes(pattern))
 }
 
 export type PoolRetryOptions = {
