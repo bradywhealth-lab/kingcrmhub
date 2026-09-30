@@ -68,6 +68,49 @@ describe('buildPostAuthRedirect', () => {
     }
   })
 
+  it('rejects CONTROL characters, which cannot appear in a legitimate path', () => {
+    for (const bad of ['/pricing\n', '/pricing\r\nSet-Cookie: x', '/pricing\t', '/pri\u0000cing', '/pricing\u007F']) {
+      expect(
+        buildPostAuthRedirect({ mustChangePassword: true, callbackPath: bad }),
+        `must not forward a path containing control chars`,
+      ).toBe('/auth/password')
+      expect(buildPostAuthRedirect({ mustChangePassword: false, callbackPath: bad })).toBe('/')
+    }
+  })
+
+  it('PRESERVES printable paths the upstream validator already accepts (cubic P2)', () => {
+    // My first version rejected these, silently dropping a callback that /auth had
+    // approved. They are percent-encoded when nested and escaped by React on render.
+    for (const ok of ['/welcome back', "/pricing?plan=pro&note=a'b", '/p?q="x"', '/a<b>']) {
+      expect(
+        buildPostAuthRedirect({ mustChangePassword: false, callbackPath: ok }),
+        `must return "${ok}" unchanged`,
+      ).toBe(ok)
+
+      const nested = buildPostAuthRedirect({ mustChangePassword: true, callbackPath: ok })
+      expect(nested.startsWith('/auth/password?callbackUrl='), `must forward "${ok}"`).toBe(true)
+      const restored = new URL(nested, 'https://kingcrmhub.net').searchParams.get('callbackUrl')
+      expect(restored, `round trip for "${ok}"`).toBe(ok)
+    }
+  })
+
+  it('behaves EXACTLY like the repo validator, plus control chars', () => {
+    // Parity guard: this helper must never be stricter than the validator whose
+    // output it consumes, or valid callbacks get dropped mid-flow.
+    const upstreamAccepts = (p: string) =>
+      p.startsWith('/') && !p.startsWith('//') && !p.includes('\\')
+    const cases = [
+      '/', '/pricing', '/pricing?plan=pro&interval=monthly', '/welcome back',
+      '/a?b=c d', "/x'y", '/x"y', '/x<y>z', '//evil.com', '/\\evil.com',
+      'relative', '', 'javascript:alert(1)', '/ok\n', '/ok\t',
+    ]
+    for (const c of cases) {
+      const accepted = buildPostAuthRedirect({ mustChangePassword: false, callbackPath: c }) === c
+      const hasControl = /[\u0000-\u001F\u007F]/.test(c)
+      expect(accepted, `"${c}" parity`).toBe(upstreamAccepts(c) && !hasControl)
+    }
+  })
+
   it('is idempotent for an already-encoded callback', () => {
     const once = buildPostAuthRedirect({ mustChangePassword: true, callbackPath: '/pricing?plan=pro&interval=monthly' })
     expect(once).not.toContain('callbackUrl=%252F') // not double-encoded

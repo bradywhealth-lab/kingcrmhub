@@ -25,18 +25,35 @@ const PASSWORD_ROUTE = '/auth/password'
 /**
  * Same-origin absolute-path check.
  *
- * Mirrors the existing validator at `src/app/auth/page.tsx:194-197` and
- * `src/app/auth/password/page.tsx:37-40`: a single leading slash, never
- * protocol-relative (`//host`), never a backslash. This helper must not become a
- * second, weaker route to an open redirect — it builds a URL that the auth flow
- * will navigate to.
+ * MUST behave identically to the existing validators at `src/app/auth/page.tsx:194-197`
+ * and `src/app/auth/password/page.tsx:37-40`: a single leading slash, never
+ * protocol-relative (`//host`), never a backslash.
+ *
+ * cubic P2 (confidence 8) caught a regression I introduced here: my first version
+ * also rejected whitespace and quotes, which is STRICTER than the validator that
+ * already approved this value upstream. So a legitimate callback such as
+ * `/welcome back` was accepted by /auth and then silently dropped by this helper,
+ * losing the redirect — and losing it entirely on the password-setup path.
+ *
+ * Being stricter than the caller is not "defence in depth" here, it is a
+ * behaviour divergence that drops valid input. The only additional rejection is
+ * genuine CONTROL characters (CRLF, tab, NUL, DEL), which cannot appear in a
+ * legitimate path and are the ones worth refusing. Printable characters such as
+ * spaces and quotes are left to the existing rules; they are percent-encoded by
+ * `encodeURIComponent` below and escaped by React on render.
  */
+/**
+ * Genuine control characters (CRLF, tab, NUL, DEL). Rejected because they cannot
+ * appear in a legitimate path and are the ones worth refusing. The unicode-escape
+ * form is used so no eslint control-regex exemption is needed.
+ */
+const CONTROL_CHARS = /[\u0000-\u001F\u007F]/
+
 function isSafeSameOriginPath(path: string): boolean {
   if (!path.startsWith('/')) return false
   if (path.startsWith('//')) return false
   if (path.includes('\\')) return false
-  // Reject anything that is not a plain path+query (e.g. embedded control chars).
-  return !/[\s"'<>]/.test(path)
+  return !CONTROL_CHARS.test(path)
 }
 
 export type PostAuthRedirectInput = {
