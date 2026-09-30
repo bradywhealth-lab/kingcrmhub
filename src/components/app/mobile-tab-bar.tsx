@@ -3,7 +3,10 @@
 import { LayoutDashboard, Users, GitBranch, CheckSquare, MoreHorizontal, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const MOBILE_TABS = [
+// Exported so nav-labels.test.ts can assert the RUNTIME value and guard
+// against desktop/mobile label drift (app-shell.tsx shipped "Work" while
+// this file shipped "Tasks" for the same view id).
+export const MOBILE_TABS = [
   { id: "dashboard", icon: LayoutDashboard, label: "Home" },
   { id: "leads", icon: Users, label: "Clients" },
   { id: "pipeline", icon: GitBranch, label: "Pipeline" },

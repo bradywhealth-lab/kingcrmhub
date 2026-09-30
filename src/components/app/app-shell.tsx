@@ -17,7 +17,7 @@ export const APP_NAV_ITEMS = [
   { id: "dashboard", icon: LayoutDashboard, label: "Home" },
   { id: "leads", icon: Users, label: "Clients" },
   { id: "pipeline", icon: GitBranch, label: "Pipeline" },
-  { id: "tasks", icon: CheckSquare, label: "Work" },
+  { id: "tasks", icon: CheckSquare, label: "Tasks" },
   { id: "automation", icon: Zap, label: "Automations" },
   { id: "assistant", icon: MessageSquare, label: "Assistant" },
   { id: "prompts", icon: Sparkles, label: "Prompts" },
