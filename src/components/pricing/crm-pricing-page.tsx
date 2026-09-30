@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check, X, Zap, Crown, Building2, Shield, ChevronDown,
@@ -176,6 +176,15 @@ export function CrmPricingPage() {
   // params — after sign-in the visitor landed back here and the purchase intent was
   // silently dropped. This holds the resumed intent so it can be offered again.
   const [resumeIntent, setResumeIntent] = useState<PlanIntent | null>(null);
+  // cubic P2 (crm-pricing-page.tsx:225, confidence 8): `isLoading` was per-plan
+  // (loadingPlan === plan.id), so every OTHER plan CTA — and the resumed-checkout
+  // Continue button — stayed enabled while a checkout was in flight. Two clicks
+  // meant two POSTs to /api/billing/checkout and two Stripe Checkout Sessions.
+  //
+  // A ref, not just the state flag: setLoadingPlan is async, so back-to-back clicks
+  // in the same tick would both still read `loadingPlan === null` and both proceed.
+  // The ref flips synchronously on entry.
+  const checkoutInFlightRef = useRef(false);
 
   // Read a checkout intent that survived a login redirect. Deliberately does NOT
   // auto-submit: silently POSTing to /api/billing/checkout on page load would
@@ -225,11 +234,18 @@ export function CrmPricingPage() {
     void handleCta(intent.planId);
   };
 
+  // Shared busy flag for the UI: true while ANY checkout is in flight, so all
+  // checkout CTAs disable together rather than only the one that was clicked.
+  const isCheckoutBusy = loadingPlan !== null;
+
   const handleCta = async (planId: PlanId) => {
     if (planId === "free") {
       router.push("/auth");
       return;
     }
+    // Synchronous lock: rejects a second concurrent checkout before any await.
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
     setLoadingPlan(planId);
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -259,6 +275,7 @@ export function CrmPricingPage() {
     } catch {
       showToast("Something went wrong. Please try again.");
     } finally {
+      checkoutInFlightRef.current = false;
       setLoadingPlan(null);
     }
   };
@@ -343,7 +360,7 @@ export function CrmPricingPage() {
                 </div>
                 <button
                   onClick={() => void handleCta(plan.id)}
-                  disabled={isLoading}
+                  disabled={isCheckoutBusy}
                   className={`mb-6 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 ${plan.btnClass}`}
                 >
                   {isLoading ? (
@@ -486,6 +503,7 @@ export function CrmPricingPage() {
             type="button"
             data-testid="resume-checkout-continue"
             onClick={continueResumeIntent}
+            disabled={isCheckoutBusy}
             className="rounded-xl bg-[#0c111b] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#14202e]"
           >
             Continue

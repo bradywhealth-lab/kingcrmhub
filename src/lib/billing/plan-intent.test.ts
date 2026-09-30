@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PLANS as PLANS_SOURCE, PAID_PLAN_IDS, isPlanId as catalogIsPlanId } from './plans'
 import {
   buildPricingCallbackUrl,
   isPlanId,
@@ -63,8 +64,14 @@ describe('parsePlanIntent', () => {
     expect(parsePlanIntent(params)).toEqual({ planId: 'pro', interval: 'monthly' })
   })
 
-  it('defaults a missing interval to monthly', () => {
-    expect(parsePlanIntent(new URLSearchParams('plan=starter'))).toEqual({
+  it('REQUIRES an explicit interval — deliberately changed from defaulting to monthly', () => {
+    // CHANGED ON PURPOSE (was: "defaults a missing interval to monthly").
+    // The old expectation encoded the P1 duplicate-subscription bug: defaulting a
+    // missing interval made Stripe's success_url (/pricing?checkout=success&plan=X,
+    // which carries NO interval) parse as a resumable intent. That assertion was
+    // wrong, so it is inverted rather than deleted — see the P1 describe block.
+    expect(parsePlanIntent(new URLSearchParams('plan=starter'))).toBeNull()
+    expect(parsePlanIntent(new URLSearchParams('plan=starter&interval=monthly'))).toEqual({
       planId: 'starter',
       interval: 'monthly',
     })
@@ -100,7 +107,9 @@ describe('parsePlanIntent', () => {
   })
 
   it('takes the first value when a param is repeated (no array coercion)', () => {
-    expect(parsePlanIntent(new URLSearchParams('plan=pro&plan=starter'))).toEqual({
+    // Updated alongside the interval change above: the URL now carries an explicit
+    // interval, because a missing one is (correctly) rejected.
+    expect(parsePlanIntent(new URLSearchParams('plan=pro&plan=starter&interval=monthly'))).toEqual({
       planId: 'pro',
       interval: 'monthly',
     })
@@ -203,12 +212,10 @@ describe('resolveResumeIntent (the mount-time seam the pricing page calls)', () 
 })
 
 describe('buildResumePrompt', () => {
-  const CATALOG = [
-    { id: 'free', name: 'Free' },
-    { id: 'starter', name: 'Pro' },
-    { id: 'pro', name: 'Studio' },
-    { id: 'enterprise', name: 'Elite' },
-  ]
+  // cubic P3: do NOT re-hardcode the plan-id -> display-name mapping. Deriving it
+  // from the canonical catalog means these tests fail if the mapping changes,
+  // instead of passing against stale names while the real prompt renders new ones.
+  const CATALOG = PLANS_SOURCE.map((plan) => ({ id: plan.planId, name: plan.displayName }))
 
   it('is hidden when there is no intent (the normal visit)', () => {
     expect(buildResumePrompt(null, CATALOG)).toEqual({ visible: false, planName: null })
@@ -289,6 +296,7 @@ describe('producer/consumer cannot drift', () => {
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+
 const COMPONENT_PATH = join(
   process.cwd(),
   'src',
@@ -339,5 +347,144 @@ describe('crm-pricing-page consumes the intent contract (wiring guard)', () => {
     expect(mountEffect).toContain('setResumeIntent(intent)')
     expect(mountEffect).not.toContain('handleCta')
     expect(source).toContain('void handleCta(intent.planId)')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// P1 — codex AND cubic found this independently, and it is a MONEY bug I
+// introduced. Verified in source:
+//   src/app/api/billing/checkout/route.ts:215
+//     success_url: `${appBaseUrl}/pricing?checkout=success&plan=${planId}`
+//   :216 cancel_url: `${appBaseUrl}/pricing?checkout=canceled&plan=${planId}`
+// Neither carries `interval`. My parsePlanIntent defaulted a missing interval to
+// monthly, so a COMPLETED checkout's return URL parsed as a valid resume intent —
+// the page would offer "Continue your Studio checkout?" on a purchase that had
+// just succeeded. Clicking it before Stripe's webhook persists the subscription
+// creates a SECOND Checkout Session and exposes the customer to a duplicate
+// subscription.
+// ---------------------------------------------------------------------------
+describe('P1: Stripe return URLs must never resume a checkout', () => {
+  it('rejects the checkout=success return URL (plan present, interval absent)', () => {
+    expect(resolveResumeIntent('?checkout=success&plan=pro')).toBeNull()
+    expect(resolveResumeIntent('?checkout=success&plan=starter')).toBeNull()
+    expect(resolveResumeIntent('?checkout=success&plan=enterprise')).toBeNull()
+  })
+
+  it('rejects checkout=success even if an interval is appended', () => {
+    // Belt and braces: the marker alone disqualifies the intent.
+    expect(resolveResumeIntent('?checkout=success&plan=pro&interval=monthly')).toBeNull()
+  })
+
+  it('rejects the checkout=canceled return URL', () => {
+    expect(resolveResumeIntent('?checkout=canceled&plan=pro')).toBeNull()
+  })
+
+  it('requires an EXPLICIT interval for a resume intent — no defaulting', () => {
+    // The default-to-monthly behaviour is what made the success URL parse. A
+    // resume must carry both halves of the intent it is resuming.
+    expect(parsePlanIntent(new URLSearchParams('plan=pro'))).toBeNull()
+    expect(parsePlanIntent(new URLSearchParams('plan=pro&interval='))).toBeNull()
+    expect(parsePlanIntent(new URLSearchParams('plan=pro&interval=monthly'))).toEqual({
+      planId: 'pro',
+      interval: 'monthly',
+    })
+  })
+
+  it('still builds a callbackUrl WITH an explicit interval, so the round trip survives', () => {
+    // The producer always writes interval=monthly, so tightening the consumer
+    // does not break the intended flow.
+    for (const planId of PAID_PLAN_IDS) {
+      const callback = buildPricingCallbackUrl(planId, 'monthly')
+      expect(callback).toContain('interval=monthly')
+      const search = callback.slice(callback.indexOf('?'))
+      expect(resolveResumeIntent(search), `round trip for ${planId}`).toEqual({
+        planId,
+        interval: 'monthly',
+      })
+    }
+  })
+})
+
+describe('P2: no duplicated plan-id list (cubic, plan-intent.ts:44)', () => {
+  it('uses the canonical catalog guard, not a local copy', () => {
+    // The catalog already exports isPlanId and PAID_PLAN_IDS. A second hand-written
+    // list drifts silently when a plan is added or removed.
+    const catalogIds = PLANS_SOURCE.map((p) => p.planId)
+    for (const id of catalogIds) {
+      expect(isPlanId(id), `catalog id ${id}`).toBe(true)
+      expect(isPlanId(id), `guard must agree with catalog for ${id}`).toBe(catalogIsPlanId(id))
+    }
+  })
+
+  it('AGREES WITH THE CATALOG IN BOTH DIRECTIONS — accepted set is exactly the catalog', () => {
+    // This test exists because mutation testing caught a real hole: the previous
+    // version only iterated catalog ids, so a hand-written list containing an EXTRA
+    // id (e.g. 'platinum') passed every assertion while `isPlanId('platinum')`
+    // wrongly returned true. Acceptance-only checks cannot detect over-acceptance.
+    //
+    // So: for ids the catalog does NOT know, this guard must also reject them.
+    const unknownIds = [
+      'platinum', 'team', 'plus', 'premium', 'enterprise2', 'starter2',
+      'Pro', 'PRO', 'Studio', 'Elite', 'Free', 'pro ', ' pro', '', 'null',
+      'undefined', '__proto__', 'constructor', 'hasOwnProperty',
+    ]
+    for (const id of unknownIds) {
+      expect(catalogIsPlanId(id), `precondition: catalog should reject "${id}"`).toBe(false)
+      expect(isPlanId(id), `guard must reject "${id}" that the catalog rejects`).toBe(false)
+    }
+
+    // And the accepted set must be EXACTLY the catalog's set, no more.
+    const catalogIds = new Set<string>(PLANS_SOURCE.map((p) => p.planId))
+    const accepted = [...catalogIds, ...unknownIds].filter(id => isPlanId(id))
+    expect(new Set(accepted)).toEqual(catalogIds)
+  })
+
+  it('resumes exactly the paid plans in the catalog, and nothing else', () => {
+    for (const id of PAID_PLAN_IDS) {
+      expect(resolveResumeIntent(`?plan=${id}&interval=monthly`), `${id} should resume`).toEqual({
+        planId: id,
+        interval: 'monthly',
+      })
+    }
+    // free is in the catalog but is not paid -> not resumable
+    expect(resolveResumeIntent('?plan=free&interval=monthly')).toBeNull()
+  })
+
+  it('rejects any id the catalog does not know', () => {
+    const catalogIds = new Set<string>(PLANS_SOURCE.map((p) => p.planId))
+    for (const id of ['platinum', 'team', 'Pro', 'studio', 'enterprise2', '']) {
+      if (catalogIds.has(id)) continue
+      expect(resolveResumeIntent(`?plan=${id}&interval=monthly`), `"${id}" must be rejected`).toBeNull()
+    }
+  })
+})
+
+describe('crm-pricing-page guards concurrent checkout (cubic P2, wiring guard)', () => {
+  const source = readFileSync(COMPONENT_PATH, 'utf8')
+
+  it('locks on a ref, not only async state — same-tick double clicks must be rejected', () => {
+    expect(source).toContain('checkoutInFlightRef')
+    expect(source).toMatch(/useRef\(false\)/)
+    // the synchronous guard must run before any await
+    expect(source).toContain('if (checkoutInFlightRef.current) return')
+    expect(source).toContain('checkoutInFlightRef.current = true')
+    // and must be released in finally, or a failed checkout would lock the page forever
+    const finallyBlock = source.slice(source.lastIndexOf('} finally {'))
+    expect(finallyBlock).toContain('checkoutInFlightRef.current = false')
+  })
+
+  it('disables EVERY plan CTA on the shared flag, not the per-plan one', () => {
+    expect(source).toContain('const isCheckoutBusy = loadingPlan !== null')
+    expect(source).toContain('disabled={isCheckoutBusy}')
+    // the per-plan spinner flag must NOT be what disables the buttons
+    expect(source).not.toContain('disabled={isLoading}')
+  })
+
+  it('disables the resumed-checkout Continue button while busy', () => {
+    const cont = source.slice(
+      source.indexOf('data-testid="resume-checkout-continue"'),
+      source.indexOf('data-testid="resume-checkout-dismiss"'),
+    )
+    expect(cont).toContain('disabled={isCheckoutBusy}')
   })
 })

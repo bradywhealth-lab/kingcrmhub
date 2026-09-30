@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AuthLoadingSkeleton } from '@/components/auth/auth-loading'
+import { buildPostAuthRedirect } from '@/lib/auth/post-auth-redirect'
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset'
 
@@ -89,7 +90,12 @@ function AuthPageInner() {
       try {
         const session = await getSession()
         if (!cancelled && session?.user) {
-          router.replace(session.user.mustChangePassword ? '/auth/password' : '/')
+          router.replace(
+            buildPostAuthRedirect({
+              mustChangePassword: Boolean(session.user.mustChangePassword),
+              callbackPath: safeCallback,
+            }),
+          )
           router.refresh()
         }
       } catch {
@@ -124,6 +130,20 @@ function AuthPageInner() {
         return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
       })())
     }
+  }, [searchParams])
+
+  /**
+   * Validated `?callbackUrl`, hoisted to component scope so BOTH post-auth
+   * redirects (the mount effect and the submit handler) can honour it.
+   * cubic P2: previously only the submit handler computed this, and it was dropped
+   * entirely on the mustChangePassword path.
+   * Same rules as before: single leading slash, not protocol-relative, no backslash.
+   */
+  const safeCallback = useMemo(() => {
+    const rawCallback = searchParams.get('callbackUrl') ?? ''
+    return rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+      ? rawCallback
+      : '/'
   }, [searchParams])
 
   const currentModeTitle = useMemo(() => {
@@ -190,15 +210,15 @@ function AuthPageInner() {
       const password = mode === 'login' ? loginPassword : signupPassword
       // Validate ?callbackUrl before signing in (cubic P2 round 3): only
       // same-origin absolute paths are honoured; everything else → '/'.
-      const rawCallback = searchParams.get('callbackUrl') ?? ''
-      const safeCallback =
-        rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
-          ? rawCallback
-          : '/'
       const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: safeCallback })
       if (!result || result.error) throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Authentication failed.')
       const session = await getSession()
-      router.push(session?.user?.mustChangePassword ? '/auth/password' : safeCallback)
+      router.push(
+        buildPostAuthRedirect({
+          mustChangePassword: Boolean(session?.user?.mustChangePassword),
+          callbackPath: safeCallback,
+        }),
+      )
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.')
