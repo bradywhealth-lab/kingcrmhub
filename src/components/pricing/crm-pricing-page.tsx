@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check, X, Zap, Crown, Building2, Shield, ChevronDown,
   Loader2, Star, ArrowRight, type LucideIcon,
 } from "lucide-react";
 import { PLANS as CATALOG, type PlanId } from "@/lib/billing/plans";
+import {
+  buildPricingCallbackUrl,
+  buildResumePrompt,
+  resolveResumeIntent,
+  type PlanIntent,
+} from "@/lib/billing/plan-intent";
 
 /**
  * Pricing page — plan data comes from the canonical billing catalog
@@ -165,6 +171,30 @@ export function CrmPricingPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [billing, setBilling] = useState<BillingDisplay>("loading");
+  // DEFECT-1 (real mechanism): the signed-out CTA already redirects to
+  // /auth?callbackUrl=/pricing?plan=X&interval=monthly, but NOTHING consumed those
+  // params — after sign-in the visitor landed back here and the purchase intent was
+  // silently dropped. This holds the resumed intent so it can be offered again.
+  const [resumeIntent, setResumeIntent] = useState<PlanIntent | null>(null);
+  // cubic P2 (crm-pricing-page.tsx:225, confidence 8): `isLoading` was per-plan
+  // (loadingPlan === plan.id), so every OTHER plan CTA — and the resumed-checkout
+  // Continue button — stayed enabled while a checkout was in flight. Two clicks
+  // meant two POSTs to /api/billing/checkout and two Stripe Checkout Sessions.
+  //
+  // A ref, not just the state flag: setLoadingPlan is async, so back-to-back clicks
+  // in the same tick would both still read `loadingPlan === null` and both proceed.
+  // The ref flips synchronously on entry.
+  const checkoutInFlightRef = useRef(false);
+
+  // Read a checkout intent that survived a login redirect. Deliberately does NOT
+  // auto-submit: silently POSTing to /api/billing/checkout on page load would
+  // bounce the visitor to Stripe without a click, so the intent is surfaced as an
+  // explicit "Continue" prompt instead.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const intent = resolveResumeIntent(window.location.search);
+    if (intent) setResumeIntent(intent);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,11 +219,33 @@ export function CrmPricingPage() {
     setTimeout(() => setToast(null), 5000);
   };
 
+  // The visible/name decision lives in the tested view-model, not inline here, so
+  // the assertions in plan-intent.test.ts guard the real implementation instead of
+  // a copy of it (cubic P2 on #221: a test over duplicated logic proves nothing).
+  const resumePrompt = buildResumePrompt(resumeIntent, PLANS, Boolean(toast));
+  const resumePlanName = resumePrompt.planName;
+
+  const dismissResumeIntent = () => setResumeIntent(null);
+
+  const continueResumeIntent = () => {
+    if (!resumeIntent) return;
+    const intent = resumeIntent;
+    setResumeIntent(null);
+    void handleCta(intent.planId);
+  };
+
+  // Shared busy flag for the UI: true while ANY checkout is in flight, so all
+  // checkout CTAs disable together rather than only the one that was clicked.
+  const isCheckoutBusy = loadingPlan !== null;
+
   const handleCta = async (planId: PlanId) => {
     if (planId === "free") {
       router.push("/auth");
       return;
     }
+    // Synchronous lock: rejects a second concurrent checkout before any await.
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
     setLoadingPlan(planId);
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -203,7 +255,12 @@ export function CrmPricingPage() {
       });
       const data = (await res.json()) as { url?: string | null; message?: string; error?: string };
       if (res.status === 401) {
-        router.push(`/auth?callbackUrl=${encodeURIComponent(`/pricing?plan=${planId}&interval=monthly`)}`);
+        // Shared with the resume consumer so producer and consumer cannot drift.
+        // Verified live: this route returns application/json on 401, so the
+        // res.json() above does not throw and this branch is reachable.
+        router.push(
+          `/auth?callbackUrl=${encodeURIComponent(buildPricingCallbackUrl(planId, "monthly"))}`,
+        );
         return;
       }
       if (!res.ok) {
@@ -218,6 +275,7 @@ export function CrmPricingPage() {
     } catch {
       showToast("Something went wrong. Please try again.");
     } finally {
+      checkoutInFlightRef.current = false;
       setLoadingPlan(null);
     }
   };
@@ -302,7 +360,7 @@ export function CrmPricingPage() {
                 </div>
                 <button
                   onClick={() => void handleCta(plan.id)}
-                  disabled={isLoading}
+                  disabled={isCheckoutBusy}
                   className={`mb-6 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 ${plan.btnClass}`}
                 >
                   {isLoading ? (
@@ -432,6 +490,35 @@ export function CrmPricingPage() {
       <footer className="border-t border-[var(--ink-line)] py-8 text-center text-xs text-[#6b6e74]">
         © {new Date().getFullYear()} King CRM Hub. Proof. Decision. Next Move.
       </footer>
+
+      {/* DEFECT-1: resumed checkout intent. Explicit prompt, never an auto-submit. */}
+      {resumePrompt.visible && resumeIntent && (
+        <div
+          data-testid="resume-checkout-prompt"
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-[var(--ink-line)] bg-white px-5 py-3.5 text-sm font-medium text-[#0c111b] shadow-xl"
+        >
+          <span>Continue your {resumePlanName} checkout?</span>
+          <button
+            type="button"
+            data-testid="resume-checkout-continue"
+            onClick={continueResumeIntent}
+            disabled={isCheckoutBusy}
+            className="rounded-xl bg-[#0c111b] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#14202e]"
+          >
+            Continue
+          </button>
+          <button
+            type="button"
+            data-testid="resume-checkout-dismiss"
+            onClick={dismissResumeIntent}
+            aria-label="Dismiss checkout reminder"
+            className="rounded-xl border border-[var(--ink-line)] px-3 py-2 text-xs font-medium text-[#0c111b]/70 transition hover:bg-[#0c111b]/5"
+          >
+            Not now
+          </button>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
