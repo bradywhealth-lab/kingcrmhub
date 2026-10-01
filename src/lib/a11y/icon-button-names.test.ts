@@ -67,10 +67,82 @@ function findOpenTagEnd(src: string, start: number): number {
   return -1
 }
 
+/**
+ * Rendered text only, using the SAME brace/quote-aware lexing as the tag scan.
+ *
+ * The previous version used `/<[^>]*>/g` — exactly the naive pattern this file
+ * exists to avoid. A child attribute containing '>' (a comparison such as
+ * `{count > 0}`) truncated the child element and left attribute text behind that
+ * looked like a rendered label, so a genuinely unnamed button passed.
+ */
 function visibleText(children: string): string {
-  let txt = children.replace(/<[^>]*>/g, ' ')
-  txt = txt.replace(/\{[\s\S]*?\}/g, ' ')
-  return txt.split(/\s+/).filter(Boolean).join(' ')
+  let out = ''
+  let i = 0
+  while (i < children.length) {
+    const ch = children[i]
+    // skip JSX element tags entirely
+    if (ch === '<' && /[A-Za-z/]/.test(children[i + 1] ?? '')) {
+      const end = findOpenTagEnd(children, i)
+      if (end === -1) break
+      i = end + 1
+      continue
+    }
+    // skip JSX expression containers, tracking nested braces
+    if (ch === '{') {
+      let depth = 0
+      let j = i
+      for (; j < children.length; j++) {
+        if (children[j] === '{') depth++
+        else if (children[j] === '}') { depth--; if (depth === 0) break }
+      }
+      i = j + 1
+      continue
+    }
+    out += ch
+    i++
+  }
+  return out.split(/\s+/).filter(Boolean).join(' ')
+}
+
+/** Children text for a non-self-closing tag, or '' for a self-closing one. */
+function childrenOf(src: string, tag: string, tagEndIdx: number): string {
+  if (tag.trimEnd().endsWith('/>')) return ''
+  const close = src.indexOf('</Button>', tagEndIdx)
+  // `tagEndIdx` is the index OF the closing '>', so children start one later.
+  // Slicing from tagEndIdx leaves a stray '>' that visibleText() reports as
+  // rendered text, skipping EVERY offender and making the repo-wide assertion
+  // pass vacuously. Caught by the self-check test below.
+  return close === -1 ? src.slice(tagEndIdx + 1, tagEndIdx + 201) : src.slice(tagEndIdx + 1, close)
+}
+
+/**
+ * The aria-label VALUE, or null when the attribute is absent.
+ *
+ * An empty literal ('' / "" / ``) is NOT an accessible name. A substring check
+ * for `aria-label` accepted it, so an unnamed button passed the guard — review
+ * finding at confidence 10.
+ */
+function ariaLabelValue(tag: string): string | null {
+  const dq = tag.match(/aria-label\s*=\s*"([^"]*)"/)
+  if (dq) return dq[1]
+  const sq = tag.match(/aria-label\s*=\s*'([^']*)'/)
+  if (sq) return sq[1]
+  const expr = tag.match(/aria-label\s*=\s*\{([\s\S]*?)\}/)
+  if (expr) {
+    const inner = expr[1].trim()
+    if (inner === "''" || inner === '""' || inner === '``') return ''
+    return inner // dynamic: value not statically knowable, but present
+  }
+  return null
+}
+
+/** True only when a NON-EMPTY accessible name is actually present. */
+function hasRealName(tag: string, children: string): boolean {
+  const label = ariaLabelValue(tag)
+  if (label !== null && label.trim().length > 0) return true
+  if (/aria-labelledby\s*=\s*["'{][^"'}]+/.test(tag)) return true
+  if (children.includes('sr-only')) return true
+  return visibleText(children).length > 0
 }
 
 function unnamedIconButtons(src: string): string[] {
@@ -87,22 +159,10 @@ function unnamedIconButtons(src: string): string[] {
     i = end + 1
 
     if (!tag.includes('size="icon"')) continue
-    if (tag.includes('aria-label') || tag.includes('aria-labelledby')) continue
     if (tag.trimEnd().endsWith('/>') && tag.includes('{...props}')) continue // name comes from caller
+    if (hasRealName(tag, childrenOf(src, tag, end))) continue
 
-    let children: string
-    if (tag.trimEnd().endsWith('/>')) {
-      children = ''
-    } else {
-      // `end` is the index OF the closing '>', so children start at end + 1.
-      // Slicing from `end` leaves a stray '>' that visibleText() reports as
-      // rendered text, which skips EVERY offender and makes the repo-wide
-      // assertion pass vacuously. Caught by the self-check test below.
-      const close = src.indexOf('</Button>', end)
-      children = close === -1 ? src.slice(end + 1, end + 201) : src.slice(end + 1, close)
-    }
-    if (children.includes('sr-only')) continue
-    if (visibleText(children)) continue
+    const children = childrenOf(src, tag, end)
 
     const line = src.slice(0, start).split('\n').length
     offenders.push(`line ${line}: ${tag.replace(/\s+/g, ' ').slice(0, 100)}`)
@@ -123,14 +183,44 @@ describe('S28: icon-only buttons have an accessible name', () => {
     expect(all, 'icon-only buttons that announce nothing to screen readers').toEqual([])
   })
 
-  it('the 4 remaining offenders are labelled specifically', () => {
+  it('the 4 remaining offenders are labelled, and the labels are TRUTHFUL', () => {
     const page = readFileSync(join(SRC, 'app/page.tsx'), 'utf8')
-    expect(page).toMatch(/aria-label=\{`Add lead to \$\{stage\.name\}`\}/)
-    expect(page).toMatch(/aria-label=\{`(Delete|Remove) \$\{item\.title\}`\}/)
+
+    // Was `Add lead to ${stage.name}`. Review proved that a lie: the dispatch
+    // carries no detail, use-workspace-overlays' leadHandler ignores detail, and
+    // add-lead-dialog's only Select is `source` — the lead does NOT land in the
+    // clicked column. An honest generic label beats a specific false promise.
+    expect(page).toMatch(/aria-label="Add lead"/)
+    expect(page, 'the stage-specific false promise must stay gone')
+      .not.toContain('Add lead to ${stage.name}')
+
+    // item.title is string|null (/api/content does `title?.trim() || null`) and
+    // the row renders `item.title || 'Untitled post'`. Interpolating the raw
+    // value announced "Delete null" while the user looked at "Untitled post".
+    expect(page).toMatch(/aria-label=\{`Delete \$\{item\.title \|\| 'Untitled post'\}`\}/)
+    expect(page, 'raw null interpolation must stay gone')
+      .not.toContain('aria-label={`Delete ${item.title}`}')
 
     const ai = readFileSync(join(SRC, 'components/ai/ai-assistant-view.tsx'), 'utf8')
     expect(ai).toMatch(/aria-label="New chat"/)
     expect(ai).toMatch(/aria-label="Send message"/)
+  })
+
+  it('the honest Add lead label is consistent with what the button does', () => {
+    // Pin the reasoning, not just the string: the button must still dispatch the
+    // generic event with NO stage payload. If someone later makes the dialog
+    // stage-aware, this fails and the label should be revisited.
+    const page = readFileSync(join(SRC, 'app/page.tsx'), 'utf8')
+    expect(page).toContain('new CustomEvent("open-add-lead")')
+    expect(page, 'open-add-lead must still carry no detail payload')
+      .not.toMatch(/new CustomEvent\("open-add-lead",\s*\{\s*detail/)
+
+    const overlays = readFileSync(join(SRC, 'components/app/use-workspace-overlays.ts'), 'utf8')
+    expect(overlays).toMatch(/const leadHandler = \(\) => setShowAddLeadDialog\(true\)/)
+    expect(overlays, 'leadHandler must still ignore event detail').not.toContain('leadHandler = (event')
+
+    const dialog = readFileSync(join(SRC, 'components/app/add-lead-dialog.tsx'), 'utf8')
+    expect(dialog, 'the lead dialog has no stage field').not.toMatch(/name="stage"|id="stage"/)
   })
 
   it('does NOT flag the two legitimate patterns (guards against a cry-wolf rule)', () => {

@@ -25,8 +25,22 @@ import { describe, expect, it } from 'vitest'
 
 const ROOT = process.cwd()
 
+/**
+ * Parse a 3- or 6-digit hex colour.
+ *
+ * 4-digit (#RGBA) and 8-digit (#RRGGBBAA) forms are REJECTED rather than
+ * mis-parsed. An earlier version silently dropped the alpha and shifted the
+ * digit groups, producing a wrong contrast number instead of a failure — a
+ * wrong ratio is worse than an exception, because it looks like evidence.
+ */
 function parseRgb(h: string): [number, number, number] {
   const s = h.replace('#', '')
+  if (s.length !== 3 && s.length !== 6) {
+    throw new Error(`parseRgb: expected 3 or 6 hex digits, got ${s.length} in "${h}"`)
+  }
+  if (!/^[0-9a-fA-F]+$/.test(s)) {
+    throw new Error(`parseRgb: "${h}" is not hex`)
+  }
   const full = s.length === 3 ? s.split('').map((c) => c + c).join('') : s
   return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)]
 }
@@ -72,21 +86,41 @@ describe('S31 guard: /claim placeholder clears WCAG AA', () => {
     }
   })
 
-  it('that placeholder colour is >= 4.5:1 on the claim field background', () => {
-    const m = claim.match(/placeholder:text-\[rgba\((\d+),(\d+),(\d+),([\d.]+)\)\]/)
-    expect(m, 'placeholder colour must be an rgba() so we can composite it').not.toBeNull()
-    const [, r, g, b, a] = m as RegExpMatchArray
-    const composited = composite([+r, +g, +b], parseFloat(a), CLAIM_BG)
-    const ratio = contrast(composited, CLAIM_BG)
-    expect(ratio, `placeholder composites to rgb(${composited.join(',')}) on #0C111B`).toBeGreaterThanOrEqual(4.5)
+  /**
+   * EVERY placeholder colour in the file, not just the first.
+   *
+   * `.match()` without /g returns only the first hit, so the contrast and
+   * subordination assertions were only ever evaluated for the EMAIL input. A
+   * future edit lowering the license-key input's alpha — still in rgba() form,
+   * so the "declares an explicit colour" test would pass — would slip straight
+   * through. Review finding.
+   */
+  const placeholderColours = (): Array<[number, number, number, number]> =>
+    [...claim.matchAll(/placeholder:text-\[rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)\]/g)].map(
+      (m) => [+m[1], +m[2], +m[3], parseFloat(m[4])] as [number, number, number, number],
+    )
+
+  it('EVERY claim placeholder colour is >= 4.5:1 on the field background', () => {
+    const colours = placeholderColours()
+    expect(colours.length, 'claim has two fields, both with placeholders').toBeGreaterThanOrEqual(2)
+    for (const [r, g, b, a] of colours) {
+      const composited = composite([r, g, b], a, CLAIM_BG)
+      const ratio = contrast(composited, CLAIM_BG)
+      expect(
+        ratio,
+        `rgba(${r},${g},${b},${a}) composites to rgb(${composited.join(',')}) on #0C111B`,
+      ).toBeGreaterThanOrEqual(4.5)
+    }
   })
 
-  it('stays subordinate to the typed input text', () => {
-    const m = claim.match(/placeholder:text-\[rgba\((\d+),(\d+),(\d+),([\d.]+)\)\]/) as RegExpMatchArray
-    const phRatio = contrast(composite([+m[1], +m[2], +m[3]], parseFloat(m[4]), CLAIM_BG), CLAIM_BG)
+  it('EVERY claim placeholder stays subordinate to the typed input text', () => {
+    const colours = placeholderColours()
     const textRatio = contrast(parseRgb('#F4F0E6'), CLAIM_BG) // claim page PAPER
-    expect(textRatio).toBeGreaterThanOrEqual(4.5)
-    expect(phRatio, 'placeholder must remain dimmer than real input').toBeLessThan(textRatio)
+    expect(textRatio, 'typed text must itself clear AA').toBeGreaterThanOrEqual(4.5)
+    for (const [r, g, b, a] of colours) {
+      const phRatio = contrast(composite([r, g, b], a, CLAIM_BG), CLAIM_BG)
+      expect(phRatio, 'placeholder must remain dimmer than real input').toBeLessThan(textRatio)
+    }
   })
 
   it('documents the bug it guards: the old light-theme muted grey was ~1:1 here', () => {
@@ -99,23 +133,91 @@ describe('S31 guard: /claim placeholder clears WCAG AA', () => {
 describe('S31/S21 guard: light-theme --muted-foreground clears AA on the app surface', () => {
   const css = readFileSync(join(ROOT, 'src/app/globals.css'), 'utf8')
 
-  it('light theme muted text is >= 4.5:1 on --background', () => {
+  /**
+   * The body of a specific top-level CSS block (`:root` or `.dark`).
+   *
+   * Locating the light token by "first --muted-foreground in the file" worked
+   * only because `:root` happens to precede `.dark`. Reordering the file, or
+   * adding an earlier declaration, would have made this test silently composite
+   * the DARK token rgba(242,242,243,0.60) over the LIGHT background #f6f6f4 —
+   * about 1.07:1 — and fail spuriously (or, worse, pass against a token nobody
+   * edits). Scope the lookup to the block instead. Review finding.
+   */
+  const blockBody = (selector: string): string => {
+    // A plain indexOf(selector) is NOT enough and produced a real bug here:
+    // `.dark` first occurs on line 4 inside `@custom-variant dark (&:is(.dark *))`
+    // and again inside a comment on line 54, so brace-matching from the first hit
+    // landed on the `@theme inline` block instead of `.dark {` — the same
+    // naive-substring failure this whole PR is about, in the guard meant to
+    // prevent it. Require the selector to actually start a rule.
+    const stripped = css
+      .replace(/\/\*[\s\S]*?\*\//g, '')   // comments (line 54 mentions `.dark`)
+      .replace(/^\s*\/\/.*$/gm, '')
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // selector, then only whitespace, then '{'; and not preceded by an
+    // identifier char (so `.dark-mode` cannot satisfy `.dark`)
+    const rule = new RegExp(`(^|[};])\\s*${escaped}\\s*\\{`, 'm')
+    const m = stripped.match(rule)
+    expect(m, `${selector} must open a rule block in globals.css`).not.toBeNull()
+    const open = m!.index! + m![0].length - 1
+    // match braces to find this block's own close, ignoring nested rules
+    let depth = 0
+    for (let i = open; i < stripped.length; i++) {
+      if (stripped[i] === '{') depth++
+      else if (stripped[i] === '}') {
+        depth--
+        if (depth === 0) return stripped.slice(open + 1, i)
+      }
+    }
+    throw new Error(`${selector} block is never closed`)
+  }
+
+  const tokenIn = (body: string, name: string): string => {
+    const m = body.match(new RegExp(`--${name}:\\s*([^;]+);`))
+    expect(m, `--${name} must be declared in this block`).not.toBeNull()
+    return m![1].trim()
+  }
+
+  it('light theme muted text is >= 4.5:1 on the light --background', () => {
     // #223 raised this 0.55 -> 0.62. On #f6f6f4 that is 5.57:1; at 0.55 it was
     // 4.35:1 and FAILED. This is the guard that keeps S21 from silently
     // regressing — and the reason the bump must not be reverted casually.
-    const token = css.match(/--background:\s*(#[0-9a-fA-F]{3,8})\s*;/)
-    expect(token, '--background must be a hex colour').not.toBeNull()
-    const bg = parseRgb(token![1])
+    const light = blockBody(':root')
+    const bgHex = tokenIn(light, 'background')
+    expect(bgHex, '--background must be hex (no alpha form) so parseRgb is exact')
+      .toMatch(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+    const bg = parseRgb(bgHex)
 
-    // the FIRST --muted-foreground in the file is the light theme one
-    const idx = css.indexOf('--muted-foreground:')
-    expect(idx).toBeGreaterThan(-1)
-    const decl = css.slice(idx, css.indexOf(';', idx))
-    const m = decl.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/)
-    expect(m, `light --muted-foreground must be rgba(), got: ${decl.slice(0, 60)}`).not.toBeNull()
+    const muted = tokenIn(light, 'muted-foreground')
+    const m = muted.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)
+    expect(m, `light --muted-foreground must be rgba(), got: ${muted}`).not.toBeNull()
     const [, r, g, b, a] = m as RegExpMatchArray
     const composited = composite([+r, +g, +b], parseFloat(a), bg)
     const ratio = contrast(composited, bg)
-    expect(ratio, `light muted text composites to rgb(${composited.join(',')}) on ${token![1]}`).toBeGreaterThanOrEqual(4.5)
+    expect(
+      ratio,
+      `light muted rgb(${r},${g},${b}@${a}) composites to rgb(${composited.join(',')}) on ${bgHex}`,
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the dark-theme tokens are read from .dark, and prove the scoping works', () => {
+    // Without this, blockBody() could return the same body for both selectors and
+    // the light assertion above would be meaningless.
+    const dark = blockBody('.dark')
+    const light = blockBody(':root')
+    expect(dark).not.toBe(light)
+
+    const darkBg = parseRgb(tokenIn(dark, 'background'))
+    const lightBg = parseRgb(tokenIn(light, 'background'))
+    expect(darkBg).not.toEqual(lightBg)
+
+    // the dark theme's own muted text must clear AA on the dark surface too
+    const m = tokenIn(dark, 'muted-foreground').match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)
+    expect(m, 'dark --muted-foreground must be rgba()').not.toBeNull()
+    const composited = composite([+m![1], +m![2], +m![3]], parseFloat(m![4]), darkBg)
+    expect(
+      contrast(composited, darkBg),
+      `dark muted text on rgb(${darkBg.join(',')})`,
+    ).toBeGreaterThanOrEqual(4.5)
   })
 })

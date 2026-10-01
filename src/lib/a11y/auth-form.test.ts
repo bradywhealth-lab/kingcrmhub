@@ -70,7 +70,39 @@ describe('S19: auth modes are wrapped in real <form> elements', () => {
     expect(open, 'form must open before the email field').toBeLessThan(firstInput)
     expect(firstInput).toBeLessThan(pwd)
     // and the email/password fields must come before the first </form>
-    expect(source.indexOf('</form>')).toBeGreaterThan(pwd)
+    const close = source.indexOf('</form>')
+    expect(close).toBeGreaterThan(pwd)
+
+    // Closing the form is not enough: the PRIMARY SUBMIT must be inside it, or
+    // clicking the CTA does nothing. Moving `</form>` above the button leaves
+    // every assertion above green — review found this hole. Prove the submit
+    // button sits between the password field and the form's own close.
+    const submit = source.indexOf('type="submit"', pwd)
+    expect(submit, 'a submit button must exist after the password field').toBeGreaterThan(pwd)
+    expect(submit, 'the submit button must be INSIDE the form, not after </form>').toBeLessThan(close)
+  })
+
+  it('each form contains exactly one submit button (3 submits, 3 forms)', () => {
+    // A submit outside any form is dead; two submits in one form is ambiguous.
+    const forms: string[] = []
+    let i = 0
+    for (;;) {
+      const open = source.indexOf('<form', i)
+      if (open === -1) break
+      const tagEnd = source.indexOf('>', open)
+      expect(tagEnd, 'the <form> tag must be closed').toBeGreaterThan(open)
+      const close = source.indexOf('</form>', open)
+      expect(close, 'every form must be closed').toBeGreaterThan(tagEnd)
+      // body only — excludes the opening tag itself, so the nested-form
+      // assertion below is actually meaningful rather than always matching
+      forms.push(source.slice(tagEnd + 1, close))
+      i = close + '</form>'.length
+    }
+    expect(forms).toHaveLength(3)
+    for (const [n, form] of forms.entries()) {
+      expect(form.match(/type="submit"/g)?.length ?? 0, `form ${n + 1} must have exactly one submit`).toBe(1)
+      expect(form, `form ${n + 1} must not contain a stray <form`).not.toContain('<form')
+    }
   })
 })
 
@@ -134,10 +166,33 @@ describe('S19: every button declares an explicit type', () => {
   })
 
   it('the forgot-mode "Continue to reset" is a plain button', () => {
-    const idx = source.indexOf("switchMode('reset')")
-    expect(idx).toBeGreaterThan(-1)
-    const tag = source.slice(source.lastIndexOf('<Button', idx), source.indexOf('>', idx))
+    // DO NOT anchor on `switchMode('reset')`. Its FIRST occurrence is the login
+    // block's lowercase <button> "Finish resetting your password" — a different
+    // element in a different form. Anchoring there made this test inspect the
+    // login CTA via lastIndexOf('<Button') and pass for the wrong reason
+    // (review finding, confidence 9). Anchor on text unique to the forgot mode.
+    const idx = source.indexOf('Continue to reset')
+    expect(idx, 'the forgot-mode CTA must exist').toBeGreaterThan(-1)
+    const start = source.lastIndexOf('<Button', idx)
+    expect(start, 'must find the <Button> that renders it').toBeGreaterThan(-1)
+    // tag = from '<Button' up to and including its own closing '>'
+    const tagEnd = source.indexOf('>', start)
+    expect(tagEnd, 'the Button tag must be closed').toBeGreaterThan(start)
+    const tag = source.slice(start, tagEnd)
     expect(tag, 'must not submit the forgot form').toContain('type="button"')
+    expect(tag, 'must be the shadcn Button component, not a raw <button>').not.toMatch(/<button/)
+    // and it must be the forgot mode's CTA specifically
+    expect(source.slice(start, idx), 'must be the forgot mode CTA').toContain("switchMode('reset')")
+  })
+
+  it('the login block\'s own "Finish resetting your password" is also a plain button', () => {
+    // This is the button the previous test USED to hit by accident. Assert it
+    // explicitly so both mode-switching buttons are covered, not one of them.
+    const idx = source.indexOf('Finish resetting your password')
+    expect(idx).toBeGreaterThan(-1)
+    const start = source.lastIndexOf('<button', idx)
+    const tag = source.slice(start, source.indexOf('>', start))
+    expect(tag, 'must not submit the login form').toContain('type="button"')
   })
 
   it('the forgot form cannot re-send after a request already succeeded', () => {
@@ -214,7 +269,27 @@ describe('S19: Enter-to-submit is handled once, not twice', () => {
         expect(p).not.toContain('autoComplete="current-password"')
       }
     }
+    // `.every()` on an EMPTY array returns true, so deleting all nine labels
+    // would have left this #223 guard green (review finding, confidence 10).
+    // Assert the exact count, then the binding in BOTH directions.
     const labels = source.match(/<Label\b[^>]*>/g) ?? []
-    expect(labels.every((l) => l.includes('htmlFor=')), 'all labels stay bound').toBe(true)
+    expect(labels.length, '#223 bound 9 labels — deleting them must fail this guard').toBe(9)
+    for (const l of labels) {
+      expect(l, 'every label must declare htmlFor').toMatch(/htmlFor="/)
+    }
+
+    // Every htmlFor must point at an id that actually exists, and every input id
+    // must be claimed by exactly one label. One-directional checks let a renamed
+    // id or an orphaned input slip through.
+    const htmlForIds = labels.map((l) => l.match(/htmlFor="([^"]+)"/)?.[1])
+    expect(htmlForIds.every((x) => typeof x === 'string' && x.length > 0)).toBe(true)
+    expect(new Set(htmlForIds).size, 'no duplicate htmlFor targets').toBe(htmlForIds.length)
+
+    const inputIds = [...source.matchAll(/<Input[\s\S]*?\bid="([^"]+)"/g)].map((m) => m[1])
+    expect(inputIds.length, 'auth has 9 labelled inputs').toBe(9)
+    expect([...inputIds].sort()).toEqual([...(htmlForIds as string[])].sort())
+    for (const id of htmlForIds) {
+      expect(source, `htmlFor="${id}" must match a real id`).toContain(`id="${id}"`)
+    }
   })
 })

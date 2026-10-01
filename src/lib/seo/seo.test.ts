@@ -75,20 +75,36 @@ describe('sitemap', () => {
     //                       exclusion alone is not enough since /welcome links
     //                       to it, so robots:noindex is enforced in the layout.
     // Reading only page.tsx would make this test fail on a false premise.
-    const readIfExists = (rel: string) => {
+    /**
+     * Read a file with its COMMENTS REMOVED.
+     *
+     * This guard regex-matched raw file text, so the tokens `index: false`,
+     * `follow: true` and `canonical: '/'` satisfied it even when they appeared
+     * only inside a comment — which is exactly what /claim's layout looks like,
+     * since its docblock discusses the noindex policy in prose. A page whose real
+     * metadata was deleted but whose comment remained would still pass.
+     * Review finding (confidence 7).
+     */
+    const readCode = (rel: string) => {
       const p = join(process.cwd(), rel)
-      return existsSync(p) ? readFileSync(p, 'utf8') : ''
+      if (!existsSync(p)) return ''
+      return readFileSync(p, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')   // /* ... */ and JSDoc
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, '') // {/* ... */}
+        .replace(/^\s*\/\/.*$/gm, '')          // // line comments
     }
 
     for (const route of ['terms', 'privacy', 'claim']) {
       const combined =
-        readIfExists(`src/app/${route}/page.tsx`) + readIfExists(`src/app/${route}/layout.tsx`)
-      expect(combined, `/${route} must declare noindex in its page or layout`).toMatch(/index:\s*false/)
-      expect(combined, `/${route} should still let links be followed`).toMatch(/follow:\s*true/)
+        readCode(`src/app/${route}/page.tsx`) + readCode(`src/app/${route}/layout.tsx`)
+      expect(combined, `/${route} must declare noindex in real metadata, not a comment`)
+        .toMatch(/robots:\s*\{[^}]*index:\s*false/)
+      expect(combined, `/${route} should still let links be followed`)
+        .toMatch(/follow:\s*true/)
     }
 
     const welcome =
-      readIfExists('src/app/welcome/page.tsx') + readIfExists('src/app/welcome/layout.tsx')
+      readCode('src/app/welcome/page.tsx') + readCode('src/app/welcome/layout.tsx')
     expect(welcome, '/welcome must canonicalise to /').toMatch(/canonical:\s*'\/'/)
   })
 })
