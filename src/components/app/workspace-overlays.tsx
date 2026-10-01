@@ -1,6 +1,7 @@
 "use client"
 
 import { FileSpreadsheet, Globe, RefreshCw, Upload } from "lucide-react"
+import { AddDealDialog } from "@/components/app/add-deal-dialog"
 import { AddLeadDialog } from "@/components/app/add-lead-dialog"
 import { CommandPalette } from "@/components/command-palette"
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +39,10 @@ export function WorkspaceOverlays({
   showAddLeadDialog,
   setShowAddLeadDialog,
   onLeadCreated,
+  showAddDealDialog,
+  setShowAddDealDialog,
+  dealStageId,
+  onDealCreated,
   showUploadDialog,
   setShowUploadDialog,
   uploading,
@@ -58,6 +63,10 @@ export function WorkspaceOverlays({
   showAddLeadDialog: boolean
   setShowAddLeadDialog: (open: boolean) => void
   onLeadCreated: () => void
+  showAddDealDialog: boolean
+  setShowAddDealDialog: (open: boolean) => void
+  dealStageId?: string
+  onDealCreated: () => void
   showUploadDialog: boolean
   setShowUploadDialog: (open: boolean) => void
   uploading: boolean
@@ -81,6 +90,15 @@ export function WorkspaceOverlays({
         open={showAddLeadDialog}
         onOpenChange={setShowAddLeadDialog}
         onCreated={onLeadCreated}
+      />
+
+      {/* S29 — the real deal path. The Pipeline board's CTA and its per-column "+"
+          open this, which POSTs to /api/pipeline. */}
+      <AddDealDialog
+        open={showAddDealDialog}
+        onOpenChange={setShowAddDealDialog}
+        defaultStageId={dealStageId}
+        onCreated={onDealCreated}
       />
 
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>

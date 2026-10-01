@@ -8,6 +8,8 @@ import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 export function useWorkspaceOverlays() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false)
+  const [showAddDealDialog, setShowAddDealDialog] = useState(false)
+  const [dealStageId, setDealStageId] = useState<string | undefined>(undefined)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [leadsRefreshKey, setLeadsRefreshKey] = useState(0)
   const [showScrapeDialog, setShowScrapeDialog] = useState(false)
@@ -34,6 +36,19 @@ export function useWorkspaceOverlays() {
     const leadHandler = () => setShowAddLeadDialog(true)
     window.addEventListener("open-add-lead", leadHandler)
     return () => window.removeEventListener("open-add-lead", leadHandler)
+  }, [])
+
+  useEffect(() => {
+    // S29 — the Pipeline board opens the deal dialog, optionally pre-scoped to the
+    // stage whose "+" was clicked. The detail is read here (not ignored) so the
+    // item lands in the column the user actually chose.
+    const dealHandler = (event: Event) => {
+      const detail = (event as CustomEvent<{ stageId?: string }>).detail
+      setDealStageId(detail?.stageId)
+      setShowAddDealDialog(true)
+    }
+    window.addEventListener("open-add-deal", dealHandler)
+    return () => window.removeEventListener("open-add-deal", dealHandler)
   }, [])
 
   const loadScrapeJobs = useCallback(async () => {
@@ -139,6 +154,10 @@ export function useWorkspaceOverlays() {
     setCommandPaletteOpen,
     showAddLeadDialog,
     setShowAddLeadDialog,
+    showAddDealDialog,
+    setShowAddDealDialog,
+    dealStageId,
+    onDealCreated: handleLeadCreated,
     showUploadDialog,
     setShowUploadDialog,
     leadsRefreshKey,
