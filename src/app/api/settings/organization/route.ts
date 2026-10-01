@@ -10,7 +10,17 @@ import { z } from 'zod'
 const organizationSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   slug: z.string().min(1).max(120).optional(),
-  logo: z.string().url().optional().or(z.literal('')),
+  // Accept a full URL OR a bare domain (e.g. "mydomain.com"); a bare domain is
+  // normalized to https:// on save. Previously a bare domain failed the whole
+  // payload with a 400 and the onboarding wizard could not advance past step 1
+  // with no error shown (S10).
+  logo: z
+    .union([
+      z.string().url(),
+      z.string().regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i),
+      z.literal(''),
+    ])
+    .optional(),
 
   sessionTimeoutMinutes: z.coerce.number().int().min(5).max(1440).optional(),
   twoFactorRequired: z.boolean().optional(),
@@ -18,6 +28,14 @@ const organizationSchema = z.object({
 
 function normalizeSettings(value: Prisma.JsonValue | null): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+/** Bare domains are stored as https:// URLs so the value is always fetchable. */
+function normalizeLogo(value: string | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }
 
 export async function GET(request: NextRequest) {
@@ -91,7 +109,7 @@ export async function PATCH(request: NextRequest) {
         data: {
           name: parsed.data.name?.trim(),
           slug: parsed.data.slug?.trim(),
-          logo: parsed.data.logo === '' ? null : parsed.data.logo?.trim(),
+          logo: parsed.data.logo === '' ? null : normalizeLogo(parsed.data.logo),
 
           settings: settings as Prisma.InputJsonValue,
         },
