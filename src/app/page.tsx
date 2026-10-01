@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   LayoutDashboard, Users, GitBranch, Brain, Share2, Settings,
@@ -1527,14 +1527,21 @@ function PipelineView() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
+  // cubic P2: a deal created while a load is in flight used to be overwritten by the
+  // older response, so the new item vanished until a manual reload. Ignore any
+  // response a newer load has already superseded.
+  const pipelineRequestRef = useRef(0)
   const loadPipeline = useCallback(async () => {
+    const requestId = ++pipelineRequestRef.current
     setLoading(true)
     try {
       const res = await fetch("/api/pipeline")
       const data = await res.json()
+      if (requestId !== pipelineRequestRef.current) return
       if (data.error) throw new Error(data.error)
       setStages(normalizePipelineStages(data.pipeline?.stages))
     } catch (error) {
+      if (requestId !== pipelineRequestRef.current) return
       toast({
         title: "Failed to load pipeline",
         description: error instanceof Error ? error.message : "Unknown error",
@@ -1542,7 +1549,7 @@ function PipelineView() {
       })
       setStages([])
     } finally {
-      setLoading(false)
+      if (requestId === pipelineRequestRef.current) setLoading(false)
     }
   }, [])
 

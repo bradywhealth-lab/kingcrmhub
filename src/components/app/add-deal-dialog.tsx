@@ -41,6 +41,9 @@ export function AddDealDialog({
     setLoadingStages(true)
     try {
       const response = await fetch(buildApiPath("/api/pipeline"))
+      // cubic P2: without this, a 500 with a JSON body parsed as an empty stage list
+      // and left Add deal disabled with no explanation.
+      if (!response.ok) throw new Error(`Could not load pipeline stages (${response.status})`)
       const payload = await response.json()
       const next: Stage[] = (payload?.pipeline?.stages ?? []).map((s: Stage) => ({ id: s.id, name: s.name }))
       setStages(next)

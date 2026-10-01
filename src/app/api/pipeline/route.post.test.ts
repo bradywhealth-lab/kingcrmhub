@@ -73,7 +73,7 @@ describe('POST /api/pipeline — deal creation (S29)', () => {
 
   it('rejects an unknown stage instead of silently filing it elsewhere', async () => {
     const response = await POST(post({ title: 'Orphan', stageId: 'stage_nope' }))
-    expect([400, 404]).toContain(response.status)
+    expect(response.status).toBe(404)
     expect(mockDb.pipelineItem.create).not.toHaveBeenCalled()
   })
 

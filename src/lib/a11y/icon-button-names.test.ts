@@ -232,6 +232,11 @@ describe('S28: icon-only buttons have an accessible name', () => {
       /new CustomEvent\("open-add-deal",\s*\{\s*detail:\s*\{\s*stageId:\s*stage\.id\s*\}\s*\}\)/,
     )
     expect(page, 'the header CTA must open the deal dialog').toContain('Add Deal')
+    // Pin the dispatch, not just the text: reverting the CTA to open-add-lead while
+    // keeping "Add Deal" would otherwise pass every test silently.
+    expect(page, 'the header CTA must dispatch open-add-deal').toMatch(
+      /new CustomEvent\("open-add-deal"\)/,
+    )
 
     const overlays = readFileSync(join(SRC, 'components/app/use-workspace-overlays.ts'), 'utf8')
     expect(overlays, 'the deal handler must read the stage from the event').toMatch(

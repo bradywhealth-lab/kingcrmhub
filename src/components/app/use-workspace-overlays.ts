@@ -157,7 +157,6 @@ export function useWorkspaceOverlays() {
     showAddDealDialog,
     setShowAddDealDialog,
     dealStageId,
-    onDealCreated: handleLeadCreated,
     showUploadDialog,
     setShowUploadDialog,
     leadsRefreshKey,
