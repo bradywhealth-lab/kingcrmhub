@@ -505,7 +505,7 @@ function AuthPageInner() {
 
                   {mode === 'login' && (
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => switchMode('forgot')} className="text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
+                      <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
                         Forgot password?
                       </button>
                     </div>
@@ -567,7 +567,7 @@ function AuthPageInner() {
                   if (!forgotRequested) void handleForgotPassword()
                 }}
               >
-                <button type="button" onClick={() => switchMode('login')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+                <button type="button" onClick={() => switchMode('login')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
@@ -596,7 +596,7 @@ function AuthPageInner() {
                   void handleResetPassword()
                 }}
               >
-                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
