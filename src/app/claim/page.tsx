@@ -213,7 +213,7 @@ function ClaimPageInner() {
 
         <div className="mt-10 rounded-3xl border p-5" style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}>
           <p className="text-sm font-semibold" style={{ color: PAPER }}>Already have an account?</p>
-          <Link href="/auth" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: TEAL }}>
+          <Link href="/auth" className="mt-2 inline-flex min-h-[24px] items-center gap-2 text-sm font-semibold" style={{ color: TEAL }}>
             Sign in instead <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

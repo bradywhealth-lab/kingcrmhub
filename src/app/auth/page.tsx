@@ -534,7 +534,7 @@ function AuthPageInner() {
 
                   <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(31,42,54,0.04)] p-4 text-sm text-[#0c111b]/60">
                     Already have a password-reset link?{' '}
-                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[#1e4fcc] hover:opacity-80">
+                    <button type="button" onClick={() => switchMode('reset')} className="inline-flex min-h-[24px] items-center font-semibold text-[#1e4fcc] hover:opacity-80">
                       Finish resetting your password
                     </button>
                   </div>
