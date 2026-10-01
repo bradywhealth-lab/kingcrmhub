@@ -1558,11 +1558,23 @@ function PipelineView() {
   }, [loadPipeline])
 
   // S29 — reload the board when a deal is created from the dialog.
-  useEffect(() => {
-    const refresh = () => { void loadPipeline() }
-    window.addEventListener("pipeline-refresh", refresh)
-    return () => window.removeEventListener("pipeline-refresh", refresh)
+  // cubic P2: a creation refresh must not race an in-flight drag, or a stale GET can
+  // restore the pre-drag positions. Defer the refresh until moves settle.
+  const moveInFlightRef = useRef(0)
+  const refreshQueuedRef = useRef(false)
+
+  const requestPipelineRefresh = useCallback(() => {
+    if (moveInFlightRef.current > 0) {
+      refreshQueuedRef.current = true
+      return
+    }
+    void loadPipeline()
   }, [loadPipeline])
+
+  useEffect(() => {
+    window.addEventListener("pipeline-refresh", requestPipelineRefresh)
+    return () => window.removeEventListener("pipeline-refresh", requestPipelineRefresh)
+  }, [requestPipelineRefresh])
 
   const onDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
@@ -1596,6 +1608,7 @@ function PipelineView() {
       return next
     })
 
+    moveInFlightRef.current += 1
     try {
       setSaving(true)
       const res = await fetch("/api/pipeline", {
@@ -1618,6 +1631,12 @@ function PipelineView() {
       await loadPipeline()
     } finally {
       setSaving(false)
+      moveInFlightRef.current = Math.max(0, moveInFlightRef.current - 1)
+      // A refresh that arrived mid-drag runs now, against settled state.
+      if (moveInFlightRef.current === 0 && refreshQueuedRef.current) {
+        refreshQueuedRef.current = false
+        void loadPipeline()
+      }
     }
   }, [loadPipeline, stages])
   

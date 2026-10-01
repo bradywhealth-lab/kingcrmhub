@@ -82,4 +82,29 @@ describe('POST /api/pipeline — deal creation (S29)', () => {
     const payload = await response.json()
     expect(payload).toMatchObject({ id: 'item_1', title: 'Acme rollout', stageId: 'stage_new', value: 5000 })
   })
+
+  // cubic: the mocks above answer any `where`, so these pin the tenant boundary. A
+  // regression that dropped the organizationId filter would otherwise pass silently,
+  // filing a deal into another org's stage or accepting a foreign org's leadId.
+  it('scopes the pipeline lookup to the caller org', async () => {
+    await POST(post({ title: 'Acme rollout', stageId: 'stage_new' }))
+    expect(mockDb.pipeline.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org_1' }) }),
+    )
+  })
+
+  it('scopes the lead lookup to the caller org', async () => {
+    mockDb.lead.findFirst.mockResolvedValue({ id: 'lead_1' })
+    await POST(post({ title: 'Acme rollout', stageId: 'stage_new', leadId: 'lead_1' }))
+    expect(mockDb.lead.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org_1' }) }),
+    )
+  })
+
+  it('rejects a lead from another org and creates nothing', async () => {
+    mockDb.lead.findFirst.mockResolvedValue(null)
+    const response = await POST(post({ title: 'Acme rollout', stageId: 'stage_new', leadId: 'foreign_lead' }))
+    expect(response.status).toBe(404)
+    expect(mockDb.pipelineItem.create).not.toHaveBeenCalled()
+  })
 })

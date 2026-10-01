@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { buildApiPath } from "@/lib/api-client"
-import { stageForOpen, type Stage } from "@/lib/pipeline/stage-selection"
+import { buildDealForm, stageForOpen, type Stage } from "@/lib/pipeline/stage-selection"
 
 /**
  * S29 — the Pipeline's only creation CTA previously opened the LEAD dialog, so the
@@ -61,11 +61,11 @@ export function AddDealDialog({
     // A stage picked in a previous visit must not survive it: "Add deal to Won"
     // filing the deal under "New" is precisely the defect this dialog ends.
     setError(null)
-    setForm({ title: "", value: "", stageId: defaultStageId ?? "", expectedClose: "" })
+    setForm(buildDealForm(defaultStageId))
     void loadStages()
   }, [open, defaultStageId, loadStages])
 
-  const reset = () => setForm({ title: "", value: "", stageId: defaultStageId || "", expectedClose: "" })
+  const reset = () => setForm(buildDealForm(defaultStageId, stages))
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
