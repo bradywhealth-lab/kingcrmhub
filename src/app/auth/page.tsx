@@ -409,6 +409,7 @@ function AuthPageInner() {
                   {(['login', 'signup'] as Mode[]).map((tab) => (
                     <button
                       key={tab}
+                      type="button"
                       onClick={() => switchMode(tab)}
                       className={cn(
                         'rounded-[14px] px-4 py-3 text-sm font-semibold transition-all',
@@ -422,7 +423,21 @@ function AuthPageInner() {
                   ))}
                 </div>
 
-                <div className="space-y-4">
+                {/*
+                    S19: a real form element is what associates these inputs with
+                    a submit. #223 added id/name/autoComplete, but without this
+                    wrapper password managers still treat the fields as loose
+                    controls. Native submit also replaces the hand-rolled
+                    onKeyDown Enter handlers removed below, so Enter can never
+                    fire handleLoginSignup twice.
+                  */}
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void handleLoginSignup()
+                  }}
+                >
                   {mode === 'signup' && (
                     <>
                       <div>
@@ -448,7 +463,7 @@ function AuthPageInner() {
                       placeholder="you@company.com"
                       value={mode === 'login' ? loginEmail : signupEmail}
                       onChange={(e) => (mode === 'login' ? setLoginEmail(e.target.value) : setSignupEmail(e.target.value))}
-                      onKeyDown={(e) => e.key === 'Enter' && void handleLoginSignup()}
+                     
                     />
                   </div>
 
@@ -465,7 +480,7 @@ function AuthPageInner() {
                       placeholder="••••••••"
                       value={mode === 'login' ? loginPassword : signupPassword}
                       onChange={(e) => (mode === 'login' ? setLoginPassword(e.target.value) : setSignupPassword(e.target.value))}
-                      onKeyDown={(e) => e.key === 'Enter' && void handleLoginSignup()}
+                     
                     />
                   </div>
 
@@ -483,7 +498,7 @@ function AuthPageInner() {
                         placeholder="••••••••"
                         value={signupConfirmPassword}
                         onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && void handleLoginSignup()}
+                       
                       />
                     </div>
                   )}
@@ -500,7 +515,7 @@ function AuthPageInner() {
                   {success && <StatusCard tone="success" message={success} />}
 
                   <Button
-                    onClick={() => void handleLoginSignup()}
+                    type="submit"
                     disabled={loading}
                     className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)] hover:opacity-95"
                   >
@@ -538,36 +553,50 @@ function AuthPageInner() {
                       Finish resetting your password
                     </button>
                   </div>
-                </div>
+                </form>
               </>
             )}
 
             {mode === 'forgot' && (
-              <div className="space-y-4">
-                <button onClick={() => switchMode('login')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  // Once a request has been sent the visible CTA becomes
+                  // "Continue to reset"; Enter must not fire a second request.
+                  if (!forgotRequested) void handleForgotPassword()
+                }}
+              >
+                <button type="button" onClick={() => switchMode('login')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
                   <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
-                  <Input id="forgot-email" name="email" autoComplete="email" type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleForgotPassword()} />
+                  <Input id="forgot-email" name="email" autoComplete="email" type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
                 {forgotRequested ? (
-                  <Button className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => switchMode('reset')}>
+                  <Button type="button" className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => switchMode('reset')}>
                     Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button onClick={() => void handleForgotPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
                     {loading ? 'Sending request…' : 'Request password reset'}
                   </Button>
                 )}
-              </div>
+              </form>
             )}
 
             {mode === 'reset' && (
-              <div className="space-y-4">
-                <button onClick={() => switchMode('forgot')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void handleResetPassword()
+                }}
+              >
+                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
@@ -580,15 +609,15 @@ function AuthPageInner() {
                 </div>
                 <div>
                   <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
-                  <Input id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword()} />
+                  <Input id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
-                <Button onClick={() => void handleResetPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
                   {loading ? 'Resetting password…' : 'Reset password'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </div>
+              </form>
             )}
           </div>
 

@@ -1661,6 +1661,10 @@ function PipelineView() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-muted-foreground hover:text-[var(--accent-text)]"
+                      // S28: icon-only "+" in a pipeline stage column. Its meaning
+                      // depends entirely on the column it sits in, so the label
+                      // names the stage rather than saying "Add".
+                      aria-label={`Add lead to ${stage.name}`}
                       onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
                     >
                       <Plus className="w-3 h-3" />
@@ -2483,7 +2487,14 @@ function SocialMediaView() {
                         Publish
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => void removeItem(item.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500 hover:text-red-700"
+                      // S28: destructive action announced only by a trash glyph.
+                      aria-label={`Delete ${item.title}`}
+                      onClick={() => void removeItem(item.id)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
