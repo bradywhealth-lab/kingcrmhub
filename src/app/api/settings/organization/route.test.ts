@@ -92,4 +92,66 @@ describe('/api/settings/organization', () => {
     expect(mockDb.auditLog.create).toHaveBeenCalledOnce()
     void json
   })
+
+  // S10 regression: a bare domain used to fail the whole payload with a 400,
+  // which silently blocked onboarding step 1.
+  it('accepts a bare domain for logo and normalizes it to https://', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({ settings: {} })
+    mockDb.organization.update.mockResolvedValueOnce({ id: 'org_1', name: 'Solo', slug: 'solo', logo: 'https://mydomain.com', plan: 'free', settings: {} })
+
+    const request = new NextRequest('http://localhost/api/settings/organization', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Solo', logo: 'mydomain.com' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    const response = await PATCH(request)
+    expect(response.status).toBe(200)
+    expect(mockDb.organization.update.mock.calls[0][0].data.logo).toBe('https://mydomain.com')
+  })
+
+  it('leaves a full URL untouched', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({ settings: {} })
+    mockDb.organization.update.mockResolvedValueOnce({ id: 'org_1', name: 'Solo', slug: 'solo', logo: 'https://keep.me/l.png', plan: 'free', settings: {} })
+
+    const request = new NextRequest('http://localhost/api/settings/organization', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Solo', logo: 'https://keep.me/l.png' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    await PATCH(request)
+    expect(mockDb.organization.update.mock.calls[0][0].data.logo).toBe('https://keep.me/l.png')
+  })
+
+  // cubic P2 regression: omitting logo must not erase existing branding.
+  it('does not clear an existing logo when logo is omitted', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({ settings: {} })
+    mockDb.organization.update.mockResolvedValueOnce({ id: 'org_1', name: 'Solo', slug: 'solo', logo: 'https://keep.me/l.png', plan: 'free', settings: {} })
+
+    const request = new NextRequest('http://localhost/api/settings/organization', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Solo' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    const response = await PATCH(request)
+    expect(response.status).toBe(200)
+    expect(mockDb.organization.update.mock.calls[0][0].data.logo).toBeUndefined()
+  })
+
+  it('clears the logo only on an explicit empty string', async () => {
+    mockDb.organization.findUnique.mockResolvedValueOnce({ settings: {} })
+    mockDb.organization.update.mockResolvedValueOnce({ id: 'org_1', name: 'Solo', slug: 'solo', logo: null, plan: 'free', settings: {} })
+
+    const request = new NextRequest('http://localhost/api/settings/organization', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Solo', logo: '' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    const response = await PATCH(request)
+    expect(response.status).toBe(200)
+    expect(mockDb.organization.update.mock.calls[0][0].data.logo).toBeNull()
+  })
 })

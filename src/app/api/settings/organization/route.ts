@@ -109,7 +109,15 @@ export async function PATCH(request: NextRequest) {
         data: {
           name: parsed.data.name?.trim(),
           slug: parsed.data.slug?.trim(),
-          logo: parsed.data.logo === '' ? null : normalizeLogo(parsed.data.logo),
+          // undefined = "do not touch" (Prisma skips the field); '' = explicit
+          // clear. Collapsing undefined into null would erase existing branding
+          // on a name-only PATCH (cubic P2).
+          logo:
+            parsed.data.logo === undefined
+              ? undefined
+              : parsed.data.logo === ''
+                ? null
+                : normalizeLogo(parsed.data.logo),
 
           settings: settings as Prisma.InputJsonValue,
         },
