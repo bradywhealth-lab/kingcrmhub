@@ -505,7 +505,7 @@ function AuthPageInner() {
 
                   {mode === 'login' && (
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => switchMode('forgot')} className="text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
+                      <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
                         Forgot password?
                       </button>
                     </div>

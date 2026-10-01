@@ -41,15 +41,15 @@ export default function PublicLandingPage() {
             <span className="font-display text-lg font-bold tracking-tight">King <span style={{ color: 'rgba(255,255,255,0.55)' }}>CRM Hub</span></span>
           </span>
           <nav aria-label="Primary" className="ml-2 hidden items-center gap-6 text-sm font-medium text-white/70 md:flex">
-            <Link href="/pricing" className="transition-colors hover:text-white">Pricing</Link>
-            <Link href="/claim" className="transition-colors hover:text-white">Claim</Link>
-            <Link href="/compare" className="transition-colors hover:text-white">Compare</Link>
-            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 transition-colors hover:text-white">
+            <Link href="/pricing" className="inline-flex min-h-[24px] items-center transition-colors hover:text-white">Pricing</Link>
+            <Link href="/claim" className="inline-flex min-h-[24px] items-center transition-colors hover:text-white">Claim</Link>
+            <Link href="/compare" className="inline-flex min-h-[24px] items-center transition-colors hover:text-white">Compare</Link>
+            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[24px] items-center gap-1 transition-colors hover:text-white">
               Amazon Planner <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </nav>
           <div className="ml-auto flex items-center gap-4">
-            <Link href="/auth" className="text-sm font-semibold text-white/80 transition-colors hover:text-white">Log in</Link>
+            <Link href="/auth" className="inline-flex min-h-[24px] items-center text-sm font-semibold text-white/80 transition-colors hover:text-white">Log in</Link>
             <Link href="/auth?mode=signup" className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold" style={{ background: COBALT, color: '#fff' }}>
               Start free <ArrowRight className="h-4 w-4" />
             </Link>
@@ -161,13 +161,13 @@ export default function PublicLandingPage() {
             <span className="font-display text-lg font-bold tracking-tight text-[#0B0B0C]">King <span className="text-[#0B0B0C]/60">CRM Hub</span></span>
           </span>
           <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#0B0B0C]/60">
-            <Link href="/pricing" className="hover:text-[#0B0B0C]">Pricing</Link>
-            <Link href="/compare" className="hover:text-[#0B0B0C]">Compare</Link>
-            <Link href="/claim" className="hover:text-[#0B0B0C]">Claim</Link>
-            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-[#0B0B0C]">Amazon Planner <ExternalLink className="h-3.5 w-3.5" /></a>
-            <Link href="/terms" className="hover:text-[#0B0B0C]">Terms</Link>
-            <Link href="/privacy" className="hover:text-[#0B0B0C]">Privacy</Link>
-            <Link href="/auth" className="hover:text-[#0B0B0C]">Log in</Link>
+            <Link href="/pricing" className="inline-flex min-h-[24px] items-center hover:text-[#0B0B0C]">Pricing</Link>
+            <Link href="/compare" className="inline-flex min-h-[24px] items-center hover:text-[#0B0B0C]">Compare</Link>
+            <Link href="/claim" className="inline-flex min-h-[24px] items-center hover:text-[#0B0B0C]">Claim</Link>
+            <a href="https://www.amazon.com/dp/B0HJPZX6WG" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[24px] items-center gap-1 hover:text-[#0B0B0C]">Amazon Planner <ExternalLink className="h-3.5 w-3.5" /></a>
+            <Link href="/terms" className="inline-flex min-h-[24px] items-center hover:text-[#0B0B0C]">Terms</Link>
+            <Link href="/privacy" className="inline-flex min-h-[24px] items-center hover:text-[#0B0B0C]">Privacy</Link>
+            <Link href="/auth" className="inline-flex min-h-[24px] items-center hover:text-[#0B0B0C]">Log in</Link>
           </nav>
           <span className="text-sm text-[#0B0B0C]/60">© 2026 King CRM Hub</span>
         </div>
