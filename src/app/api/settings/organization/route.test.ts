@@ -120,7 +120,8 @@ describe('/api/settings/organization', () => {
       headers: { 'Content-Type': 'application/json' },
     })
 
-    await PATCH(request)
+    const response = await PATCH(request)
+    expect(response.status).toBe(200)
     expect(mockDb.organization.update.mock.calls[0][0].data.logo).toBe('https://keep.me/l.png')
   })
 
