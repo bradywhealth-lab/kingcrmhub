@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "npm@11.11.0",
   "engines": {
-    "node": "22.x"
+    "node": "22.x",
+    "bun": ">=1.4.2"
   },
   "scripts": {
     "postinstall": "prisma generate",
