@@ -75,6 +75,10 @@ export function AddDealDialog({
       setError("Deal name is required.")
       return
     }
+    if (!form.stageId) {
+      setError("Choose a stage for this deal.")
+      return
+    }
     if (form.value && Number(form.value) < 0) {
       setError("Deal value cannot be negative.")
       return
@@ -196,7 +200,11 @@ export function AddDealDialog({
             </Button>
             <Button
               type="submit"
-              disabled={saving || stages.length === 0}
+              // cubic: the stage is briefly unresolved between open and the stage load,
+              // while the previous visit's list can still keep this enabled — a quick
+              // submit would then omit stageId and land in the first stage. Require a
+              // resolved stage, not merely a non-empty stage list.
+              disabled={saving || loadingStages || !form.stageId}
               className="btn-gold"
             >
               {saving ? "Adding…" : "Add deal"}

@@ -89,4 +89,12 @@ describe('dialog wiring — the derivation is actually used', () => {
   it('resolves the stage through stageForOpen', () => {
     expect(source).toContain('stageForOpen(defaultStageId, next)')
   })
+
+  it('cannot be submitted without a resolved stage', () => {
+    // cubic P2: a non-empty stage list from a previous visit kept the button enabled
+    // while the stage was still unresolved, so a quick submit omitted stageId and
+    // placed the deal in the first stage.
+    expect(source).toMatch(/disabled=\{saving \|\| loadingStages \|\| !form\.stageId\}/)
+    expect(source).toMatch(/if \(!form\.stageId\) \{/)
+  })
 })
