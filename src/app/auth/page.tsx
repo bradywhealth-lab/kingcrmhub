@@ -426,19 +426,22 @@ function AuthPageInner() {
                   {mode === 'signup' && (
                     <>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
+                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
+                        <Input id="signup-name" name="name" autoComplete="name" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
                       </div>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
+                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
+                        <Input id="signup-org" name="organization" autoComplete="organization" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
+                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
                     <Input
+                      id="auth-email"
+                      name="email"
+                      autoComplete={mode === 'login' ? 'username' : 'email'}
                       type="email"
                       required
                       className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
@@ -450,8 +453,11 @@ function AuthPageInner() {
                   </div>
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
+                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
                     <Input
+                      id="auth-password"
+                      name="password"
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                       type="password"
                       required
                       minLength={mode === 'signup' ? 8 : undefined}
@@ -465,8 +471,11 @@ function AuthPageInner() {
 
                   {mode === 'signup' && (
                     <div>
-                      <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
                       <Input
+                        id="auth-confirm"
+                        name="confirmPassword"
+                        autoComplete="new-password"
                         type="password"
                         required
                         minLength={8}

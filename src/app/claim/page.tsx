@@ -149,7 +149,7 @@ function ClaimPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="mt-2 h-12 rounded-2xl border px-4"
+                className="mt-2 h-12 rounded-2xl border px-4 placeholder:text-[rgba(244,240,230,0.62)]"
                 style={{ borderColor: 'rgba(244,240,230,0.2)', background: '#0C111B', color: PAPER }}
               />
             </div>
@@ -160,7 +160,7 @@ function ClaimPageInner() {
                 value={licenseKey}
                 onChange={(e) => setLicenseKey(e.target.value)}
                 placeholder="XXXX-XXXX-XXXX-XXXX"
-                className="mt-2 h-12 rounded-2xl border px-4 font-mono"
+                className="mt-2 h-12 rounded-2xl border px-4 font-mono placeholder:text-[rgba(244,240,230,0.62)]"
                 style={{ borderColor: 'rgba(244,240,230,0.2)', background: '#0C111B', color: PAPER }}
               />
             </div>
