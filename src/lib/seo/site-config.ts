@@ -17,9 +17,18 @@ export const SITE_TAGLINE = 'The client pipeline for one-person businesses'
  * - /welcome      -> duplicate of / (canonical points to /)
  * - /book/[slug]  -> dynamic tenant pages, discovered via links not sitemap
  * - /admin/*      -> authenticated app surface
+ *
+ * Included even though it is not an app route:
+ * - /books/       -> Caddy static site (see the inline note for the trailing slash)
  */
 export const PUBLIC_ROUTES = [
   { path: '/', changeFrequency: 'daily' as const, priority: 1.0 },
   { path: '/pricing', changeFrequency: 'weekly' as const, priority: 0.9 },
   { path: '/compare', changeFrequency: 'weekly' as const, priority: 0.8 },
+  // /books is NOT a Next.js route — Caddy serves it as a static site:
+  //   handle_path /books* { root * /data/sites/bradys-books; file_server }
+  //   redir /books /books/ permanent
+  // The trailing slash is therefore mandatory: /books 301s to /books/, and
+  // submitting the redirecting URL would make Google crawl a hop.
+  { path: '/books/', changeFrequency: 'weekly' as const, priority: 0.7 },
 ]

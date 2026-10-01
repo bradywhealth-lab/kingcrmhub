@@ -1,6 +1,7 @@
 "use client"
 
 import { FileSpreadsheet, Globe, RefreshCw, Upload } from "lucide-react"
+import { AddDealDialog } from "@/components/app/add-deal-dialog"
 import { AddLeadDialog } from "@/components/app/add-lead-dialog"
 import { CommandPalette } from "@/components/command-palette"
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +39,10 @@ export function WorkspaceOverlays({
   showAddLeadDialog,
   setShowAddLeadDialog,
   onLeadCreated,
+  showAddDealDialog,
+  setShowAddDealDialog,
+  addDealStageId,
+  onDealCreated,
   showUploadDialog,
   setShowUploadDialog,
   uploading,
@@ -58,6 +63,10 @@ export function WorkspaceOverlays({
   showAddLeadDialog: boolean
   setShowAddLeadDialog: (open: boolean) => void
   onLeadCreated: () => void
+  showAddDealDialog: boolean
+  setShowAddDealDialog: (open: boolean) => void
+  addDealStageId: string | null
+  onDealCreated: () => void
   showUploadDialog: boolean
   setShowUploadDialog: (open: boolean) => void
   uploading: boolean
@@ -81,6 +90,13 @@ export function WorkspaceOverlays({
         open={showAddLeadDialog}
         onOpenChange={setShowAddLeadDialog}
         onCreated={onLeadCreated}
+      />
+
+      <AddDealDialog
+        open={showAddDealDialog}
+        onOpenChange={setShowAddDealDialog}
+        onCreated={onDealCreated}
+        defaultStageId={addDealStageId}
       />
 
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>

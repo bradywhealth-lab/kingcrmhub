@@ -373,6 +373,27 @@
 .input-elite::placeholder { color: var(--muted-foreground); }
 
 /* ============================================================
+   DARK-SURFACE INPUTS — S31 fix
+   ------------------------------------------------------------
+   The /claim page renders fields on #0C111B and set their colour with an inline
+   style. Inline `color` CANNOT reach the ::placeholder pseudo-element, so the
+   .input-elite rule above won and the placeholder inherited the LIGHT theme's
+   --muted-foreground rgba(11,11,12,0.55) — which composites to rgb(11,14,19) on
+   #0C111B, i.e. 1.02:1. Effectively invisible text.
+
+   This class exists so any input on a dark surface gets a placeholder that
+   actually clears WCAG AA (4.5:1) for normal-size text:
+     rgba(244,240,230,0.55) over #0C111B -> rgb(140,140,139) -> 5.61:1
+   It stays dimmer than the typed text (#F4F0E6 = 16.60:1) so the visual
+   hierarchy "placeholder is subordinate to content" is preserved.
+
+   src/lib/a11y/claim-contrast.test.ts recomputes these ratios from this file,
+   so editing either colour without keeping AA will fail the build.
+   ============================================================ */
+.input-dark::placeholder { color: rgba(244, 240, 230, 0.55); }
+.input-dark { color: #F4F0E6; }
+
+/* ============================================================
    STATUS BADGES — quiet chips
    ============================================================ */
 .badge-status { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }

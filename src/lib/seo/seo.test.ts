@@ -18,7 +18,30 @@ describe('sitemap', () => {
       `${SITE_URL}`,
       `${SITE_URL}/pricing`,
       `${SITE_URL}/compare`,
+      `${SITE_URL}/books/`,
     ])
+  })
+
+  it('lists /books/ WITH the trailing slash, because /books 301s to /books/', () => {
+    // Atlas found /books missing from the sitemap; measured live:
+    //   GET /books  -> 301 https://kingcrmhub.net/books/
+    //   GET /books/ -> 200
+    // Submitting the 301ing URL would make Google crawl a redirect, so the entry
+    // must be the canonical final URL.
+    const urls = sitemap().map((e) => e.url)
+    expect(urls).toContain(`${SITE_URL}/books/`)
+    expect(urls).not.toContain(`${SITE_URL}/books`)
+  })
+
+  it('every sitemap URL is a real, indexable destination (no noindex pages)', () => {
+    // Guards the S22 false positive from being "fixed" later: /terms, /privacy and
+    // /claim all declare robots:{index:false,follow:true} in source, and /welcome
+    // declares canonical '/'. Listing a noindex page in the sitemap sends Google a
+    // contradictory signal, so these must stay OUT.
+    const urls = sitemap().map((e) => e.url)
+    for (const banned of ['/terms', '/privacy', '/claim', '/welcome', '/auth', '/admin']) {
+      expect(urls, `${banned} is noindex or utility — must not be in the sitemap`).not.toContain(`${SITE_URL}${banned}`)
+    }
   })
 
   it('never lists auth, admin, welcome, or dynamic tenant routes', () => {

@@ -8,6 +8,11 @@ import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 export function useWorkspaceOverlays() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false)
+  // S29: "Add Deal" used to dispatch open-add-lead, so the Pipeline board's deal
+  // button opened the LEAD form. This is the real deal dialog state.
+  const [showAddDealDialog, setShowAddDealDialog] = useState(false)
+  const [addDealStageId, setAddDealStageId] = useState<string | null>(null)
+  const [pipelineRefreshKey, setPipelineRefreshKey] = useState(0)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [leadsRefreshKey, setLeadsRefreshKey] = useState(0)
   const [showScrapeDialog, setShowScrapeDialog] = useState(false)
@@ -34,6 +39,18 @@ export function useWorkspaceOverlays() {
     const leadHandler = () => setShowAddLeadDialog(true)
     window.addEventListener("open-add-lead", leadHandler)
     return () => window.removeEventListener("open-add-lead", leadHandler)
+  }, [])
+
+  useEffect(() => {
+    // The stage-header "+" passes the stage it belongs to so the new deal lands
+    // there by default instead of always the first stage.
+    const dealHandler = (event: Event) => {
+      const detail = (event as CustomEvent<{ stageId?: string | null }>).detail
+      setAddDealStageId(detail?.stageId ?? null)
+      setShowAddDealDialog(true)
+    }
+    window.addEventListener("open-add-deal", dealHandler)
+    return () => window.removeEventListener("open-add-deal", dealHandler)
   }, [])
 
   const loadScrapeJobs = useCallback(async () => {
@@ -134,11 +151,20 @@ export function useWorkspaceOverlays() {
     setLeadsRefreshKey((current) => current + 1)
   }, [])
 
+  const handleDealCreated = useCallback(() => {
+    setPipelineRefreshKey((current) => current + 1)
+  }, [])
+
   return {
     commandPaletteOpen,
     setCommandPaletteOpen,
     showAddLeadDialog,
     setShowAddLeadDialog,
+    showAddDealDialog,
+    setShowAddDealDialog,
+    addDealStageId,
+    pipelineRefreshKey,
+    handleDealCreated,
     showUploadDialog,
     setShowUploadDialog,
     leadsRefreshKey,

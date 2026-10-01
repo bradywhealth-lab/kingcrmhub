@@ -1517,7 +1517,7 @@ function PipelineStageColumn({
   )
 }
 
-function PipelineView() {
+function PipelineView({ refreshKey = 0 }: { refreshKey?: number }) {
   const [stages, setStages] = useState<PipelineStage[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -1544,7 +1544,10 @@ function PipelineView() {
     } finally {
       setLoading(false)
     }
-  }, [])
+    // refreshKey is bumped by the overlays hook after a deal is created, so the
+    // board re-reads and the new card appears without a page reload. This mirrors
+    // the established LeadsView pattern (`}, [refreshKey])` at its loader).
+  }, [refreshKey])
 
   useEffect(() => {
     void loadPipeline()
@@ -1627,7 +1630,10 @@ function PipelineView() {
               <span className="text-sm text-muted-foreground">{saving ? "saving…" : "live total"}</span>
             </div>
           </Card>
-          <Button className="btn-gold gap-2" onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}>
+          <Button
+            className="btn-gold gap-2"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-add-deal"))}
+          >
             <Plus className="w-4 h-4" />
             Add Deal
           </Button>
@@ -1660,8 +1666,9 @@ function PipelineView() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Add deal to ${stage.name}`}
                       className="h-6 w-6 text-muted-foreground hover:text-[var(--accent-text)]"
-                      onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
+                      onClick={() => window.dispatchEvent(new CustomEvent("open-add-deal", { detail: { stageId: stage.id } }))}
                     >
                       <Plus className="w-3 h-3" />
                     </Button>
@@ -2483,7 +2490,7 @@ function SocialMediaView() {
                         Publish
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => void removeItem(item.id)}>
+                    <Button variant="ghost" size="icon" aria-label={`Delete ${item.title}`} className="text-red-500 hover:text-red-700" onClick={() => void removeItem(item.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -2708,6 +2715,11 @@ export default function EliteCRM() {
     setCommandPaletteOpen,
     showAddLeadDialog,
     setShowAddLeadDialog,
+    showAddDealDialog,
+    setShowAddDealDialog,
+    addDealStageId,
+    pipelineRefreshKey,
+    handleDealCreated,
     showUploadDialog,
     setShowUploadDialog,
     leadsRefreshKey,
@@ -2727,7 +2739,7 @@ export default function EliteCRM() {
     switch (activeView) {
       case "dashboard": return <DashboardView />
       case "leads": return <LeadsView onAddLead={() => setShowAddLeadDialog(true)} onUploadCSV={() => setShowUploadDialog(true)} onScrape={() => setShowScrapeDialog(true)} refreshKey={leadsRefreshKey} />
-      case "pipeline": return <PipelineView />
+      case "pipeline": return <PipelineView refreshKey={pipelineRefreshKey} />
       case "automation": return <AutomationView />
       case "assistant": return <AiAssistantView onOpenAISettings={() => { setSettingsInitialTab("ai"); handleNavigate("settings") }} />
       case "prompts": return <PromptsView onUpgrade={() => { window.location.href = "/pricing" }} onRunInAssistant={() => setActiveView("assistant")} />
@@ -2796,6 +2808,10 @@ export default function EliteCRM() {
         showAddLeadDialog={showAddLeadDialog}
         setShowAddLeadDialog={setShowAddLeadDialog}
         onLeadCreated={handleLeadCreated}
+        showAddDealDialog={showAddDealDialog}
+        setShowAddDealDialog={setShowAddDealDialog}
+        addDealStageId={addDealStageId}
+        onDealCreated={handleDealCreated}
         showUploadDialog={showUploadDialog}
         setShowUploadDialog={setShowUploadDialog}
         uploading={uploading}

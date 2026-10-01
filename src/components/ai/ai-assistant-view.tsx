@@ -394,6 +394,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
             variant="ghost"
             className="w-8 h-8 text-muted-foreground hover:text-[var(--accent-text)] hover:bg-muted"
             onClick={createNewChat}
+            aria-label="New chat"
             title="New chat"
           >
             <Plus className="w-4 h-4" />
@@ -597,6 +598,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                     )}
                     disabled={!input.trim() || streaming}
                     onClick={() => void sendMessage(input)}
+                    aria-label="Send message"
                   >
                     <Send className="w-4 h-4" />
                   </Button>
