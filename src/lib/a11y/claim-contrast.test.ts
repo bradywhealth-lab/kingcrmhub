@@ -63,6 +63,19 @@ function contrast(a: [number, number, number], b: [number, number, number]): num
 }
 
 function composite(fg: [number, number, number], alpha: number, bg: [number, number, number]): [number, number, number] {
+  // Validate rather than clamp. CSS clamps alpha to [0,1] and channels to
+  // [0,255] at render time — so an out-of-range source value would silently
+  // render DIFFERENTLY from what this function computed, and a guard could pass
+  // a colour that actually fails AA (or vice versa). A broken value must fail
+  // the suite, not be quietly repaired here.
+  if (![0, 1].every((bound) => alpha >= Math.min(bound, 0) && alpha <= Math.max(bound, 1))) {
+    throw new Error(`composite: alpha ${alpha} outside [0, 1]`)
+  }
+  for (const v of fg) {
+    if (!Number.isFinite(v) || v < 0 || v > 255) {
+      throw new Error(`composite: channel ${v} outside [0, 255]`)
+    }
+  }
   return [
     Math.round(fg[0] * alpha + bg[0] * (1 - alpha)),
     Math.round(fg[1] * alpha + bg[1] * (1 - alpha)),
@@ -96,9 +109,13 @@ describe('S31 guard: /claim placeholder clears WCAG AA', () => {
    * through. Review finding.
    */
   const placeholderColours = (): Array<[number, number, number, number]> =>
-    [...claim.matchAll(/placeholder:text-\[rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)\]/g)].map(
-      (m) => [+m[1], +m[2], +m[3], parseFloat(m[4])] as [number, number, number, number],
-    )
+    [...claim.matchAll(/placeholder:text-\[rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)\]/g)].map((m) => {
+      const a = parseFloat(m[4])
+      if (!Number.isFinite(a) || a < 0 || a > 1) {
+        throw new Error(`claim placeholder alpha ${m[4]} outside [0, 1]`)
+      }
+      return [+m[1], +m[2], +m[3], a] as [number, number, number, number]
+    })
 
   it('EVERY claim placeholder colour is >= 4.5:1 on the field background', () => {
     const colours = placeholderColours()

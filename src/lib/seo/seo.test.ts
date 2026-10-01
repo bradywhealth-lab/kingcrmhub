@@ -83,7 +83,6 @@ describe('sitemap', () => {
      * only inside a comment — which is exactly what /claim's layout looks like,
      * since its docblock discusses the noindex policy in prose. A page whose real
      * metadata was deleted but whose comment remained would still pass.
-     * Review finding (confidence 7).
      */
     const readCode = (rel: string) => {
       const p = join(process.cwd(), rel)

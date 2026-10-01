@@ -107,12 +107,28 @@ function visibleText(children: string): string {
 /** Children text for a non-self-closing tag, or '' for a self-closing one. */
 function childrenOf(src: string, tag: string, tagEndIdx: number): string {
   if (tag.trimEnd().endsWith('/>')) return ''
-  const close = src.indexOf('</Button>', tagEndIdx)
   // `tagEndIdx` is the index OF the closing '>', so children start one later.
   // Slicing from tagEndIdx leaves a stray '>' that visibleText() reports as
   // rendered text, skipping EVERY offender and making the repo-wide assertion
   // pass vacuously. Caught by the self-check test below.
-  return close === -1 ? src.slice(tagEndIdx + 1, tagEndIdx + 201) : src.slice(tagEndIdx + 1, close)
+  const start = tagEndIdx + 1
+
+  // A plain indexOf('</Button>') is NOT scoped to THIS element: a NESTED
+  // <Button> between here and the first close would make that close belong to
+  // the inner element, truncating the outer scan at the wrong boundary (and a
+  // literal '</Button>' inside a child string or comment would do the same).
+  // No nested case exists in the repo today (measured); this keeps it correct
+  // when one is added. Track nested <Button opens before each candidate close.
+  let searchFrom = start
+  for (;;) {
+    const close = src.indexOf('</Button>', searchFrom)
+    if (close === -1) return src.slice(start, start + 200) // unbalanced; bounded
+    const between = src.slice(start, close)
+    const opens = (between.match(/<Button(?=[\s/>])/g) ?? []).length
+    const closes = (between.match(/<\/Button>/g) ?? []).length
+    if (opens <= closes) return between // balanced -> this close belongs to us
+    searchFrom = close + '</Button>'.length // belongs to a nested element; keep looking
+  }
 }
 
 /**
@@ -289,6 +305,24 @@ describe('S28: icon-only buttons have an accessible name', () => {
     const walked = walkTsx(SRC).filter((f) => !f.includes('.test.'))
     expect(walked.length, 'scanner must walk the real tree').toBeGreaterThan(50)
     expect(walked.some((f) => f.endsWith('app/page.tsx')), 'page.tsx must be in scope').toBe(true)
+
+    // NESTED Button: the outer scan must not be truncated by the inner close.
+    const nested =
+      '<Button size="icon">\n  <span>\n    <Button size="icon" aria-label="inner"><Plus /></Button>\n  </span>\n  <Trash2 />\n</Button>'
+    expect(unnamedIconButtons(nested), 'outer button stays an offender; inner is named').toHaveLength(1)
+
+    // literal </Button> inside a child STRING must not end the scan either
+    const literal =
+      `<Button size="icon" title={"</Button> is not a tag"}>` +
+      '<Plus className="w-3 h-3" />' +
+      '</Button>'
+    // the literal sits inside an attribute (parsed by the tag scanner, which
+    // respects quotes), so this button has title= only -> still an offender
+    expect(unnamedIconButtons(literal), 'attribute strings are not markup').toHaveLength(1)
+
+    // UNBALANCED source (no closing tag): must terminate, not loop forever
+    const unbalanced = '<Button size="icon"><Plus />no close ever'
+    expect(unnamedIconButtons(unbalanced).length).toBeLessThanOrEqual(1)
 
     // The naive regex that hid 3 of 4 offenders on main:
     const naive = synthetic.match(/<Button\b[^>]*>/)?.[0] ?? ''
