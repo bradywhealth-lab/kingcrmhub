@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import sitemap from '@/app/sitemap'
 import { PUBLIC_ROUTES, SITE_URL } from '@/lib/seo/site-config'
@@ -18,7 +20,21 @@ describe('sitemap', () => {
       `${SITE_URL}`,
       `${SITE_URL}/pricing`,
       `${SITE_URL}/compare`,
+      `${SITE_URL}/books/`,
     ])
+  })
+
+  it('lists /books/ WITH the trailing slash, because /books 301s to /books/', () => {
+    // Atlas measured this live:
+    //   GET /books  -> 301 https://kingcrmhub.net/books/
+    //   GET /books/ -> 200  ("Brady's Books | Practical Paper Tools by Brady Wilson")
+    // /books is NOT a Next.js route — Caddy serves it as a static site:
+    //   handle_path /books* { root * /data/sites/bradys-books; file_server }
+    //   redir /books /books/ permanent
+    // Submitting the redirecting URL would make Google crawl a hop.
+    const urls = sitemap().map((e) => e.url)
+    expect(urls).toContain(`${SITE_URL}/books/`)
+    expect(urls).not.toContain(`${SITE_URL}/books`)
   })
 
   it('never lists auth, admin, welcome, or dynamic tenant routes', () => {
@@ -26,7 +42,69 @@ describe('sitemap', () => {
     expect(urls).not.toMatch(/\/auth/)
     expect(urls).not.toMatch(/\/admin/)
     expect(urls).not.toMatch(/\/welcome/)
+    // /book/[slug] is dynamic tenant booking content. NOTE this regex deliberately
+    // requires the trailing slash: it must NOT match the static /books/ entry, and
+    // it only avoids doing so because of the `s`. Asserting both directions so the
+    // distinction can never silently break.
     expect(urls).not.toMatch(/\/book\//)
+    expect(urls).toMatch(/\/books\//)
+  })
+
+  it('never lists a noindex page (guards the S22 false positive)', () => {
+    // Sentinel routed "add /claim /terms /privacy to the sitemap". They are
+    // DELIBERATELY noindex — verified in source:
+    //   /terms, /privacy, /claim -> robots: { index: false, follow: true }
+    //   /welcome                 -> alternates: { canonical: '/' }
+    // Listing a noindex page sends Google a contradictory signal (indexed in the
+    // sitemap, noindex on the page), which is a regression, not a fix.
+    const urls = sitemap().map((e) => e.url)
+    for (const banned of ['/terms', '/privacy', '/claim', '/welcome', '/auth', '/admin']) {
+      expect(urls, `${banned} must stay out of the sitemap`).not.toContain(`${SITE_URL}${banned}`)
+    }
+  })
+
+  it('the noindex claims above are TRUE in source, not assumed', () => {
+    // Without this, the previous test would pass even if someone removed the
+    // noindex metadata — at which point those pages SHOULD be added back.
+    //
+    // The metadata lives in DIFFERENT files per route, which matters:
+    //   /terms, /privacy -> page.tsx (server components, can export metadata)
+    //   /claim           -> layout.tsx, because the page is 'use client' and a
+    //                       client component CANNOT export metadata. Its layout
+    //                       comment states the policy explicitly: sitemap
+    //                       exclusion alone is not enough since /welcome links
+    //                       to it, so robots:noindex is enforced in the layout.
+    // Reading only page.tsx would make this test fail on a false premise.
+    /**
+     * Read a file with its COMMENTS REMOVED.
+     *
+     * This guard regex-matched raw file text, so the tokens `index: false`,
+     * `follow: true` and `canonical: '/'` satisfied it even when they appeared
+     * only inside a comment — which is exactly what /claim's layout looks like,
+     * since its docblock discusses the noindex policy in prose. A page whose real
+     * metadata was deleted but whose comment remained would still pass.
+     */
+    const readCode = (rel: string) => {
+      const p = join(process.cwd(), rel)
+      if (!existsSync(p)) return ''
+      return readFileSync(p, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')   // /* ... */ and JSDoc
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, '') // {/* ... */}
+        .replace(/^\s*\/\/.*$/gm, '')          // // line comments
+    }
+
+    for (const route of ['terms', 'privacy', 'claim']) {
+      const combined =
+        readCode(`src/app/${route}/page.tsx`) + readCode(`src/app/${route}/layout.tsx`)
+      expect(combined, `/${route} must declare noindex in real metadata, not a comment`)
+        .toMatch(/robots:\s*\{[^}]*index:\s*false/)
+      expect(combined, `/${route} should still let links be followed`)
+        .toMatch(/follow:\s*true/)
+    }
+
+    const welcome =
+      readCode('src/app/welcome/page.tsx') + readCode('src/app/welcome/layout.tsx')
+    expect(welcome, '/welcome must canonicalise to /').toMatch(/canonical:\s*'\/'/)
   })
 })
 

@@ -394,6 +394,10 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
             variant="ghost"
             className="w-8 h-8 text-muted-foreground hover:text-[var(--accent-text)] hover:bg-muted"
             onClick={createNewChat}
+            // S28: `title` alone is a weak accessible name — not reliably exposed
+            // to assistive tech, and invisible to touch users. Keep it as the
+            // hover tooltip and add a real accessible name.
+            aria-label="New chat"
             title="New chat"
           >
             <Plus className="w-4 h-4" />
@@ -595,6 +599,8 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                         ? "bg-[var(--accent-solid)] hover:bg-[var(--accent-hover)] text-white shadow-sm"
                         : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
+                    // S28: send is announced by a paper-plane glyph only.
+                    aria-label="Send message"
                     disabled={!input.trim() || streaming}
                     onClick={() => void sendMessage(input)}
                   >

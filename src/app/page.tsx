@@ -1661,6 +1661,15 @@ function PipelineView() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-muted-foreground hover:text-[var(--accent-text)]"
+                      // S28: icon-only "+" in a pipeline stage column.
+                      // Deliberately NOT "Add lead to {stage.name}": the dispatch
+                      // carries no detail, use-workspace-overlays' leadHandler
+                      // ignores detail, and add-lead-dialog has no stage field
+                      // (its only Select is `source`). The lead would NOT land in
+                      // this column, so a stage-specific name would be a lie told
+                      // to screen-reader users. Honest label until the dialog can
+                      // actually accept a stage.
+                      aria-label="Add lead"
                       onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
                     >
                       <Plus className="w-3 h-3" />
@@ -2483,7 +2492,18 @@ function SocialMediaView() {
                         Publish
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => void removeItem(item.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500 hover:text-red-700"
+                      // S28: destructive action announced only by a trash glyph.
+                      // item.title is string|null (/api/content normalises an empty
+                      // title to null), so mirror the fallback the row actually
+                      // renders — otherwise the label announces "Delete null" while
+                      // the user is looking at "Untitled post".
+                      aria-label={`Delete ${item.title || 'Untitled post'}`}
+                      onClick={() => void removeItem(item.id)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
