@@ -9,40 +9,72 @@ import { describe, expect, it } from 'vitest'
  * #223 raised the /claim, /terms and /privacy links to `min-h-[24px]`; Atlas and
  * OpsForge both re-measured them at 24.0px on the deployed build.
  *
- * ## What was still failing (Atlas measured live on `afe3b4f`)
- * - `/welcome`: **12** nav/footer links at exactly **20px** (5 header, 7 footer)
- * - `/auth`: the **"Forgot password?"** control at **20px**
+ * ## What this pins (Atlas measured live on `afe3b4f`, then cubic caught 2 more)
+ * - `/welcome`: 12 nav/footer links at exactly 20px (5 header, 7 footer)
+ * - `/auth`: "Forgot password?" **and both "Back" controls** at 20px
  *
- * Both now declare `min-h-[24px]`. The rule below: any Link/anchor on /welcome
- * that has no vertical padding (i.e. an inline text link, not a padded CTA) must
- * declare the 24px floor. Padded CTAs are already >24px via their own padding.
+ * ## Why the scanner, not a single match
+ * An earlier version of this test only asserted the FIRST `switchMode('forgot')`
+ * match, so the reset-mode "Back" button slipped through and the test passed
+ * anyway (cubic P2, confidence 9). Every tag is now enumerated.
+ *
+ * Rule: a control with no vertical padding of its own (no `py-N`, no `h-N`) is an
+ * inline tap target and must declare the 24px floor. Padded CTAs are already >24px
+ * and are exempt. Tags are scanned brace/quote-aware because `onClick={() => …}`
+ * contains a `>` that naive regexes truncate on.
  *
  * ## Honest limitation
- * These are source assertions — there is no jsdom in this repo. They prove the
- * markup carries the floor; the real proof is a browser getBoundingClientRect
- * measurement on the deployed build.
+ * Source assertions only — no jsdom here. They prove the markup carries the floor;
+ * a browser `getBoundingClientRect` pass on the deployed build is the real proof.
  */
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 
-const WELCOME = 'src/app/welcome/page.tsx'
-const AUTH = 'src/app/auth/page.tsx'
+/** Every `<name …>` tag with brace/quote-aware scanning (arrow fns contain `>`). */
+function scanTags(src: string, name: string): string[] {
+  const out: string[] = []
+  for (const m of src.matchAll(new RegExp(`<${name}\\b`, 'g'))) {
+    let i = m.index
+    let depth = 0
+    let quote: string | null = null
+    while (i < src.length) {
+      const c = src[i]
+      if (quote) {
+        if (c === quote) quote = null
+      } else if (c === '"' || c === "'") {
+        quote = c
+      } else if (c === '{') {
+        depth++
+      } else if (c === '}') {
+        depth--
+      } else if (c === '>' && depth === 0) {
+        out.push(src.slice(m.index, i + 1))
+        break
+      }
+      i++
+    }
+  }
+  return out
+}
+
+/** A control is exempt when its own box already exceeds 24px via padding/height. */
+const isExempt = (tag: string) => /py-\d/.test(tag) || /h-\d|h-full/.test(tag)
 
 describe('tap targets (S20)', () => {
-  it('every unpadded /welcome link carries the 24px floor', () => {
-    const tags = read(WELCOME).match(/<(?:Link|a)\b[^>]*>/g) ?? []
-    const inline = tags.filter((t) => !/py-\d/.test(t))
+  it('every /welcome Link and anchor is either padded or floored at 24px', () => {
+    const inline = [...scanTags(read('src/app/welcome/page.tsx'), 'Link'), ...scanTags(read('src/app/welcome/page.tsx'), 'a')].filter(
+      (t) => !isExempt(t),
+    )
 
-    expect(inline.length).toBeGreaterThan(9) // 5 header + 7 footer
+    expect(inline.length).toBeGreaterThanOrEqual(12) // 5 header + 7 footer
     for (const tag of inline) expect(tag).toContain('min-h-[24px]')
   })
 
-  it('the /auth "Forgot password?" control carries the 24px floor', () => {
-    const src = read(AUTH)
-    const at = src.indexOf("switchMode('forgot')")
-    expect(at).toBeGreaterThan(-1)
+  it('every unpadded /auth button is floored at 24px', () => {
+    const inline = scanTags(read('src/app/auth/page.tsx'), 'button').filter((t) => !isExempt(t))
 
-    const tag = src.slice(src.lastIndexOf('<button', at), src.indexOf('>', at))
-    expect(tag).toContain('min-h-[24px]')
+    // "Forgot password?" + "Back to sign in" + "Back"
+    expect(inline.length).toBeGreaterThanOrEqual(3)
+    for (const tag of inline) expect(tag).toContain('min-h-[24px]')
   })
 })
