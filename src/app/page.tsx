@@ -1629,7 +1629,7 @@ function PipelineView() {
           </Card>
           <Button className="btn-gold gap-2" onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}>
             <Plus className="w-4 h-4" />
-            Add Deal
+            Add Lead
           </Button>
         </div>
       </div>

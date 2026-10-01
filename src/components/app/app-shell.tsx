@@ -232,7 +232,7 @@ function NotificationsBell({ open, setOpen, unreadCount }: { open: boolean; setO
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white">
+        <Button variant="ghost" size="icon" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"} className="relative h-9 w-9 rounded-xl border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--accent-solid)]" />}
         </Button>
@@ -253,7 +253,7 @@ function UserMenu({ currentUser, onSignOut, onSettings }: { currentUser: AppShel
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1 rounded-xl p-0.5 pr-1.5 transition-colors hover:bg-white/8">
+        <button aria-label="Account menu" className="flex items-center gap-1 rounded-xl p-0.5 pr-1.5 transition-colors hover:bg-white/8">
           <Avatar className="h-9 w-9 rounded-xl border border-white/10">
             <AvatarFallback className="rounded-xl bg-[var(--accent-solid)] text-sm font-semibold text-white">{getInitials(currentUser?.name)}</AvatarFallback>
           </Avatar>

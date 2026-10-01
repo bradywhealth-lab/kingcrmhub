@@ -149,7 +149,7 @@ function ClaimPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="mt-2 h-12 rounded-2xl border px-4"
+                className="mt-2 h-12 rounded-2xl border px-4 placeholder:text-[rgba(244,240,230,0.62)]"
                 style={{ borderColor: 'rgba(244,240,230,0.2)', background: '#0C111B', color: PAPER }}
               />
             </div>
@@ -160,7 +160,7 @@ function ClaimPageInner() {
                 value={licenseKey}
                 onChange={(e) => setLicenseKey(e.target.value)}
                 placeholder="XXXX-XXXX-XXXX-XXXX"
-                className="mt-2 h-12 rounded-2xl border px-4 font-mono"
+                className="mt-2 h-12 rounded-2xl border px-4 font-mono placeholder:text-[rgba(244,240,230,0.62)]"
                 style={{ borderColor: 'rgba(244,240,230,0.2)', background: '#0C111B', color: PAPER }}
               />
             </div>
@@ -213,7 +213,7 @@ function ClaimPageInner() {
 
         <div className="mt-10 rounded-3xl border p-5" style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}>
           <p className="text-sm font-semibold" style={{ color: PAPER }}>Already have an account?</p>
-          <Link href="/auth" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: TEAL }}>
+          <Link href="/auth" className="mt-2 inline-flex min-h-[24px] items-center gap-2 text-sm font-semibold" style={{ color: TEAL }}>
             Sign in instead <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

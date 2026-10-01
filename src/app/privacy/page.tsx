@@ -89,10 +89,10 @@ export default function PrivacyPage() {
         </section>
 
         <footer className="border-t border-[var(--ink,#0C111B)]/10 pt-6 flex flex-wrap gap-4 text-sm text-[var(--ink,#0C111B)]/60">
-          <Link href="/terms" className="hover:text-[var(--ink,#0C111B)] transition-colors">
+          <Link href="/terms" className="inline-flex min-h-[24px] items-center hover:text-[var(--ink,#0C111B)] transition-colors">
             Terms of Service
           </Link>
-          <Link href="/pricing" className="hover:text-[var(--ink,#0C111B)] transition-colors">
+          <Link href="/pricing" className="inline-flex min-h-[24px] items-center hover:text-[var(--ink,#0C111B)] transition-colors">
             Pricing
           </Link>
         </footer>

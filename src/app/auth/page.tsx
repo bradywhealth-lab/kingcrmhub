@@ -426,19 +426,22 @@ function AuthPageInner() {
                   {mode === 'signup' && (
                     <>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
+                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
+                        <Input id="signup-name" name="name" autoComplete="name" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
                       </div>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
+                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
+                        <Input id="signup-org" name="organization" autoComplete="organization" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
+                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
                     <Input
+                      id="auth-email"
+                      name="email"
+                      autoComplete={mode === 'login' ? 'username' : 'email'}
                       type="email"
                       required
                       className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
@@ -450,8 +453,11 @@ function AuthPageInner() {
                   </div>
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
+                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
                     <Input
+                      id="auth-password"
+                      name="password"
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                       type="password"
                       required
                       minLength={mode === 'signup' ? 8 : undefined}
@@ -465,8 +471,11 @@ function AuthPageInner() {
 
                   {mode === 'signup' && (
                     <div>
-                      <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
                       <Input
+                        id="auth-confirm"
+                        name="confirmPassword"
+                        autoComplete="new-password"
                         type="password"
                         required
                         minLength={8}
@@ -525,7 +534,7 @@ function AuthPageInner() {
 
                   <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(31,42,54,0.04)] p-4 text-sm text-[#0c111b]/60">
                     Already have a password-reset link?{' '}
-                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[#1e4fcc] hover:opacity-80">
+                    <button type="button" onClick={() => switchMode('reset')} className="inline-flex min-h-[24px] items-center font-semibold text-[#1e4fcc] hover:opacity-80">
                       Finish resetting your password
                     </button>
                   </div>
@@ -539,8 +548,8 @@ function AuthPageInner() {
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
-                  <Input type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleForgotPassword()} />
+                  <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
+                  <Input id="forgot-email" name="email" autoComplete="email" type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleForgotPassword()} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
@@ -562,16 +571,16 @@ function AuthPageInner() {
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
-                  <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
+                  <Label htmlFor="reset-token" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
+                  <Input id="reset-token" name="token" autoComplete="one-time-code" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
-                  <Input type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  <Label htmlFor="reset-new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
+                  <Input id="reset-new-password" name="newPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
-                  <Input type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword()} />
+                  <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                  <Input id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword()} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}

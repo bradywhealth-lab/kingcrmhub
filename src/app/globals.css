@@ -93,7 +93,7 @@
 
   /* Muted + shadcn accent (hover surface) */
   --muted: #f0f0ee;
-  --muted-foreground: rgba(11, 11, 12, 0.55);
+  --muted-foreground: rgba(11, 11, 12, 0.62);
   --accent: rgba(47, 107, 255, 0.10);
   --accent-foreground: #0b0b0c;
 
