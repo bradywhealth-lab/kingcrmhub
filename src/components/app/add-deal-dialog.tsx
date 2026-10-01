@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { buildApiPath } from "@/lib/api-client"
-
-type Stage = { id: string; name: string }
+import { stageForOpen, type Stage } from "@/lib/pipeline/stage-selection"
 
 /**
  * S29 — the Pipeline's only creation CTA previously opened the LEAD dialog, so the
@@ -45,10 +44,7 @@ export function AddDealDialog({
       const payload = await response.json()
       const next: Stage[] = (payload?.pipeline?.stages ?? []).map((s: Stage) => ({ id: s.id, name: s.name }))
       setStages(next)
-      setForm((current) => ({
-        ...current,
-        stageId: current.stageId || defaultStageId || next[0]?.id || "",
-      }))
+      setForm((current) => ({ ...current, stageId: stageForOpen(defaultStageId, next) }))
     } catch {
       setError("Could not load pipeline stages.")
     } finally {
@@ -57,8 +53,14 @@ export function AddDealDialog({
   }, [defaultStageId])
 
   useEffect(() => {
-    if (open) void loadStages()
-  }, [open, loadStages])
+    if (!open) return
+    // Every open re-scopes the form to the column that was clicked (S29 review).
+    // A stage picked in a previous visit must not survive it: "Add deal to Won"
+    // filing the deal under "New" is precisely the defect this dialog ends.
+    setError(null)
+    setForm({ title: "", value: "", stageId: defaultStageId ?? "", expectedClose: "" })
+    void loadStages()
+  }, [open, defaultStageId, loadStages])
 
   const reset = () => setForm({ title: "", value: "", stageId: defaultStageId || "", expectedClose: "" })
 
