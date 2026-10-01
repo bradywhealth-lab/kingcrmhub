@@ -57,7 +57,7 @@ This scaffold provides a robust foundation built with:
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+# Install dependencies (requires Bun >= 1.4.2 — bun.lock is lockfileVersion 3)
 bun install
 
 # Start development server
