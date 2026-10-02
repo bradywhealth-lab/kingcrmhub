@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/lib/store"
-import { NotificationsBody, useNotifications } from "@/components/app/notifications-bell"
+import { NotificationsBody, seenStorageKey, useNotifications } from "@/components/app/notifications-bell"
 
 // Freelancer-native IA. `id`s match the DashboardView router in src/app/page.tsx.
 export const APP_NAV_ITEMS = [
@@ -41,7 +41,7 @@ export function AppShell({
 }: {
   activeView: string
   setActiveView: (view: string) => void
-  currentUser: { name: string | null; role: string; organization?: { name: string; plan: string } } | null
+  currentUser: { name: string | null; role: string; organizationId?: string | null; organization?: { name: string; plan: string } } | null
   onAddLead: () => void
   onSignOut: () => void
   /** Opens the command palette. The header search affordances are triggers for
@@ -153,7 +153,7 @@ export function AppShell({
               <Search className="h-4 w-4" />
             </button>
             <ThemeToggle theme={theme} setTheme={setTheme} />
-            <NotificationsBell open={notificationsOpen} setOpen={setNotificationsOpen} />
+            <NotificationsBell key={currentUser?.organizationId ?? "no-org"} open={notificationsOpen} setOpen={setNotificationsOpen} orgScope={currentUser?.organizationId ?? null} />
             <Button onClick={onAddLead} className="h-9 gap-2 rounded-xl bg-[var(--accent-solid)] px-4 font-semibold text-white hover:bg-[var(--accent-hover)]">
               <Plus className="h-4 w-4" /> New
             </Button>
@@ -226,20 +226,22 @@ function ThemeToggle({ theme, setTheme }: { theme: "dark" | "light"; setTheme: (
   )
 }
 
-function NotificationsBell({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+function NotificationsBell({ open, setOpen, orgScope }: { open: boolean; setOpen: (v: boolean) => void; orgScope?: string | null }) {
   // Real data: org activity log via GET /api/activities. The old hardcoded
   // empty mock array + empty-dep useMemo made this bell permanently inert —
-  // a false all-clear (t_9dadc534). Opening the dropdown marks seen,
-  // clearing the badge honestly; items stay listed.
-  const { status, notifications, unreadCount, refresh, markSeen } = useNotifications()
+  // a false all-clear (t_9dadc534). Opening the dropdown refetches and marks
+  // seen ONLY after a successful render, and the seen-baseline is scoped per
+  // organization so tenants on one browser never clobber each other (P1/P2).
+  const seenKey = seenStorageKey(orgScope)
+  const { status, notifications, unreadCount, refreshAndMarkSeen } = useNotifications(seenKey)
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (next) {
       // Opening = seeing the contents: pull fresh items and clear the unread
-      // claim. Items stay listed; only the badge resets.
-      void refresh()
-      markSeen(Date.now())
+      // claim for what was actually rendered. Items stay listed; only the
+      // badge resets, and only on success.
+      void refreshAndMarkSeen()
     }
   }
 
@@ -293,4 +295,4 @@ function UserMenu({ currentUser, onSignOut, onSettings }: { currentUser: AppShel
   )
 }
 
-type AppShellUser = { name: string | null; role: string; organization?: { name: string; plan: string } } | null
+type AppShellUser = { name: string | null; role: string; organizationId?: string | null; organization?: { name: string; plan: string } } | null

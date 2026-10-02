@@ -4,8 +4,10 @@ import {
   LAST_SEEN_STORAGE_KEY,
   NotificationsBody,
   formatRelativeTime,
+  latestSeenAtFrom,
   parseActivitiesPayload,
   readLastSeenAt,
+  seenStorageKey,
   toNotifications,
   writeLastSeenAt,
   fetchNotifications,
@@ -56,6 +58,9 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 const NOW = Date.parse('2026-10-01T13:00:00.000Z')
+
+const shellSourcePath = join(process.cwd(), 'src/components/app/app-shell.tsx')
+const bellModulePath = join(process.cwd(), 'src/components/app/notifications-bell.tsx')
 
 describe('notifications: false all-clear is impossible (t_9dadc534)', () => {
   it('renders NO all-clear while loading', () => {
@@ -134,6 +139,54 @@ describe('unread semantics are computed from a real seen-timestamp', () => {
     expect(readLastSeenAt(storage)).toBeNull()
     const storage2 = memoryStorage({ [LAST_SEEN_STORAGE_KEY]: '-5' })
     expect(readLastSeenAt(storage2)).toBeNull()
+  })
+})
+
+describe('seen-baseline is scoped per organization (P2) and only advances on rendered data (P1)', () => {
+  it('scopes the storage key by organization', () => {
+    expect(seenStorageKey('org_A')).toBe(`${LAST_SEEN_STORAGE_KEY}:org_A`)
+    expect(seenStorageKey('org_B')).toBe(`${LAST_SEEN_STORAGE_KEY}:org_B`)
+    expect(seenStorageKey(null)).toBe(LAST_SEEN_STORAGE_KEY)
+    expect(seenStorageKey('   ')).toBe(LAST_SEEN_STORAGE_KEY)
+  })
+
+  it('org A writes never touch org B baseline', () => {
+    const storage = memoryStorage()
+    writeLastSeenAt(1000, storage, seenStorageKey('org_A'))
+    expect(readLastSeenAt(storage, seenStorageKey('org_B'))).toBeNull()
+    expect(readLastSeenAt(storage, seenStorageKey('org_A'))).toBe(1000)
+  })
+
+  it('latestSeenAtFrom returns the newest parseable createdAt only', () => {
+    expect(latestSeenAtFrom([])).toBeNull()
+    const activities = [
+      makeActivity({ id: 'a1', createdAt: '2026-10-01T10:00:00.000Z' }),
+      makeActivity({ id: 'a2', createdAt: '2026-10-01T12:30:00.000Z' }),
+      makeActivity({ id: 'a3', createdAt: '2026-10-01T11:00:00.000Z' }),
+    ]
+    expect(latestSeenAtFrom(activities)).toBe(Date.parse('2026-10-01T12:30:00.000Z'))
+  })
+
+  it('ignores unparseable timestamps when computing the seen advance', () => {
+    const activities = [
+      makeActivity({ id: 'a1', createdAt: 'garbage' }),
+      makeActivity({ id: 'a2', createdAt: '2026-10-01T12:30:00.000Z' }),
+    ]
+    expect(latestSeenAtFrom(activities)).toBe(Date.parse('2026-10-01T12:30:00.000Z'))
+    expect(latestSeenAtFrom([makeActivity({ createdAt: 'garbage' })])).toBeNull()
+  })
+
+  it('the shipped open-handler never marks seen on a bare clock time', () => {
+    // P1 regression pin: marking seen with Date.now() while a fetch is still
+    // loading or has failed would suppress genuinely unread items. The bell
+    // must advance the baseline only through refreshAndMarkSeen (success +
+    // rendered items), never through a standalone timestamp write.
+    const shell = readFileSync(shellSourcePath, 'utf8')
+    expect(shell).toContain('void refreshAndMarkSeen()')
+    expect(shell).not.toMatch(/markSeen\(Date\.now\(\)\)/)
+    const bell = readFileSync(bellModulePath, 'utf8')
+    expect(bell).toMatch(/if \(result\.status === "ready"\)/)
+    expect(bell).toContain('latestSeenAtFrom(result.activities)')
   })
 })
 
@@ -224,12 +277,8 @@ describe('fetchNotifications hits the real activity log and never throws', () =>
 })
 
 describe('the inert stub can never be reintroduced silently (source-level)', () => {
-  const shellPath = join(process.cwd(), 'src/components/app/app-shell.tsx')
-  const shell = readFileSync(shellPath, 'utf8')
-  const bellModule = readFileSync(
-    join(process.cwd(), 'src/components/app/notifications-bell.tsx'),
-    'utf8',
-  )
+  const shell = readFileSync(shellSourcePath, 'utf8')
+  const bellModule = readFileSync(bellModulePath, 'utf8')
 
   it('app-shell no longer contains mockNotifications or the empty-dep useMemo', () => {
     expect(shell).not.toContain('mockNotifications')

@@ -66,9 +66,12 @@ function defaultStorage(): StorageLike | null {
 }
 
 /** Last time this browser saw the bell's contents, or null when unknown. */
-export function readLastSeenAt(storage: StorageLike | null = defaultStorage()): number | null {
+export function readLastSeenAt(
+  storage: StorageLike | null = defaultStorage(),
+  key: string = LAST_SEEN_STORAGE_KEY,
+): number | null {
   try {
-    const raw = storage?.getItem(LAST_SEEN_STORAGE_KEY)
+    const raw = storage?.getItem(key)
     if (!raw) return null
     const parsed = Number(raw)
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null
@@ -77,13 +80,39 @@ export function readLastSeenAt(storage: StorageLike | null = defaultStorage()): 
   }
 }
 
-export function writeLastSeenAt(value: number, storage: StorageLike | null = defaultStorage()): void {
+export function writeLastSeenAt(
+  value: number,
+  storage: StorageLike | null = defaultStorage(),
+  key: string = LAST_SEEN_STORAGE_KEY,
+): void {
   try {
-    storage?.setItem(LAST_SEEN_STORAGE_KEY, String(value))
+    storage?.setItem(key, String(value))
   } catch {
     // Private mode / quota — the session degrades to in-memory state, which
     // is honest: we simply won't claim items were seen across reloads.
   }
+}
+
+/**
+ * Multi-tenant scoping (P2): the seen-baseline key is per organization, so
+ * opening the bell in org A never overwrites org B's baseline. Without a
+ * scope (signed-out / identity not yet loaded) it falls back to the global
+ * key — which then claims nothing about any org's history.
+ */
+export function seenStorageKey(scope: string | null | undefined): string {
+  const trimmed = scope?.trim()
+  return trimmed ? `${LAST_SEEN_STORAGE_KEY}:${trimmed}` : LAST_SEEN_STORAGE_KEY
+}
+
+/** Newest parseable createdAt among activities — the only timestamp the bell
+ *  may claim as "seen". Null when nothing renderable exists. */
+export function latestSeenAtFrom(activities: ActivityLike[]): number | null {
+  let latest: number | null = null
+  for (const activity of activities) {
+    const parsed = Date.parse(activity.createdAt ?? "")
+    if (Number.isFinite(parsed) && (latest === null || parsed > latest)) latest = parsed
+  }
+  return latest
 }
 
 /** Deterministic relative time for the dropdown rows. */
@@ -149,52 +178,75 @@ export async function fetchNotifications(fetchImpl: typeof fetch = globalThis.fe
 
 /**
  * Bell state: fetch on mount, poll every 60s while the tab is visible, and
- * expose markSeen so opening the dropdown clears the badge honestly (items
- * stay listed; only the unread claim clears). A failed poll never clobbers
- * previously loaded items — it only surfaces "error" before the first
- * successful load.
+ * expose `refreshAndMarkSeen` so opening the dropdown clears the badge
+ * honestly — ONLY after a successful refresh, and ONLY through the newest
+ * activity actually rendered (P1: marking seen on a loading/failed fetch
+ * would silently suppress items the user never saw, recreating a false
+ * all-clear). A failed poll never clobbers previously loaded items — it only
+ * surfaces "error" before the first successful load.
+ *
+ * `seenKey` scopes the persisted baseline per organization (P2); callers
+ * should also key the mounting component by it so an identity change
+ * re-initializes every piece of state from the right baseline.
  */
-export function useNotifications() {
+export function useNotifications(seenKey: string = LAST_SEEN_STORAGE_KEY) {
   const [status, setStatus] = useState<BellStatus>("loading")
   const [activities, setActivities] = useState<ActivityLike[]>([])
   const [lastSeenAt, setLastSeenAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const baselineSetRef = useRef(false)
 
+  /** Advances the seen baseline monotonically (never regresses it). */
+  const advanceSeen = useCallback(
+    (seenAt: number) => {
+      setLastSeenAt((prev) => {
+        const next = prev === null ? seenAt : Math.max(prev, seenAt)
+        writeLastSeenAt(next, defaultStorage(), seenKey)
+        return next
+      })
+    },
+    [seenKey],
+  )
+
   /** Applies one fetch result to state. Called only from async continuations
    *  (after await), never synchronously inside an effect body. */
-  const applyResult = useCallback((result: FetchNotificationsResult) => {
-    if (result.status === "error") {
-      setStatus((prev) => (prev === "ready" ? prev : "error"))
-      return
-    }
-    setActivities(result.activities)
-    setNow(Date.now())
-    setStatus("ready")
-    if (!baselineSetRef.current) {
-      baselineSetRef.current = true
-      setLastSeenAt((prev) => {
-        if (prev !== null) return prev
-        const stored = readLastSeenAt()
-        if (stored !== null) return stored
-        // First visit on this browser: baseline to now. Existing history was
-        // not "missed" through the bell, so claiming it unread would be as
-        // fabricated as the old all-clear. Only genuinely new events badge.
-        const baseline = Date.now()
-        writeLastSeenAt(baseline)
-        return baseline
-      })
-    }
-  }, [])
+  const applyResult = useCallback(
+    (result: FetchNotificationsResult) => {
+      if (result.status === "error") {
+        setStatus((prev) => (prev === "ready" ? prev : "error"))
+        return
+      }
+      setActivities(result.activities)
+      setNow(Date.now())
+      setStatus("ready")
+      if (!baselineSetRef.current) {
+        baselineSetRef.current = true
+        setLastSeenAt((prev) => {
+          if (prev !== null) return prev
+          const stored = readLastSeenAt(defaultStorage(), seenKey)
+          if (stored !== null) return stored
+          // First visit on this browser: baseline to now. Existing history was
+          // not "missed" through the bell, so claiming it unread would be as
+          // fabricated as the old all-clear. Only genuinely new events badge.
+          const baseline = Date.now()
+          writeLastSeenAt(baseline, defaultStorage(), seenKey)
+          return baseline
+        })
+      }
+    },
+    [seenKey],
+  )
 
-  const refresh = useCallback(async () => {
-    applyResult(await fetchNotifications())
-  }, [applyResult])
-
-  const markSeen = useCallback((seenAt: number) => {
-    writeLastSeenAt(seenAt)
-    setLastSeenAt(seenAt)
-  }, [])
+  /** Opening the bell: pull fresh items, and mark seen ONLY what was actually
+   *  rendered by a successful fetch. Loading/error states advance nothing. */
+  const refreshAndMarkSeen = useCallback(async () => {
+    const result = await fetchNotifications()
+    applyResult(result)
+    if (result.status === "ready") {
+      const latest = latestSeenAtFrom(result.activities)
+      if (latest !== null) advanceSeen(latest)
+    }
+  }, [applyResult, advanceSeen])
 
   useEffect(() => {
     let cancelled = false
@@ -234,7 +286,7 @@ export function useNotifications() {
   const notifications = useMemo(() => toNotifications(activities, lastSeenAt, now), [activities, lastSeenAt, now])
   const unreadCount = useMemo(() => notifications.filter((n) => n.unread).length, [notifications])
 
-  return { status, notifications, unreadCount, refresh, markSeen }
+  return { status, notifications, unreadCount, refreshAndMarkSeen }
 }
 
 /**
