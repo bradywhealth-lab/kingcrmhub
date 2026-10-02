@@ -129,7 +129,7 @@ export default function PublicLandingPage() {
       {/* METRICS BAND */}
       <section className="mt-16 bg-[#0B0B0C] px-5 py-14 text-white sm:px-8">
         <div className="mx-auto grid max-w-4xl gap-8 text-center md:grid-cols-3">
-          {[['3.2×', 'faster follow-ups'], ['$0', 'per-seat fees, ever'], ['1', 'calm place for everything']].map(([n, l]) => (
+          {[['$0', 'per-seat fees, ever'], ['1', 'calm place for everything']].map(([n, l]) => (
             <div key={l}>
               <div className="font-display text-5xl font-extrabold" style={{ color: COBALT }}>{n}</div>
               <div className="mt-2 text-[15px] text-white/65">{l}</div>
