@@ -18,6 +18,25 @@ ROLLBACK_ARMED=0
 # be initialized at top level because restore_old may be called earlier
 # (e.g. NEW_HEALTH_FAIL) under `set -u`.
 STATIC_PHASE_DONE=0
+# Single-use snapshot lifecycle (cubic P2: unbounded disk growth). Each deploy
+# snapshots the /books volume + host Caddy config; without cleanup every run
+# leaves a full copy behind on a small VPS. Remove them in an EXIT trap only
+# once they can no longer be needed: a completed rollback that consumed them,
+# or a clean deploy finish. A FAILED rollback (ROLLBACK_NAME_CONFLICT /
+# ROLLBACK_HEALTH_FAIL) keeps them for forensics.
+STATIC_SNAPSHOTS_SPENT=0
+cleanup_static_snapshots() {
+  if [[ "$STATIC_SNAPSHOTS_SPENT" == "1" ]]; then
+    if [[ -n "${STATIC_BACKUP_DIR:-}" ]]; then
+      rm -rf "$STATIC_BACKUP_DIR"
+    fi
+    if [[ -n "${CADDY_CONFIG_BACKUP:-}" ]]; then
+      rm -f "$CADDY_CONFIG_BACKUP"
+    fi
+  fi
+  return 0
+}
+trap cleanup_static_snapshots EXIT
 DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-${DEPLOY_ROOT}/kingcrmhub-deploy.lock}"
 
 # Serialize deployments: only one deploy process may hold this lock.
@@ -106,6 +125,8 @@ restore_old() {
       cp -f "$CADDY_CONFIG_BACKUP" "$DEPLOY_ROOT/Caddyfile.apps"
       docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || true
     fi
+    # Rollback consumed the snapshots; the EXIT trap may now delete them.
+    STATIC_SNAPSHOTS_SPENT=1
   fi
   echo "ROLLED_BACK_TO_ORIGINAL"
 }
@@ -190,6 +211,12 @@ if [[ ! -d "$STATIC_SRC_DIR" ]]; then
   exit 1
 fi
 mkdir -p "$STATIC_DST_DIR"
+# Arm external-artifact rollback BEFORE the first destructive operation: the
+# volume is cleared next, so any subsequent failure (empty source, partial
+# copy, sync verify) must restore the snapshot. Arming only after the sync
+# verify would let a mid-sync failure leave the live /books volume cleared
+# with no restore.
+STATIC_PHASE_DONE=1
 # Reproducible volume: clear destination before copying so files removed
 # from the repo never linger as stale volume extras (cubic P2). Only ever
 # touches the dedicated /books static volume.
@@ -219,7 +246,6 @@ for asset in "${STATIC_FILES[@]}"; do
   fi
 done
 echo "STATIC_SYNC_OK"
-STATIC_PHASE_DONE=1
 
 echo "=== SYNC CADDY CONFIG (repo deploy/Caddyfile.apps is source of truth) ==="
 cp "$REPO_DIR/deploy/Caddyfile.apps" "$DEPLOY_ROOT/Caddyfile.apps"
@@ -385,5 +411,8 @@ container_get "$CONTAINER" /sitemap.xml >/dev/null
 echo "SITEMAP_OK"
 
 ROLLBACK_ARMED=0
+# Clean finish: snapshots can no longer be needed, so the EXIT trap deletes
+# them (cubic P2: repeated deploys must not accumulate volume/config copies).
+STATIC_SNAPSHOTS_SPENT=1
 echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
 echo "DEPLOY_V4_DONE"

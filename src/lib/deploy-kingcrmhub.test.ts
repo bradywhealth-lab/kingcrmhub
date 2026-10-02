@@ -527,7 +527,7 @@ describe('KingCRMhub deploy hardening', () => {
   })
 
   it('syncs the vendored /books static site and Caddy config, then verifies all assets 200', deployTimeout, () => {
-    const { deployLog, result, curlLog: curlLogPath } = runMockDeploy()
+    const { deployLog, result, curlLog: curlLogPath, root: rootPath } = runMockDeploy()
     const output = `${result.stdout}\n${result.stderr}`
 
     expect(result.status, output).toBe(0)
@@ -537,6 +537,27 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('CADDY_RELOAD_OK')
     expect(output).toContain('STATIC_VERIFY_OK')
     expect(output).toContain('DEPLOY_V4_DONE')
+
+    // cubic P2: the success path must PURGE the seeded stale volume file and
+    // REPLACE the old host Caddy config. A deploy that stops clearing
+    // STATIC_DST_DIR (stale extras linger on the live /books volume) or stops
+    // copying the vendored config would pass the marker assertions alone.
+    const volDir = join(rootPath, 'sites', 'bradys-books')
+    expect(existsSync(join(volDir, 'stale_extras.txt'))).toBe(false)
+    // The script copies $REPO_DIR/deploy/Caddyfile.apps — in the harness that
+    // is the stub fixture (see createDeployHarness), which replaces the
+    // seeded 'old-caddy-config'. Compare against the stub, not repoRoot.
+    expect(readFileSync(join(rootPath, 'Caddyfile.apps'), 'utf8')).toBe(
+      'kingcrmhub.net { handle_path /books* { root * /data/sites/bradys-books file_server } }\n',
+    )
+
+    // cubic P2 (snapshot lifecycle): single-use snapshots must be deleted
+    // after a clean finish so repeated deploys never grow the disk.
+    const leftovers = [
+      ...readdirSync(rootPath),
+      ...readdirSync(join(rootPath, 'sites')),
+    ].filter((f) => f.includes('.bak-'))
+    expect(leftovers).toHaveLength(0)
 
     const dockerCalls = readFileSync(deployLog, 'utf8')
     // The caddy reload must happen through docker exec so the unit test
@@ -581,10 +602,18 @@ describe('KingCRMhub deploy hardening', () => {
     const restoredVol = readFileSync(join(rootPath, 'sites', 'bradys-books', 'stale_extras.txt'), 'utf8')
     expect(restoredVol).toBe('stale')
     expect(readFileSync(join(rootPath, 'Caddyfile.apps'), 'utf8')).toBe('old-caddy-config\n')
+
+    // Snapshots are single-use: a COMPLETED rollback consumed them, so the
+    // EXIT trap must delete them (cubic P2 disk growth).
+    const leftovers = [
+      ...readdirSync(rootPath),
+      ...readdirSync(join(rootPath, 'sites')),
+    ].filter((f) => f.includes('.bak-'))
+    expect(leftovers).toHaveLength(0)
   })
 
   it('fails the deploy and rolls back when Caddy validate fails', deployTimeout, () => {
-    const { result } = runMockDeploy({ failCaddyCmd: 'validate' })
+    const { result, root: rootPath } = runMockDeploy({ failCaddyCmd: 'validate' })
     const output = `${result.stdout}\n${result.stderr}`
 
     expect(result.status).toBe(1)
@@ -592,10 +621,18 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('CADDY_RELOAD_OK')
     expect(output).not.toContain('DEPLOY_V4_DONE')
+
+    // cubic P3: assert the actual RESTORE, not just the marker. The config
+    // copy happens before validate, so a rollback that skipped the artifact
+    // restore would leave the vendored config live and the volume replaced.
+    const volDir = join(rootPath, 'sites', 'bradys-books')
+    expect(readFileSync(join(volDir, 'stale_extras.txt'), 'utf8')).toBe('stale')
+    expect(existsSync(join(volDir, 'index.html'))).toBe(false)
+    expect(readFileSync(join(rootPath, 'Caddyfile.apps'), 'utf8')).toBe('old-caddy-config\n')
   })
 
   it('fails the deploy and rolls back when Caddy reload fails', deployTimeout, () => {
-    const { result } = runMockDeploy({ failCaddyCmd: 'reload' })
+    const { result, root: rootPath } = runMockDeploy({ failCaddyCmd: 'reload' })
     const output = `${result.stdout}\n${result.stderr}`
 
     expect(result.status).toBe(1)
@@ -603,6 +640,13 @@ describe('KingCRMhub deploy hardening', () => {
     expect(output).toContain('CADDY_RELOAD_FAIL')
     expect(output).toContain('ROLLED_BACK_TO_ORIGINAL')
     expect(output).not.toContain('DEPLOY_V4_DONE')
+
+    // cubic P3: same restore assertions as the validate-fail path — a config
+    // that validates but fails to reload must still roll the artifacts back.
+    const volDir = join(rootPath, 'sites', 'bradys-books')
+    expect(readFileSync(join(volDir, 'stale_extras.txt'), 'utf8')).toBe('stale')
+    expect(existsSync(join(volDir, 'index.html'))).toBe(false)
+    expect(readFileSync(join(rootPath, 'Caddyfile.apps'), 'utf8')).toBe('old-caddy-config\n')
   })
 
   it('fails the deploy when the vendored static source directory is missing', deployTimeout, () => {
