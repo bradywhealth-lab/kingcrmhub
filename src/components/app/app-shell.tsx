@@ -1,7 +1,7 @@
 "use client"
 
 import { Bell, Bot, CheckSquare, LayoutDashboard, LogOut, Menu, MessageSquare, Moon, Plus, Search, Settings, Share2, Sparkles, Sun, Users, X, Zap, GitBranch, ChevronDown } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/lib/store"
-
-const mockNotifications: Array<{ id: string; title: string; body: string; time: string; unread: boolean }> = []
+import { NotificationsBody, useNotifications } from "@/components/app/notifications-bell"
 
 // Freelancer-native IA. `id`s match the DashboardView router in src/app/page.tsx.
 export const APP_NAV_ITEMS = [
@@ -54,7 +53,6 @@ export function AppShell({
   const { theme, setTheme } = useAppStore()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const unreadCount = useMemo(() => mockNotifications.filter((n) => n.unread).length, [])
 
   // Apply the Regal dark theme by toggling `.dark` on <html>.
   useEffect(() => {
@@ -155,7 +153,7 @@ export function AppShell({
               <Search className="h-4 w-4" />
             </button>
             <ThemeToggle theme={theme} setTheme={setTheme} />
-            <NotificationsBell open={notificationsOpen} setOpen={setNotificationsOpen} unreadCount={unreadCount} />
+            <NotificationsBell open={notificationsOpen} setOpen={setNotificationsOpen} />
             <Button onClick={onAddLead} className="h-9 gap-2 rounded-xl bg-[var(--accent-solid)] px-4 font-semibold text-white hover:bg-[var(--accent-hover)]">
               <Plus className="h-4 w-4" /> New
             </Button>
@@ -228,9 +226,25 @@ function ThemeToggle({ theme, setTheme }: { theme: "dark" | "light"; setTheme: (
   )
 }
 
-function NotificationsBell({ open, setOpen, unreadCount }: { open: boolean; setOpen: (v: boolean) => void; unreadCount: number }) {
+function NotificationsBell({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+  // Real data: org activity log via GET /api/activities. The old hardcoded
+  // empty mock array + empty-dep useMemo made this bell permanently inert —
+  // a false all-clear (t_9dadc534). Opening the dropdown marks seen,
+  // clearing the badge honestly; items stay listed.
+  const { status, notifications, unreadCount, refresh, markSeen } = useNotifications()
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (next) {
+      // Opening = seeing the contents: pull fresh items and clear the unread
+      // claim. Items stay listed; only the badge resets.
+      void refresh()
+      markSeen(Date.now())
+    }
+  }
+
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"} className="relative h-9 w-9 rounded-xl border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white">
           <Bell className="h-4 w-4" />
@@ -243,7 +257,7 @@ function NotificationsBell({ open, setOpen, unreadCount }: { open: boolean; setO
           {unreadCount > 0 && <Badge className="border-0 bg-[var(--accent-soft)] text-[var(--accent-text)]">{unreadCount}</Badge>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <div className="px-3 py-6 text-center text-sm text-muted-foreground">You're all caught up.</div>
+        <NotificationsBody status={status} notifications={notifications} unreadCount={unreadCount} />
       </DropdownMenuContent>
     </DropdownMenu>
   )
