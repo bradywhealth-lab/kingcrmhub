@@ -141,6 +141,12 @@ export async function resolveAIConfig(
     }
   }
 
+  // Platform-key availability (read once, used by the preference branches
+  // and the free tier below). Order note: Groq gates the openrouter preference
+  // branch precisely because the free tier treats Groq as the first resort.
+  const groqKey = process.env.GROQ_API_KEY?.trim()
+  const openaiKey = process.env.OPENAI_API_KEY?.trim()
+
   // If org chose openai but no key, check platform env
   if (provider === 'openai' && process.env.OPENAI_API_KEY) {
     return {
@@ -163,10 +169,15 @@ export async function resolveAIConfig(
     }
   }
 
-  // If org chose openrouter but no key, check platform env.
+  // If org chose openrouter but no key, check platform env — ONLY when no
+  // platform Groq key exists. The free tier's Groq route is measured working
+  // where OpenRouter's zero-cost catalog 429s intermittently (2026-10-02 prod
+  // outage: a key-less org stored {aiProvider:'openrouter', aiApiKey:null} and
+  // this branch pinned it to OpenRouter ahead of Groq; 1-in-9 requests 500'd).
+  // A stored provider preference with no usable BYOK key means "no preference".
   // The platform (default) key must NEVER fund a paid model: force the free
   // router unless the org explicitly picked a specific zero-cost `:free` model.
-  if (provider === 'openrouter' && process.env.OPENROUTER_API_KEY) {
+  if (provider === 'openrouter' && !groqKey && process.env.OPENROUTER_API_KEY) {
     return {
       provider: 'openrouter',
       model: isFreeOpenRouterModel(model) ? (model as string) : OPENROUTER_FREE_MODEL,
@@ -184,7 +195,6 @@ export async function resolveAIConfig(
   // won and the working Groq key was unreachable. That ordering, not just the
   // model id, is why free-tier replies were nonsense.
   // When falling back to a provider other than the stored one, force its default model.
-  const groqKey = process.env.GROQ_API_KEY?.trim()
   if (groqKey) {
     // A stored org model is only honoured on the PLATFORM key when it is one of
     // the pinned free models. Orgs that chose Groq before this deploy still have
@@ -220,7 +230,6 @@ export async function resolveAIConfig(
   }
 
   // Last resort: check for any platform key
-  const openaiKey = process.env.OPENAI_API_KEY?.trim()
   if (openaiKey) {
     const resolvedModel = (provider === 'openai' && model) ? model : 'gpt-4o'
     return {
@@ -346,6 +355,28 @@ export async function createChatStream(
           return await attempt({ ...config, model: nextModel })
         } catch {
           continue
+        }
+      }
+    }
+    // Platform OpenRouter key: OpenRouter's zero-cost catalog 429s
+    // intermittently ('…temporarily rate-limited upstream'), which surfaced as
+    // user-visible HTTP 500 (t_c1c40620). Mirror the Groq failover: fall over
+    // ONCE to the platform Groq key with its DEFAULT model — never the stored
+    // slug of the provider that just failed. Deliberately NOT applied to BYOK
+    // keys: the org chose that provider and funds it themselves.
+    if (config.provider === 'openrouter' && !config.byokKey) {
+      const groqFailoverKey = process.env.GROQ_API_KEY?.trim()
+      if (groqFailoverKey) {
+        try {
+          return await attempt({
+            ...config,
+            provider: 'groq',
+            model: getDefaultModel('groq'),
+            apiKey: groqFailoverKey,
+            label: 'Groq (free, failover from OpenRouter)',
+          })
+        } catch {
+          // fall through: original error is the honest failure
         }
       }
     }
