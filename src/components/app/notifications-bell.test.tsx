@@ -7,6 +7,7 @@ import {
   createResultGate,
   formatRelativeTime,
   latestSeenAtFrom,
+  nextSeenFloor,
   parseActivitiesPayload,
   parseServerDate,
   readLastSeenAt,
@@ -253,6 +254,53 @@ describe('seen baselines are server-sourced only — no client clock skew (cubic
     const advanceStart = bell.indexOf('const advanceSeen = useCallback')
     const advanceBody = bell.slice(advanceStart, bell.indexOf('[seenKey],', advanceStart))
     expect(advanceBody).not.toContain('Date.now()')
+  })
+
+  it('the seen floor spans storage AND the in-memory high-water mark (cubic P3)', () => {
+    // Degraded-storage regression: `advanceSeen` must never regress the
+    // baseline below the in-memory mark just because storage reads null
+    // (quota / private mode). Each null participant abstains.
+    expect(nextSeenFloor(null, null, 500)).toBe(500)
+    expect(nextSeenFloor(500, null, 300)).toBe(500) // stored holds the floor
+    expect(nextSeenFloor(null, 500, 300)).toBe(500) // in-memory holds the floor
+    expect(nextSeenFloor(300, 400, 500)).toBe(500) // the candidate itself
+    expect(nextSeenFloor(900, 800, 700)).toBe(900) // never regresses
+  })
+
+  it('advanceSeen floors on lastSeenRef — degraded storage cannot regress the baseline', () => {
+    // Source pin: the shipped advance path must consult BOTH floors. If the
+    // in-memory participant disappears from the max, the P3 regression the
+    // reviewer flagged returns (first open drops the baseline from the
+    // server-now value S back to `latest < S`, re-marking viewed items
+    // unread for the rest of the session).
+    const bell = readFileSync(bellModulePath, 'utf8')
+    const advanceStart = bell.indexOf('const advanceSeen = useCallback')
+    expect(advanceStart).toBeGreaterThan(-1)
+    const advanceBody = bell.slice(advanceStart, bell.indexOf('[seenKey],', advanceStart))
+    expect(advanceBody).toContain('nextSeenFloor(')
+    expect(advanceBody).toContain('lastSeenRef.current')
+  })
+
+  it('refreshAndMarkSeen advances seen BEFORE the gate check — the advance survives supersession (cubic P3)', () => {
+    // Supersession regression: the open-refresh's seen-advance used to sit
+    // after `if (!gate.isCurrent(token)) return`, so a poll/visibility tick
+    // issuing a newer token while the open-refresh was in flight dropped the
+    // advance entirely — items the user was viewing stayed badged until a
+    // second open. The advance is monotonic and runs first; only the DATA
+    // application stays gated.
+    const bell = readFileSync(bellModulePath, 'utf8')
+    const fnStart = bell.indexOf('const refreshAndMarkSeen = useCallback(async () => {')
+    expect(fnStart).toBeGreaterThan(-1)
+    const fnBody = bell.slice(fnStart, bell.indexOf('}, [applyResult, advanceSeen])', fnStart))
+    const advanceIdx = fnBody.indexOf('advanceSeen(latest)')
+    const gateIdx = fnBody.indexOf('if (!gate.isCurrent(token)) return')
+    expect(advanceIdx).toBeGreaterThan(-1)
+    expect(gateIdx).toBeGreaterThan(-1)
+    expect(advanceIdx).toBeLessThan(gateIdx)
+    // And the advance is still success-gated inside the ready branch.
+    const readyIdx = fnBody.indexOf('if (result.status === "ready")')
+    expect(readyIdx).toBeGreaterThan(-1)
+    expect(advanceIdx).toBeGreaterThan(readyIdx)
   })
 })
 

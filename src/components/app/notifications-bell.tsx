@@ -31,7 +31,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { buildApiPath, readApiJsonOrText } from "@/lib/api-client"
 
-export const LAST_SEEN_STORAGE_KEY = "kch-n…n-at"
+export const LAST_SEEN_STORAGE_KEY = "kch-notifications-last-seen-at"
 export const NOTIFICATIONS_FETCH_LIMIT = 20
 export const REFRESH_INTERVAL_MS = 60_000
 /** The bell only renders inside the header's `hidden lg:flex` cluster —
@@ -142,6 +142,15 @@ export function resolveInitialBaseline(args: {
   if (args.stored !== null) return args.stored
   if (args.serverNow !== null) return args.serverNow
   return args.latestActivityAt
+}
+
+/** Monotonic floor for the seen baseline across every source of truth —
+ *  persisted storage, the in-memory high-water mark, and the candidate value
+ *  (cubic P3). A null participant (degraded storage on quota/private-mode
+ *  failures, or state not yet initialized) must never drag the baseline
+ *  backwards: each null simply abstains from the max. */
+export function nextSeenFloor(stored: number | null, inMemory: number | null, seenAt: number): number {
+  return Math.max(stored ?? seenAt, inMemory ?? seenAt, seenAt)
 }
 
 /**
@@ -271,7 +280,8 @@ export function useMatchesMediaQuery(query: string): boolean {
  * user never saw, recreating a false all-clear). A failed poll never
  * clobbers previously loaded items — it only surfaces "error" before the
  * first successful load. Superseded out-of-order responses are dropped by
- * the result gate.
+ * the result gate (the seen-advance itself deliberately survives
+ * supersession — see `refreshAndMarkSeen`).
  *
  * `seenKey` scopes the persisted baseline per organization (P2); callers
  * should also key the mounting component by it so an identity change
@@ -285,15 +295,24 @@ export function useNotifications(seenKey: string = LAST_SEEN_STORAGE_KEY, option
   const [now, setNow] = useState(() => Date.now())
   const baselineSetRef = useRef(false)
   const gateRef = useRef(createResultGate())
+  /** In-memory high-water mark for the seen baseline (cubic P3). A ref, not
+   *  state, so rapid successive advances share one fresh floor with no
+   *  stale-closure window — and so the floor still holds when storage is
+   *  degraded (private mode / quota) and reads come back null. */
+  const lastSeenRef = useRef<number | null>(null)
 
   /** Advances the seen baseline monotonically (never regresses it). Only
-   *  ever called with server-sourced timestamps — read-modify-write against
-   *  storage so the setState updater stays pure. */
+   *  ever called with server-sourced timestamps. The floor spans BOTH the
+   *  persisted value and the in-memory high-water mark: under the
+   *  documented degraded-storage path storage alone cannot hold the floor,
+   *  and a first open would otherwise regress the baseline below the
+   *  server-now value established on mount. */
   const advanceSeen = useCallback(
     (seenAt: number) => {
-      const current = readLastSeenAt(defaultStorage(), seenKey)
-      const next = current === null ? seenAt : Math.max(current, seenAt)
+      const stored = readLastSeenAt(defaultStorage(), seenKey)
+      const next = nextSeenFloor(stored, lastSeenRef.current, seenAt)
       writeLastSeenAt(next, defaultStorage(), seenKey)
+      lastSeenRef.current = next
       setLastSeenAt(next)
     },
     [seenKey],
@@ -329,6 +348,7 @@ export function useNotifications(seenKey: string = LAST_SEEN_STORAGE_KEY, option
           // the next successful poll retries — nothing is claimed meanwhile.
           baselineSetRef.current = true
           if (stored === null) writeLastSeenAt(baseline, defaultStorage(), seenKey)
+          lastSeenRef.current = baseline
           setLastSeenAt(baseline)
         }
       }
@@ -352,19 +372,24 @@ export function useNotifications(seenKey: string = LAST_SEEN_STORAGE_KEY, option
     [applyResult],
   )
 
-  /** Opening the bell: pull fresh items, and mark seen ONLY what was actually
-   *  rendered by a successful, non-superseded fetch. Loading/error states
-   *  advance nothing. */
+  /** Opening the bell: pull fresh items, and mark seen ONLY what a successful
+   *  fetch actually returned. Loading/error states advance nothing. The data
+   *  application stays behind the out-of-order gate, but the seen-advance
+   *  itself deliberately runs BEFORE the gate check (cubic P3): the dropdown
+   *  is open and the user is viewing these items, so dropping the advance
+   *  because a background poll won the gate would leave items they just read
+   *  badged until a second open. The advance is monotonic, so it can never
+   *  un-see anything a newer response will show. */
   const refreshAndMarkSeen = useCallback(async () => {
     const gate = gateRef.current
     const token = gate.begin()
     const result = await fetchNotifications()
-    if (!gate.isCurrent(token)) return
-    applyResult(result)
     if (result.status === "ready") {
       const latest = latestSeenAtFrom(result.activities)
       if (latest !== null) advanceSeen(latest)
     }
+    if (!gate.isCurrent(token)) return
+    applyResult(result)
   }, [applyResult, advanceSeen])
 
   useEffect(() => {
