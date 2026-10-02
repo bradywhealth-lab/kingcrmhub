@@ -156,7 +156,7 @@ export function filterAppointments(appts: AppointmentRecord[], tab: FilterTab): 
 function LeadBadge({ lead }: { lead?: { firstName: string; lastName: string; company: string } | null }) {
   if (!lead) return null
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-foreground/50">
+    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
       <Building className="h-3 w-3" />
       {lead.firstName} {lead.lastName}
       {lead.company ? ` · ${lead.company}` : ''}
@@ -170,7 +170,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
     <Card
       draggable
       onDragStart={(e) => { e.dataTransfer.setData('text/plain', task.id); e.dataTransfer.effectAllowed = 'move' }}
-      className={`group border-[rgba(31,42,54,0.08)] bg-card shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow ${isDone ? 'opacity-60' : ''}`}
+      className="group border-[rgba(31,42,54,0.08)] bg-card shadow-[0_4px_16px_rgba(31,42,54,0.04)] hover:shadow-[0_8px_24px_rgba(31,42,54,0.08)] transition-shadow"
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
@@ -186,9 +186,9 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             {isDone && <Check className="h-3 w-3" />}
           </button>
           <div className="min-w-0 flex-1">
-            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-foreground/50 line-through' : 'text-foreground'}`}>{task.title}</p>
+            <p className={`text-sm font-medium leading-snug ${isDone ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{task.title}</p>
             {task.description && (
-              <p className="mt-1 text-xs text-foreground/55 line-clamp-2">{task.description}</p>
+              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {isDone && task.completedAt && (
@@ -210,7 +210,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
               )}
               <LeadBadge lead={task.lead} />
               {task.assignedTo && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-foreground/50">
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                   <User className="h-3 w-3" />
                   {task.assignedTo.name ?? task.assignedTo.email}
                 </span>
@@ -226,7 +226,7 @@ export function TaskCard({ task, onToggleDone, onOpenPipelineItem }: { task: Tas
             <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? 'bg-slate-300'}`} />
           )}
           {!isDone && task.dueDate && (
-            <span className="shrink-0 text-[11px] tabular-nums text-foreground/45">
+            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
               {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -248,9 +248,9 @@ function AppointmentCard({ appt }: { appt: AppointmentRecord }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">{appt.title}</p>
-            <p className="mt-0.5 text-xs text-foreground/55">{timeStr}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{timeStr}</p>
             {appt.location && (
-              <p className="mt-0.5 text-[11px] text-foreground/50">{appt.location}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{appt.location}</p>
             )}
             <div className="mt-1.5">
               <LeadBadge lead={appt.lead} />
@@ -277,7 +277,7 @@ function EmptyState({ tab }: { tab: FilterTab }) {
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <CheckSquare className="h-12 w-12 text-foreground/12" />
       <p className="mt-4 text-sm font-medium text-foreground/60">{m.title}</p>
-      <p className="mt-1 text-xs text-foreground/50 max-w-xs">{m.body}</p>
+      <p className="mt-1 text-xs text-muted-foreground max-w-xs">{m.body}</p>
     </div>
   )
 }
@@ -507,7 +507,7 @@ export function TasksView({
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 tab === id
                   ? 'bg-[var(--accent-soft)] text-[var(--accent-text)]'
-                  : 'text-foreground/55 hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -522,7 +522,7 @@ export function TasksView({
               onClick={() => setViewMode('list')}
               aria-label="List view"
               aria-pressed={viewMode === 'list' || tab === 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'list' || tab === 'completed' ? 'bg-[#0c111b]/6 text-foreground' : 'text-foreground/60 hover:text-foreground'}`}
             >
               <List className="h-4 w-4" />
             </button>
@@ -532,7 +532,7 @@ export function TasksView({
               aria-disabled={tab === 'completed'}
               disabled={tab === 'completed'}
               aria-pressed={viewMode === 'kanban' && tab !== 'completed'}
-              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-foreground' : tab === 'completed' ? 'cursor-not-allowed text-foreground/25' : 'text-foreground/50 hover:text-foreground'}`}
+              className={`rounded-lg px-3 py-1.5 ${viewMode === 'kanban' && tab !== 'completed' ? 'bg-[#0c111b]/6 text-foreground' : tab === 'completed' ? 'cursor-not-allowed text-foreground/25' : 'text-foreground/60 hover:text-foreground'}`}
             >
               <Columns className="h-4 w-4" />
             </button>
@@ -566,11 +566,11 @@ export function TasksView({
                   <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${col.color}`}>
                     {col.label}
                   </span>
-                  <span className="text-xs text-foreground/35 tabular-nums">{col.tasks.length}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">{col.tasks.length}</span>
                 </div>
                 <div className="space-y-3">
                   {col.tasks.length === 0 ? (
-                    <p className="py-6 text-center text-xs text-foreground/25">No tasks</p>
+                    <p className="py-6 text-center text-xs text-muted-foreground">No tasks</p>
                   ) : (
                     col.tasks.map((task) => <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />)
                   )}
@@ -581,7 +581,7 @@ export function TasksView({
 
           {filteredAppointments.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/50">Appointments</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Appointments</h2>
               <div className="space-y-3">
                 {filteredAppointments.map((appt) => (
                   <AppointmentCard key={appt.id} appt={appt} />
@@ -597,7 +597,7 @@ export function TasksView({
         <div className="space-y-8">
           {filteredTasks.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/50">Tasks</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Tasks</h2>
               <div className="space-y-3">
                 {filteredTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onToggleDone={handleToggleDone} onOpenPipelineItem={onOpenPipelineItem} />
@@ -608,7 +608,7 @@ export function TasksView({
 
           {filteredAppointments.length > 0 && (
             <section>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-foreground/50">Appointments</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Appointments</h2>
               <div className="space-y-3">
                 {filteredAppointments.map((appt) => (
                   <AppointmentCard key={appt.id} appt={appt} />
