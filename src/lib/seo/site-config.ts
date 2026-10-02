@@ -22,4 +22,19 @@ export const PUBLIC_ROUTES = [
   { path: '/', changeFrequency: 'daily' as const, priority: 1.0 },
   { path: '/pricing', changeFrequency: 'weekly' as const, priority: 0.9 },
   { path: '/compare', changeFrequency: 'weekly' as const, priority: 0.8 },
+  /**
+   * Brady's Books is a real public marketing page that returns 200 and carries a
+   * canonical, so it belongs in the sitemap. Measured live:
+   *   GET /books  -> 301 https://kingcrmhub.net/books/
+   *   GET /books/ -> 200  "Brady's Books | Practical Paper Tools by Brady Wilson"
+   *
+   * It is NOT a Next.js route. Caddy serves it as a static site:
+   *   handle_path /books* { root * /data/sites/bradys-books; file_server }
+   *   redir /books /books/ permanent
+   * so the entry must carry the trailing slash — submitting the redirecting URL
+   * would make Google crawl a 301 hop every time.
+   *
+   * Still noindex and correctly EXCLUDED: /terms, /privacy, /claim, /welcome.
+   */
+  { path: '/books/', changeFrequency: 'weekly' as const, priority: 0.7 },
 ]

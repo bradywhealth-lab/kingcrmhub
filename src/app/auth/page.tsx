@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AuthLoadingSkeleton } from '@/components/auth/auth-loading'
+import { buildPostAuthRedirect } from '@/lib/auth/post-auth-redirect'
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset'
 
@@ -89,7 +90,12 @@ function AuthPageInner() {
       try {
         const session = await getSession()
         if (!cancelled && session?.user) {
-          router.replace(session.user.mustChangePassword ? '/auth/password' : '/')
+          router.replace(
+            buildPostAuthRedirect({
+              mustChangePassword: Boolean(session.user.mustChangePassword),
+              callbackPath: safeCallback,
+            }),
+          )
           router.refresh()
         }
       } catch {
@@ -124,6 +130,20 @@ function AuthPageInner() {
         return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
       })())
     }
+  }, [searchParams])
+
+  /**
+   * Validated `?callbackUrl`, hoisted to component scope so BOTH post-auth
+   * redirects (the mount effect and the submit handler) can honour it.
+   * cubic P2: previously only the submit handler computed this, and it was dropped
+   * entirely on the mustChangePassword path.
+   * Same rules as before: single leading slash, not protocol-relative, no backslash.
+   */
+  const safeCallback = useMemo(() => {
+    const rawCallback = searchParams.get('callbackUrl') ?? ''
+    return rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+      ? rawCallback
+      : '/'
   }, [searchParams])
 
   const currentModeTitle = useMemo(() => {
@@ -190,15 +210,15 @@ function AuthPageInner() {
       const password = mode === 'login' ? loginPassword : signupPassword
       // Validate ?callbackUrl before signing in (cubic P2 round 3): only
       // same-origin absolute paths are honoured; everything else → '/'.
-      const rawCallback = searchParams.get('callbackUrl') ?? ''
-      const safeCallback =
-        rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
-          ? rawCallback
-          : '/'
       const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: safeCallback })
       if (!result || result.error) throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Authentication failed.')
       const session = await getSession()
-      router.push(session?.user?.mustChangePassword ? '/auth/password' : safeCallback)
+      router.push(
+        buildPostAuthRedirect({
+          mustChangePassword: Boolean(session?.user?.mustChangePassword),
+          callbackPath: safeCallback,
+        }),
+      )
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.')
@@ -385,10 +405,11 @@ function AuthPageInner() {
 
             {(mode === 'login' || mode === 'signup') && (
               <>
-                <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[var(--paper)] p-1">
+                <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(12,17,27,0.05)] p-1">
                   {(['login', 'signup'] as Mode[]).map((tab) => (
                     <button
                       key={tab}
+                      type="button"
                       onClick={() => switchMode(tab)}
                       className={cn(
                         'rounded-[14px] px-4 py-3 text-sm font-semibold transition-all',
@@ -402,36 +423,56 @@ function AuthPageInner() {
                   ))}
                 </div>
 
-                <div className="space-y-4">
+                {/*
+                    S19: a real form element is what associates these inputs with
+                    a submit. #223 added id/name/autoComplete, but without this
+                    wrapper password managers still treat the fields as loose
+                    controls. Native submit also replaces the hand-rolled
+                    onKeyDown Enter handlers removed below, so Enter can never
+                    fire handleLoginSignup twice.
+                  */}
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void handleLoginSignup()
+                  }}
+                >
                   {mode === 'signup' && (
                     <>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
+                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
+                        <Input id="signup-name" name="name" autoComplete="name" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
                       </div>
                       <div>
-                        <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
-                        <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
+                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
+                        <Input id="signup-org" name="organization" autoComplete="organization" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
+                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
                     <Input
+                      id="auth-email"
+                      name="email"
+                      autoComplete={mode === 'login' ? 'username' : 'email'}
                       type="email"
                       required
                       className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
                       placeholder="you@company.com"
                       value={mode === 'login' ? loginEmail : signupEmail}
                       onChange={(e) => (mode === 'login' ? setLoginEmail(e.target.value) : setSignupEmail(e.target.value))}
-                      onKeyDown={(e) => e.key === 'Enter' && void handleLoginSignup()}
+                     
                     />
                   </div>
 
                   <div>
-                    <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
+                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
                     <Input
+                      id="auth-password"
+                      name="password"
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                       type="password"
                       required
                       minLength={mode === 'signup' ? 8 : undefined}
@@ -439,14 +480,17 @@ function AuthPageInner() {
                       placeholder="••••••••"
                       value={mode === 'login' ? loginPassword : signupPassword}
                       onChange={(e) => (mode === 'login' ? setLoginPassword(e.target.value) : setSignupPassword(e.target.value))}
-                      onKeyDown={(e) => e.key === 'Enter' && void handleLoginSignup()}
+                     
                     />
                   </div>
 
                   {mode === 'signup' && (
                     <div>
-                      <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
                       <Input
+                        id="auth-confirm"
+                        name="confirmPassword"
+                        autoComplete="new-password"
                         type="password"
                         required
                         minLength={8}
@@ -454,14 +498,14 @@ function AuthPageInner() {
                         placeholder="••••••••"
                         value={signupConfirmPassword}
                         onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && void handleLoginSignup()}
+                       
                       />
                     </div>
                   )}
 
                   {mode === 'login' && (
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => switchMode('forgot')} className="text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
+                      <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center text-sm font-medium text-[var(--teal-deep)] hover:opacity-80">
                         Forgot password?
                       </button>
                     </div>
@@ -471,7 +515,7 @@ function AuthPageInner() {
                   {success && <StatusCard tone="success" message={success} />}
 
                   <Button
-                    onClick={() => void handleLoginSignup()}
+                    type="submit"
                     disabled={loading}
                     className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)] hover:opacity-95"
                   >
@@ -503,63 +547,77 @@ function AuthPageInner() {
                     </p>
                   )}
 
-                  <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f7f4ec] p-4 text-sm text-[#0c111b]/60">
+                  <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[rgba(31,42,54,0.04)] p-4 text-sm text-[#0c111b]/60">
                     Already have a password-reset link?{' '}
-                    <button type="button" onClick={() => switchMode('reset')} className="font-semibold text-[var(--teal-deep)] hover:opacity-80">
+                    <button type="button" onClick={() => switchMode('reset')} className="inline-flex min-h-[24px] items-center font-semibold text-[#1e4fcc] hover:opacity-80">
                       Finish resetting your password
                     </button>
                   </div>
-                </div>
+                </form>
               </>
             )}
 
             {mode === 'forgot' && (
-              <div className="space-y-4">
-                <button onClick={() => switchMode('login')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  // Once a request has been sent the visible CTA becomes
+                  // "Continue to reset"; Enter must not fire a second request.
+                  if (!forgotRequested) void handleForgotPassword()
+                }}
+              >
+                <button type="button" onClick={() => switchMode('login')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
-                  <Input type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleForgotPassword()} />
+                  <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
+                  <Input id="forgot-email" name="email" autoComplete="email" type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
                 {forgotRequested ? (
-                  <Button className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => switchMode('reset')}>
+                  <Button type="button" className="mt-3 h-11 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)]" onClick={() => switchMode('reset')}>
                     Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button onClick={() => void handleForgotPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
                     {loading ? 'Sending request…' : 'Request password reset'}
                   </Button>
                 )}
-              </div>
+              </form>
             )}
 
             {mode === 'reset' && (
-              <div className="space-y-4">
-                <button onClick={() => switchMode('forgot')} className="inline-flex items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void handleResetPassword()
+                }}
+              >
+                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
-                  <Input required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
+                  <Label htmlFor="reset-token" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
+                  <Input id="reset-token" name="token" autoComplete="one-time-code" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
-                  <Input type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  <Label htmlFor="reset-new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
+                  <Input id="reset-new-password" name="newPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
-                  <Input type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword()} />
+                  <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                  <Input id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
-                <Button onClick={() => void handleResetPassword()} disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
                   {loading ? 'Resetting password…' : 'Reset password'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </div>
+              </form>
             )}
           </div>
 

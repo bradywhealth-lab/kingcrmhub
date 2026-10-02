@@ -57,7 +57,8 @@ This scaffold provides a robust foundation built with:
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+# Install dependencies (requires Bun >= 1.4.2 — the lockfile records a nested
+# next-auth override that older Bun clients cannot read)
 bun install
 
 # Start development server

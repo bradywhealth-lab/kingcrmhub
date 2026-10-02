@@ -55,7 +55,7 @@ export default function PrivacyPage() {
       <header className="border-b border-[var(--ink,#0C111B)]/10 bg-white/40 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-[var(--teal,#18B897)] flex items-center justify-center shadow-lg">
+            <div className="h-10 w-10 rounded-2xl bg-[var(--teal,#2f6bff)] flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-lg">K</span>
             </div>
             <span className="text-xl font-bold">King CRM Hub</span>
@@ -89,10 +89,10 @@ export default function PrivacyPage() {
         </section>
 
         <footer className="border-t border-[var(--ink,#0C111B)]/10 pt-6 flex flex-wrap gap-4 text-sm text-[var(--ink,#0C111B)]/60">
-          <Link href="/terms" className="hover:text-[var(--ink,#0C111B)] transition-colors">
+          <Link href="/terms" className="inline-flex min-h-[24px] items-center hover:text-[var(--ink,#0C111B)] transition-colors">
             Terms of Service
           </Link>
-          <Link href="/pricing" className="hover:text-[var(--ink,#0C111B)] transition-colors">
+          <Link href="/pricing" className="inline-flex min-h-[24px] items-center hover:text-[var(--ink,#0C111B)] transition-colors">
             Pricing
           </Link>
         </footer>

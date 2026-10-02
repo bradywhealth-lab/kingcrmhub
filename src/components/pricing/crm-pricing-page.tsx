@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check, X, Zap, Crown, Building2, Shield, ChevronDown,
   Loader2, Star, ArrowRight, type LucideIcon,
 } from "lucide-react";
 import { PLANS as CATALOG, type PlanId } from "@/lib/billing/plans";
+import {
+  buildPricingCallbackUrl,
+  buildResumePrompt,
+  resolveResumeIntent,
+  type PlanIntent,
+} from "@/lib/billing/plan-intent";
 
 /**
  * Pricing page — plan data comes from the canonical billing catalog
@@ -44,8 +50,8 @@ const PRESENTATION: Record<PlanId, PresentationPlan> = {
   },
   starter: {
     icon: Zap,
-    color: "border-[#127c66]/40",
-    btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
+    color: "border-[#1e4fcc]/40",
+    btnClass: "bg-[#2f6bff] text-[#0c111b] hover:bg-[#245be0]",
     features: [
       { text: "1 user seat", included: true },
       { text: "Up to 500 leads", included: true },
@@ -61,9 +67,9 @@ const PRESENTATION: Record<PlanId, PresentationPlan> = {
   },
   pro: {
     icon: Crown,
-    color: "border-[#127c66]",
+    color: "border-[#1e4fcc]",
     popular: true,
-    btnClass: "bg-[#18b897] text-[#0c111b] hover:bg-[#15a88a]",
+    btnClass: "bg-[#2f6bff] text-[#0c111b] hover:bg-[#245be0]",
     features: [
       { text: "3 user seats", included: true },
       { text: "Unlimited leads", included: true },
@@ -165,6 +171,30 @@ export function CrmPricingPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [billing, setBilling] = useState<BillingDisplay>("loading");
+  // DEFECT-1 (real mechanism): the signed-out CTA already redirects to
+  // /auth?callbackUrl=/pricing?plan=X&interval=monthly, but NOTHING consumed those
+  // params — after sign-in the visitor landed back here and the purchase intent was
+  // silently dropped. This holds the resumed intent so it can be offered again.
+  const [resumeIntent, setResumeIntent] = useState<PlanIntent | null>(null);
+  // cubic P2 (crm-pricing-page.tsx:225, confidence 8): `isLoading` was per-plan
+  // (loadingPlan === plan.id), so every OTHER plan CTA — and the resumed-checkout
+  // Continue button — stayed enabled while a checkout was in flight. Two clicks
+  // meant two POSTs to /api/billing/checkout and two Stripe Checkout Sessions.
+  //
+  // A ref, not just the state flag: setLoadingPlan is async, so back-to-back clicks
+  // in the same tick would both still read `loadingPlan === null` and both proceed.
+  // The ref flips synchronously on entry.
+  const checkoutInFlightRef = useRef(false);
+
+  // Read a checkout intent that survived a login redirect. Deliberately does NOT
+  // auto-submit: silently POSTing to /api/billing/checkout on page load would
+  // bounce the visitor to Stripe without a click, so the intent is surfaced as an
+  // explicit "Continue" prompt instead.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const intent = resolveResumeIntent(window.location.search);
+    if (intent) setResumeIntent(intent);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,11 +219,33 @@ export function CrmPricingPage() {
     setTimeout(() => setToast(null), 5000);
   };
 
+  // The visible/name decision lives in the tested view-model, not inline here, so
+  // the assertions in plan-intent.test.ts guard the real implementation instead of
+  // a copy of it (cubic P2 on #221: a test over duplicated logic proves nothing).
+  const resumePrompt = buildResumePrompt(resumeIntent, PLANS, Boolean(toast));
+  const resumePlanName = resumePrompt.planName;
+
+  const dismissResumeIntent = () => setResumeIntent(null);
+
+  const continueResumeIntent = () => {
+    if (!resumeIntent) return;
+    const intent = resumeIntent;
+    setResumeIntent(null);
+    void handleCta(intent.planId);
+  };
+
+  // Shared busy flag for the UI: true while ANY checkout is in flight, so all
+  // checkout CTAs disable together rather than only the one that was clicked.
+  const isCheckoutBusy = loadingPlan !== null;
+
   const handleCta = async (planId: PlanId) => {
     if (planId === "free") {
       router.push("/auth");
       return;
     }
+    // Synchronous lock: rejects a second concurrent checkout before any await.
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
     setLoadingPlan(planId);
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -203,7 +255,12 @@ export function CrmPricingPage() {
       });
       const data = (await res.json()) as { url?: string | null; message?: string; error?: string };
       if (res.status === 401) {
-        router.push(`/auth?callbackUrl=${encodeURIComponent(`/pricing?plan=${planId}&interval=monthly`)}`);
+        // Shared with the resume consumer so producer and consumer cannot drift.
+        // Verified live: this route returns application/json on 401, so the
+        // res.json() above does not throw and this branch is reachable.
+        router.push(
+          `/auth?callbackUrl=${encodeURIComponent(buildPricingCallbackUrl(planId, "monthly"))}`,
+        );
         return;
       }
       if (!res.ok) {
@@ -218,6 +275,7 @@ export function CrmPricingPage() {
     } catch {
       showToast("Something went wrong. Please try again.");
     } finally {
+      checkoutInFlightRef.current = false;
       setLoadingPlan(null);
     }
   };
@@ -234,7 +292,7 @@ export function CrmPricingPage() {
         </div>
         <button
           onClick={() => router.push("/auth")}
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-[#127c66]/40 px-4 text-sm font-medium text-[#127c66] transition hover:bg-[#18b897] hover:text-[#0c111b]"
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-[#1e4fcc]/40 px-4 text-sm font-medium text-[#1e4fcc] transition hover:bg-[#2f6bff] hover:text-[#0c111b]"
         >
           Sign in <ArrowRight className="h-3.5 w-3.5" />
         </button>
@@ -242,13 +300,13 @@ export function CrmPricingPage() {
 
       {/* Hero */}
       <section className="px-6 pb-12 pt-12 text-center sm:px-10 sm:pt-16">
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#127c66]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#127c66] shadow-sm backdrop-blur-sm">
-          <Star className="h-3 w-3 fill-[#18b897]" />
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#1e4fcc]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#1e4fcc] shadow-sm backdrop-blur-sm">
+          <Star className="h-3 w-3 fill-[#2f6bff]" />
           {BILLING_LABEL[billing]}
         </div>
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-[#0c111b] sm:text-5xl">
           Plans built for{" "}
-          <span className="text-[#127c66]">
+          <span className="text-[#1e4fcc]">
             independent client work
           </span>
         </h1>
@@ -268,19 +326,19 @@ export function CrmPricingPage() {
               <div
                 key={plan.id}
                 className={`relative flex flex-col rounded-3xl border-2 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg ${plan.color} ${
-                  plan.popular ? "ring-2 ring-[#18b897]/30 shadow-[0_8px_32px_rgba(24,184,151,0.18)]" : ""
+                  plan.popular ? "ring-2 ring-[#2f6bff]/30 shadow-[0_8px_32px_rgba(37,99,235,0.18)]" : ""
                 }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="flex items-center gap-1 rounded-full bg-[#18b897] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--ink)] shadow-md">
+                    <span className="flex items-center gap-1 rounded-full bg-[#2f6bff] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--ink)] shadow-md">
                       <Crown className="h-3 w-3" />
                       Most Popular
                     </span>
                   </div>
                 )}
-                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#18b897]" : "bg-[#f4f0e6]"}`}>
-                  <Icon className={`h-5 w-5 ${plan.popular ? "text-[var(--ink)]" : "text-[#127c66]"}`} />
+                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl ${plan.popular ? "bg-[#2f6bff]" : "bg-muted"}`}>
+                  <Icon className={`h-5 w-5 ${plan.popular ? "text-[var(--ink)]" : "text-[#1e4fcc]"}`} />
                 </div>
                 <h3 className="text-lg font-bold text-[#0c111b]">{plan.name}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-[#545961]">{plan.description}</p>
@@ -302,7 +360,7 @@ export function CrmPricingPage() {
                 </div>
                 <button
                   onClick={() => void handleCta(plan.id)}
-                  disabled={isLoading}
+                  disabled={isCheckoutBusy}
                   className={`mb-6 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 ${plan.btnClass}`}
                 >
                   {isLoading ? (
@@ -339,10 +397,10 @@ export function CrmPricingPage() {
         <div className="overflow-hidden rounded-3xl border border-[var(--ink-line)] bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--ink-line)] bg-[#f4f0e6]">
+              <tr className="border-b border-[var(--ink-line)] bg-muted">
                 <th className="py-4 pl-6 text-left font-semibold text-[#545961]">Feature</th>
                 {PLANS.map((p) => (
-                  <th key={p.id} className={`py-4 text-center font-bold ${p.popular ? "text-[#127c66]" : "text-[#0c111b]"}`}>
+                  <th key={p.id} className={`py-4 text-center font-bold ${p.popular ? "text-[#1e4fcc]" : "text-[#0c111b]"}`}>
                     {p.name}
                   </th>
                 ))}
@@ -350,7 +408,7 @@ export function CrmPricingPage() {
             </thead>
             <tbody>
               {COMPARE_FEATURES.map((feature, i) => (
-                <tr key={feature} className={i % 2 === 0 ? "bg-white" : "bg-[#f4f0e6]"}>
+                <tr key={feature} className={i % 2 === 0 ? "bg-white" : "bg-muted"}>
                   <td className="py-3.5 pl-6 text-[#0c111b]">{feature}</td>
                   {(["free", "starter", "pro", "enterprise"] as PlanId[]).map((planId) => {
                     const val = FEATURE_MAP[planId][i];
@@ -391,7 +449,7 @@ export function CrmPricingPage() {
             <div key={i} className="overflow-hidden rounded-2xl border border-[var(--ink-line)] bg-white">
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-semibold text-[#0c111b] hover:bg-[#f4f0e6]"
+                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-semibold text-[#0c111b] hover:bg-muted"
               >
                 {item.q}
                 <ChevronDown className={`h-4 w-4 shrink-0 text-[#545961] transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
@@ -407,7 +465,7 @@ export function CrmPricingPage() {
       </section>
 
       {/* Bottom CTA */}
-      <section className="bg-[#18b897] px-6 py-16 text-center sm:px-10">
+      <section className="bg-[#2f6bff] px-6 py-16 text-center sm:px-10">
         <h2 className="text-3xl font-bold text-[#0c111b]">Ready to run a tighter operation?</h2>
         <p className="mx-auto mt-3 max-w-md text-base text-[#0c111b]/80">
           Start free today. Paid options will open only after the full billing flow is verified.
@@ -415,7 +473,7 @@ export function CrmPricingPage() {
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
             onClick={() => router.push("/auth")}
-            className="flex h-12 items-center gap-2 rounded-2xl bg-white px-8 text-sm font-bold text-[#127c66] shadow-lg transition hover:shadow-xl"
+            className="flex h-12 items-center gap-2 rounded-2xl bg-white px-8 text-sm font-bold text-[#1e4fcc] shadow-lg transition hover:shadow-xl"
           >
             Start for free <ArrowRight className="h-4 w-4" />
           </button>
@@ -432,6 +490,35 @@ export function CrmPricingPage() {
       <footer className="border-t border-[var(--ink-line)] py-8 text-center text-xs text-[#6b6e74]">
         © {new Date().getFullYear()} King CRM Hub. Proof. Decision. Next Move.
       </footer>
+
+      {/* DEFECT-1: resumed checkout intent. Explicit prompt, never an auto-submit. */}
+      {resumePrompt.visible && resumeIntent && (
+        <div
+          data-testid="resume-checkout-prompt"
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-[var(--ink-line)] bg-white px-5 py-3.5 text-sm font-medium text-[#0c111b] shadow-xl"
+        >
+          <span>Continue your {resumePlanName} checkout?</span>
+          <button
+            type="button"
+            data-testid="resume-checkout-continue"
+            onClick={continueResumeIntent}
+            disabled={isCheckoutBusy}
+            className="rounded-xl bg-[#0c111b] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#14202e]"
+          >
+            Continue
+          </button>
+          <button
+            type="button"
+            data-testid="resume-checkout-dismiss"
+            onClick={dismissResumeIntent}
+            aria-label="Dismiss checkout reminder"
+            className="rounded-xl border border-[var(--ink-line)] px-3 py-2 text-xs font-medium text-[#0c111b]/70 transition hover:bg-[#0c111b]/5"
+          >
+            Not now
+          </button>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (

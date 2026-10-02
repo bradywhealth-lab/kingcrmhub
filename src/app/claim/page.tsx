@@ -107,7 +107,9 @@ function ClaimPageInner() {
 
   const INK = '#0C111B'
   const PAPER = '#F4F0E6'
-  const TEAL = '#18B897'
+  // Brighter cobalt so the accent clears WCAG AA on the ink surface for both
+  // the sign-in link text and the ink-on-accent CTA label (cubic review).
+  const TEAL = '#4080ff'
   // Truthful window copy: the 30-day clock starts at VERIFICATION (the server
   // mints expiresAt = verification + 30d — cubic P2 round 1). We never promise
   // a date that assumes signup-day start; buyers who delay lose days, not the
@@ -147,7 +149,7 @@ function ClaimPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="mt-2 h-12 rounded-2xl border px-4"
+                className="mt-2 h-12 rounded-2xl border px-4 placeholder:text-[rgba(244,240,230,0.62)]"
                 style={{ borderColor: 'rgba(244,240,230,0.2)', background: '#0C111B', color: PAPER }}
               />
             </div>
@@ -158,7 +160,7 @@ function ClaimPageInner() {
                 value={licenseKey}
                 onChange={(e) => setLicenseKey(e.target.value)}
                 placeholder="XXXX-XXXX-XXXX-XXXX"
-                className="mt-2 h-12 rounded-2xl border px-4 font-mono"
+                className="mt-2 h-12 rounded-2xl border px-4 font-mono placeholder:text-[rgba(244,240,230,0.62)]"
                 style={{ borderColor: 'rgba(244,240,230,0.2)', background: '#0C111B', color: PAPER }}
               />
             </div>
@@ -175,12 +177,12 @@ function ClaimPageInner() {
                       className={cn(
                         'flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-medium transition',
                         productId === product.id
-                          ? 'border-[#18b897] bg-[#18b897]/15 text-[#f4f0e6]'
+                          ? 'border-[#2f6bff] bg-[#2f6bff]/15 text-[#f4f0e6]'
                           : 'border-white/15 bg-white/5 text-[#f4f0e6]/80 hover:border-white/30',
                       )}
                     >
                       <span>{product.name}</span>
-                      {productId === product.id && <CheckCircle2 className="h-4 w-4 text-[#18b897]" />}
+                      {productId === product.id && <CheckCircle2 className="h-4 w-4 text-[#2f6bff]" />}
                     </button>
                   ))}
                 </div>
@@ -211,7 +213,7 @@ function ClaimPageInner() {
 
         <div className="mt-10 rounded-3xl border p-5" style={{ borderColor: `${TEAL}44`, background: `${TEAL}0F` }}>
           <p className="text-sm font-semibold" style={{ color: PAPER }}>Already have an account?</p>
-          <Link href="/auth" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: TEAL }}>
+          <Link href="/auth" className="mt-2 inline-flex min-h-[24px] items-center gap-2 text-sm font-semibold" style={{ color: TEAL }}>
             Sign in instead <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

@@ -118,7 +118,7 @@ function StepIndicator({
                 status === "done" && "border-[var(--teal-deep)] bg-[var(--teal-deep)] text-white",
                 status === "active" && "border-[var(--teal)] bg-[var(--teal-deep)] text-white shadow-[0_0_12px_rgba(18,124,102,0.45)]",
                 status === "skipped" && "border-amber-400 bg-amber-50 text-amber-600",
-                status === "pending" && "border-[rgba(31,42,54,0.15)] bg-white text-[rgba(31,42,54,0.35)]"
+                status === "pending" && "border-[rgba(31,42,54,0.15)] bg-card text-muted-foreground"
               )}
             >
               {status === "done" ? (
@@ -163,7 +163,7 @@ function WelcomeStep({
         transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
         className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
       >
-        <Sparkles className="h-9 w-9 text-[var(--ink)]" />
+        <Sparkles className="h-9 w-9 text-foreground" />
       </motion.div>
 
       <div className="space-y-3">
@@ -171,7 +171,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]"
+          className="text-3xl font-semibold tracking-[-0.03em] text-foreground"
         >
           Welcome{userName ? `, ${userName.split(" ")[0]}` : ""}
         </motion.h2>
@@ -179,7 +179,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="text-lg text-[#0c111b]/60"
+          className="text-lg text-foreground/60"
         >
           <span className="font-semibold text-[var(--teal-deep)]">{organizationName}</span> is ready for setup.
         </motion.p>
@@ -187,7 +187,7 @@ function WelcomeStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mx-auto max-w-md text-sm leading-7 text-[#0c111b]/55"
+          className="mx-auto max-w-md text-sm leading-7 text-foreground/55"
         >
           We'll walk you through a few quick steps to get your pipeline, offers, and prompts running.
           Takes less than 3 minutes.
@@ -207,10 +207,10 @@ function WelcomeStep({
         ].map((feature) => (
           <div
             key={feature.label}
-            className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f8f5ec] p-3 text-center"
+            className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-muted p-3 text-center"
           >
-            <p className="text-xs font-semibold text-[#0c111b]">{feature.label}</p>
-            <p className="mt-0.5 text-[11px] text-[#0c111b]/50">{feature.desc}</p>
+            <p className="text-xs font-semibold text-foreground">{feature.label}</p>
+            <p className="mt-0.5 text-[11px] text-foreground/50">{feature.desc}</p>
           </div>
         ))}
       </motion.div>
@@ -272,23 +272,23 @@ function OrganizationStep({
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Organization name
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your business name (e.g. Alex Design Co.)"
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Logo URL{" "}
             <span className="text-[rgba(31,42,54,0.38)] normal-case font-normal tracking-normal">(optional)</span>
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={logo}
             onChange={(e) => setLogo(e.target.value)}
             placeholder="https://your-domain.com/logo.png"
@@ -299,7 +299,7 @@ function OrganizationStep({
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-foreground/60"
           onClick={onSkip}
         >
           Skip for now
@@ -358,35 +358,35 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Offer name
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Website Redesign Package, Monthly Retainer"
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Website{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
             placeholder="https://yourportfolio.com"
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Notes{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Best for small business clients, 2-week turnaround…"
@@ -394,7 +394,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-[#f4f0e6] p-4 text-sm text-[#0c111b]/65">
+      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-muted p-4 text-sm text-foreground/65">
         You can add more offers and upload service documents in{" "}
         <span className="font-semibold text-[var(--teal-deep)]">Settings → Offers</span> at any time.
       </div>
@@ -402,7 +402,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-foreground/60"
           onClick={onSkip}
         >
           Skip for now
@@ -465,47 +465,47 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             First name
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Jane"
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Last name
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Smith"
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Email{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
           <Input
             type="email"
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jane@email.com"
           />
         </div>
         <div>
-          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#0c111b]/52">
+          <Label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-foreground/52">
             Phone{" "}
             <span className="normal-case font-normal tracking-normal text-[rgba(31,42,54,0.38)]">(optional)</span>
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm"
+            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="(555) 123-4567"
@@ -516,7 +516,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-foreground/60"
           onClick={onSkip}
         >
           Skip for now
@@ -570,14 +570,14 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-[#f8f5ec] p-5">
+      <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-muted p-5">
         <div className="flex items-start gap-4">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(18,124,102,0.12)]">
             <Zap className="h-5 w-5 text-[var(--teal-deep)]" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[var(--ink)]">New client — immediate follow-up</p>
-            <p className="mt-1 text-sm text-[#0c111b]/60">
+            <p className="text-sm font-semibold text-foreground">New client — immediate follow-up</p>
+            <p className="mt-1 text-sm text-foreground/60">
               When a new client is created, automatically create a task: "Follow up within 5 minutes".
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -592,7 +592,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         </div>
       </div>
 
-      <p className="text-sm text-[#0c111b]/55">
+      <p className="text-sm text-foreground/55">
         You can customize triggers and actions in the{" "}
         <span className="font-semibold text-[var(--teal-deep)]">AI Automation</span> section at any time.
       </p>
@@ -600,7 +600,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       <div className="flex gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-[#0c111b]/60"
+          className="h-11 rounded-2xl border-[rgba(31,42,54,0.1)] text-foreground/60"
           onClick={onSkip}
         >
           Skip for now
@@ -633,7 +633,7 @@ function DoneStep({
         transition={{ type: "spring", stiffness: 180, delay: 0.05 }}
         className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
       >
-        <Check className="h-9 w-9 text-[var(--ink)]" />
+        <Check className="h-9 w-9 text-foreground" />
       </motion.div>
 
       <div className="space-y-2">
@@ -641,7 +641,7 @@ function DoneStep({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]"
+          className="text-3xl font-semibold tracking-[-0.03em] text-foreground"
         >
           You're all set
         </motion.h2>
@@ -649,7 +649,7 @@ function DoneStep({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="text-lg text-[#0c111b]/60"
+          className="text-lg text-foreground/60"
         >
           Your workspace is ready. Time to make your next move.
         </motion.p>
@@ -679,7 +679,7 @@ function DoneStep({
           "Settings → Offers to upload documents for AI",
           "Settings → AI Configuration to change your AI provider",
         ].map((item) => (
-          <div key={item} className="flex items-center gap-3 text-sm text-[#0c111b]/65">
+          <div key={item} className="flex items-center gap-3 text-sm text-foreground/65">
             <Check className="h-4 w-4 shrink-0 text-[var(--teal-deep)]" />
             {item}
           </div>
@@ -791,13 +791,13 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="relative mx-4 w-full max-w-xl overflow-hidden rounded-[28px] border border-white/60 bg-[rgba(252,252,252,0.97)] shadow-[0_40px_100px_rgba(31,42,54,0.22)] backdrop-blur-xl"
+        className="relative mx-4 w-full max-w-[calc(100%-2rem)] sm:max-w-xl overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_40px_100px_rgba(31,42,54,0.22)] backdrop-blur-xl"
       >
         {/* Skip all button */}
         {!isDoneStep && (
           <button
             onClick={() => void handleSkipAll()}
-            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[#0c111b]/35 transition-colors hover:bg-[rgba(31,42,54,0.06)] hover:text-[#0c111b]"
+            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-foreground/35 transition-colors hover:bg-[rgba(31,42,54,0.06)] hover:text-foreground"
             aria-label="Skip setup"
           >
             <X className="h-4 w-4" />
@@ -806,13 +806,13 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
 
         {/* Header - progress */}
         {!isDoneStep && currentStep > 0 && (
-          <div className="border-b border-[rgba(31,42,54,0.06)] px-8 py-5">
+          <div className="border-b border-[rgba(31,42,54,0.06)] px-5 py-5 sm:px-8">
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
               <div className="min-w-0 overflow-x-auto overscroll-x-contain">
                 <StepIndicator steps={STEPS} currentIndex={currentStep} statuses={statuses} />
               </div>
               <div className="ml-auto min-w-[80px] text-right">
-                <p className="text-xs font-medium text-[#0c111b]/45">
+                <p className="text-xs font-medium text-foreground/45">
                   Step {currentStep} of {totalSteps - 2}
                 </p>
               </div>
@@ -823,7 +823,7 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
 
         {/* Step header (for non-welcome, non-done steps) */}
         {currentStep > 0 && !isDoneStep && (
-          <div className="px-8 pt-6">
+          <div className="px-5 pt-6 sm:px-8">
             <div className="flex items-center gap-3">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-2xl"
@@ -832,15 +832,15 @@ export function OnboardingWizard({ organizationName, userName, initialStep = 0, 
                 <step.icon className="h-5 w-5" style={{ color: step.color }} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-[#0c111b]">{step.title}</h3>
-                <p className="text-sm text-[#0c111b]/55">{step.subtitle}</p>
+                <h3 className="text-lg font-semibold text-foreground">{step.title}</h3>
+                <p className="text-sm text-foreground/55">{step.subtitle}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Content */}
-        <div className={cn("px-8 pb-8", currentStep > 0 && !isDoneStep ? "pt-6" : "pt-8")}>
+        <div className={cn("px-5 pb-8 sm:px-8", currentStep > 0 && !isDoneStep ? "pt-6" : "pt-8")}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
