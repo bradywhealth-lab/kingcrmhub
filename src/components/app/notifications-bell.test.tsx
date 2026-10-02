@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
+  DESKTOP_BELL_MEDIA_QUERY,
   LAST_SEEN_STORAGE_KEY,
   NotificationsBody,
+  createResultGate,
   formatRelativeTime,
   latestSeenAtFrom,
   parseActivitiesPayload,
+  parseServerDate,
   readLastSeenAt,
+  resolveInitialBaseline,
   seenStorageKey,
   toNotifications,
   writeLastSeenAt,
@@ -184,9 +188,135 @@ describe('seen-baseline is scoped per organization (P2) and only advances on ren
     const shell = readFileSync(shellSourcePath, 'utf8')
     expect(shell).toContain('void refreshAndMarkSeen()')
     expect(shell).not.toMatch(/markSeen\(Date\.now\(\)\)/)
+    expect(shell).not.toMatch(/advanceSeen\(/) // app-shell never advances directly
     const bell = readFileSync(bellModulePath, 'utf8')
-    expect(bell).toMatch(/if \(result\.status === "ready"\)/)
-    expect(bell).toContain('latestSeenAtFrom(result.activities)')
+    // The REAL advance path: advanceSeen(latest) must sit INSIDE the
+    // result.status === "ready" branch of refreshAndMarkSeen (cubic P2 —
+    // asserting on a nonexistent markSeen API would be vacuous). Slice the
+    // function body and check containment, not just file-wide presence.
+    const fnStart = bell.indexOf('const refreshAndMarkSeen = useCallback(async () => {')
+    expect(fnStart).toBeGreaterThan(-1)
+    const fnBody = bell.slice(fnStart, bell.indexOf('}, [applyResult, advanceSeen])', fnStart))
+    const readyIdx = fnBody.indexOf('if (result.status === "ready")')
+    const advanceIdx = fnBody.indexOf('advanceSeen(latest)')
+    expect(readyIdx).toBeGreaterThan(-1)
+    expect(advanceIdx).toBeGreaterThan(-1)
+    expect(advanceIdx).toBeGreaterThan(readyIdx) // gated by success
+    expect(fnBody).not.toMatch(/advanceSeen\(Date\.now\(\)\)/)
+  })
+})
+
+describe('seen baselines are server-sourced only — no client clock skew (cubic P2)', () => {
+  const SERVER_NOW = Date.parse('2026-10-01T13:00:00.000Z')
+  const LATEST = Date.parse('2026-10-01T12:30:00.000Z')
+
+  it('resolveInitialBaseline prefers stored, then server Date header, then newest activity', () => {
+    expect(resolveInitialBaseline({ stored: 5000, serverNow: SERVER_NOW, latestActivityAt: LATEST })).toBe(5000)
+    expect(resolveInitialBaseline({ stored: null, serverNow: SERVER_NOW, latestActivityAt: LATEST })).toBe(SERVER_NOW)
+    expect(resolveInitialBaseline({ stored: null, serverNow: null, latestActivityAt: LATEST })).toBe(LATEST)
+    expect(resolveInitialBaseline({ stored: null, serverNow: null, latestActivityAt: null })).toBeNull()
+  })
+
+  it('parseServerDate reads the HTTP Date header and rejects garbage', () => {
+    const withDate = { headers: { get: (k: string) => (k === 'date' ? 'Thu, 01 Oct 2026 13:00:00 GMT' : null) } } as unknown as Response
+    expect(parseServerDate(withDate)).toBe(SERVER_NOW)
+    const noDate = { headers: { get: () => null } } as unknown as Response
+    expect(parseServerDate(noDate)).toBeNull()
+    const garbage = { headers: { get: () => 'not-a-date' } } as unknown as Response
+    expect(parseServerDate(garbage)).toBeNull()
+  })
+
+  it('fetchNotifications surfaces the server clock with ready results', async () => {
+    const response = {
+      ok: true,
+      status: 200,
+      headers: {
+        get: (key: string) =>
+          key === 'content-type' ? 'application/json' : key === 'date' ? 'Thu, 01 Oct 2026 13:00:00 GMT' : null,
+      },
+      json: async () => ({ activities: [makeActivity()] }),
+      text: async () => '',
+    } as unknown as Response
+    const fetchImpl = vi.fn(async () => response)
+    const result = await fetchNotifications(fetchImpl as unknown as typeof fetch)
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') expect(result.serverNow).toBe(SERVER_NOW)
+  })
+
+  it('the bell module never seeds the baseline or the seen-advance from Date.now()', () => {
+    // Clock-skew pin: the ONLY legitimate Date.now() in the module is the
+    // display-time fallback (`result.serverNow ?? Date.now()`) for relative
+    // labels — never in resolveInitialBaseline, advanceSeen, or refreshAndMarkSeen.
+    const bell = readFileSync(bellModulePath, 'utf8')
+    const resolveFn = bell.slice(bell.indexOf('export function resolveInitialBaseline'), bell.indexOf('export function createResultGate'))
+    expect(resolveFn).not.toContain('Date.now()')
+    const advanceStart = bell.indexOf('const advanceSeen = useCallback')
+    const advanceBody = bell.slice(advanceStart, bell.indexOf('[seenKey],', advanceStart))
+    expect(advanceBody).not.toContain('Date.now()')
+  })
+})
+
+describe('out-of-order responses cannot clobber newer data (cubic P2)', () => {
+  it('the gate invalidates superseded tokens', () => {
+    const gate = createResultGate()
+    const t1 = gate.begin()
+    expect(gate.isCurrent(t1)).toBe(true)
+    const t2 = gate.begin() // a newer request supersedes t1
+    expect(gate.isCurrent(t1)).toBe(false)
+    expect(gate.isCurrent(t2)).toBe(true)
+    const t3 = gate.begin()
+    expect(gate.isCurrent(t2)).toBe(false)
+    expect(gate.isCurrent(t3)).toBe(true)
+  })
+
+  it('all fetch paths (mount, poll, open-refresh) take a gate token and drop stale results', () => {
+    const bell = readFileSync(bellModulePath, 'utf8')
+    // Mount IIFE, fetchGated (poll/visibility), and refreshAndMarkSeen must
+    // each begin() a token and check isCurrent(token) BEFORE applying results.
+    expect(bell.match(/\.begin\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3)
+    expect(bell.match(/isCurrent\(token\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3)
+    const gatedStart = bell.indexOf('const fetchGated = useCallback')
+    const gatedBody = bell.slice(gatedStart, bell.indexOf('[applyResult],', gatedStart))
+    expect(gatedBody.indexOf('isCurrent')).toBeLessThan(gatedBody.indexOf('applyResult(result)'))
+    const refreshStart = bell.indexOf('const refreshAndMarkSeen = useCallback(async () => {')
+    const refreshBody = bell.slice(refreshStart, bell.indexOf('}, [applyResult, advanceSeen])', refreshStart))
+    expect(refreshBody.indexOf('isCurrent')).toBeLessThan(refreshBody.indexOf('applyResult(result)'))
+  })
+})
+
+describe('polling matches the repo conventions and the bell viewport (cubic P3)', () => {
+  it('fetches with cache: "no-store" like every other polling view', async () => {
+    const response = {
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ activities: [] }),
+      text: async () => '',
+    } as unknown as Response
+    const fetchImpl = vi.fn(async () => response)
+    await fetchNotifications(fetchImpl as unknown as typeof fetch)
+    const init = (fetchImpl.mock.calls[0] as unknown[])[1] as RequestInit
+    expect(init.cache).toBe('no-store')
+  })
+
+  it('the desktop gate matches the header lg:flex breakpoint', () => {
+    // Tailwind `lg` = 64rem = 1024px; the bell lives in `hidden ... lg:flex`.
+    expect(DESKTOP_BELL_MEDIA_QUERY).toBe('(min-width: 1024px)')
+    const shell = readFileSync(shellSourcePath, 'utf8')
+    expect(shell).toContain('useMatchesMediaQuery(DESKTOP_BELL_MEDIA_QUERY)')
+    expect(shell).toContain('{ enabled: isDesktop }')
+  })
+
+  it('an org change remounts the bell closed — open state lives inside it', () => {
+    // cubic P2: if AppShell owned `open`, an identity-change remount could
+    // leave the dropdown open on the new org without a seen refresh. The bell
+    // must own its open state and be keyed by organizationId.
+    const shell = readFileSync(shellSourcePath, 'utf8')
+    expect(shell).toContain('key={currentUser?.organizationId ?? "no-org"}')
+    expect(shell).not.toContain('notificationsOpen')
+    const bellStart = shell.indexOf('function NotificationsBell')
+    const bellBody = shell.slice(bellStart, shell.indexOf('function UserMenu', bellStart))
+    expect(bellBody).toContain('const [open, setOpen] = useState(false)')
   })
 })
 
@@ -219,7 +349,13 @@ describe('item mapping keeps the id/title/body/time/unread contract', () => {
     expect(formatRelativeTime(t0 - 5 * 60_000, t0)).toBe('5m ago')
     expect(formatRelativeTime(t0 - 3 * 3_600_000, t0)).toBe('3h ago')
     expect(formatRelativeTime(t0 - 2 * 86_400_000, t0)).toBe('2d ago')
-    expect(formatRelativeTime(t0 - 8 * 86_400_000, t0)).toBe('Sep 23')
+    // Beyond 7 days the label is a LOCAL month/day — derive the expected
+    // value in the host timezone instead of hardcoding a UTC assumption
+    // (cubic P3: in UTC+14 the fixture formats a day later).
+    const weekAgo = t0 - 8 * 86_400_000
+    expect(formatRelativeTime(weekAgo, t0)).toBe(
+      new Date(weekAgo).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    )
     expect(formatRelativeTime(Number.NaN, t0)).toBe('recently')
 
     const [bad] = toNotifications([makeActivity({ createdAt: 'garbage' })], NOW, NOW)

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/lib/store"
-import { NotificationsBody, seenStorageKey, useNotifications } from "@/components/app/notifications-bell"
+import { DESKTOP_BELL_MEDIA_QUERY, NotificationsBody, seenStorageKey, useMatchesMediaQuery, useNotifications } from "@/components/app/notifications-bell"
 
 // Freelancer-native IA. `id`s match the DashboardView router in src/app/page.tsx.
 export const APP_NAV_ITEMS = [
@@ -51,7 +51,6 @@ export function AppShell({
   children: React.ReactNode
 }) {
   const { theme, setTheme } = useAppStore()
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // Apply the Regal dark theme by toggling `.dark` on <html>.
@@ -153,7 +152,7 @@ export function AppShell({
               <Search className="h-4 w-4" />
             </button>
             <ThemeToggle theme={theme} setTheme={setTheme} />
-            <NotificationsBell key={currentUser?.organizationId ?? "no-org"} open={notificationsOpen} setOpen={setNotificationsOpen} orgScope={currentUser?.organizationId ?? null} />
+            <NotificationsBell key={currentUser?.organizationId ?? "no-org"} orgScope={currentUser?.organizationId ?? null} />
             <Button onClick={onAddLead} className="h-9 gap-2 rounded-xl bg-[var(--accent-solid)] px-4 font-semibold text-white hover:bg-[var(--accent-hover)]">
               <Plus className="h-4 w-4" /> New
             </Button>
@@ -226,14 +225,23 @@ function ThemeToggle({ theme, setTheme }: { theme: "dark" | "light"; setTheme: (
   )
 }
 
-function NotificationsBell({ open, setOpen, orgScope }: { open: boolean; setOpen: (v: boolean) => void; orgScope?: string | null }) {
+function NotificationsBell({ orgScope }: { orgScope?: string | null }) {
   // Real data: org activity log via GET /api/activities. The old hardcoded
   // empty mock array + empty-dep useMemo made this bell permanently inert —
   // a false all-clear (t_9dadc534). Opening the dropdown refetches and marks
-  // seen ONLY after a successful render, and the seen-baseline is scoped per
+  // seen ONLY after a successful render; the seen-baseline is scoped per
   // organization so tenants on one browser never clobber each other (P1/P2).
+  //
+  // The open state lives HERE, not in AppShell: the bell is keyed by
+  // organizationId, so an identity change remounts it CLOSED — an org switch
+  // can never leave the dropdown open showing the new org's items without a
+  // success-gated seen refresh (cubic P2).
+  const [open, setOpen] = useState(false)
   const seenKey = seenStorageKey(orgScope)
-  const { status, notifications, unreadCount, refreshAndMarkSeen } = useNotifications(seenKey)
+  // The bell only renders inside the header's `hidden lg:flex` cluster —
+  // mobile never polls an invisible control (cubic P3).
+  const isDesktop = useMatchesMediaQuery(DESKTOP_BELL_MEDIA_QUERY)
+  const { status, notifications, unreadCount, refreshAndMarkSeen } = useNotifications(seenKey, { enabled: isDesktop })
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
