@@ -23,6 +23,9 @@ import { describe, expect, it } from 'vitest'
  *    sub-AA alpha cannot silently return.
  *
  * ## Documented exemptions (WCAG 1.4.3 / 1.4.11 scoping, NOT oversights)
+ * Pinned to their EXACT occurrences in the pattern-guard section (disabled
+ * completed-tab kanban toggle /25, decorative CheckSquare watermark /12) —
+ * a bare alpha-value allow-list is not accepted (PR #233 review).
  * - Pure icons (lucide `<Icon className="text-...">`) are non-text content:
  *   WCAG 1.4.11 requires 3:1, not 4.5:1 — e.g. app-shell Search icon
  *   white/40 = 3.80:1 passes; the ⌘K kbd IS text and was fixed to white/60.
@@ -80,12 +83,60 @@ function composite(fg: [number, number, number], alpha: number, bg: [number, num
 
 const AA = 4.5
 
-// ---------- light-theme surfaces (globals.css :root, hex so exact) ----------
+// ---------- theme tokens PARSED from globals.css (never duplicated) ----------
 
-const INK = parseRgb('#0b0b0c')            // light --foreground / --ink
-const CANVAS = parseRgb('#f6f6f4')         // --background
-const CARD = parseRgb('#ffffff')           // --card
-const MUTED = parseRgb('#f0f0ee')          // --muted  (worst case: lowest luminance light surface)
+/**
+ * Extract a theme block (`:root` / `.dark`) from globals.css by brace matching,
+ * then read custom properties out of it at test time. The guard deliberately
+ * does NOT duplicate theme constants (PR #233 review: "Read contrast colors
+ * from the production theme") — a theme change now re-measures instead of
+ * silently keeping the guard green while Tasks regresses below AA.
+ */
+function themeBlock(css: string, selector: ':root' | '.dark'): string {
+  const re = selector === ':root' ? /(^|\n):root\s*\{/ : /(^|\n)\.dark\s*\{/
+  const start = css.search(re)
+  if (start === -1) throw new Error(`themeBlock: ${selector} block not found in globals.css`)
+  const open = css.indexOf('{', start)
+  let depth = 0
+  for (let i = open; i < css.length; i++) {
+    if (css[i] === '{') depth++
+    else if (css[i] === '}') {
+      depth--
+      if (depth === 0) return css.slice(open + 1, i)
+    }
+  }
+  throw new Error(`themeBlock: ${selector} block is unterminated`)
+}
+
+function themeVar(block: string, name: string): string {
+  const m = block.match(new RegExp(`--${name}\\s*:\\s*([^;]+);`))
+  if (!m) throw new Error(`themeVar: --${name} not found in theme block`)
+  return m[1].trim()
+}
+
+function rgbaThemeVar(block: string, name: string): [number, number, number, number] {
+  const value = themeVar(block, name)
+  const m = value.match(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)$/)
+  if (!m) {
+    throw new Error(
+      `rgbaThemeVar: --${name} is not an rgba() literal (got "${value}") — the guard cannot measure it; update the parse`,
+    )
+  }
+  return [+m[1], +m[2], +m[3], +m[4]]
+}
+
+const globalsCss = src('src/app/globals.css')
+const LIGHT_THEME = themeBlock(globalsCss, ':root')
+const DARK_THEME = themeBlock(globalsCss, '.dark')
+const rgbOf = (c: [number, number, number, number]): [number, number, number] => [c[0], c[1], c[2]]
+
+const INK = parseRgb(themeVar(LIGHT_THEME, 'foreground'))       // light --foreground (parsed)
+const MUTED_FG = rgbaThemeVar(LIGHT_THEME, 'muted-foreground')  // light --muted-foreground (parsed)
+const CANVAS = parseRgb(themeVar(LIGHT_THEME, 'background'))    // --background
+const CARD = parseRgb(themeVar(LIGHT_THEME, 'card'))            // --card
+const MUTED = parseRgb(themeVar(LIGHT_THEME, 'muted'))          // --muted  (worst case: lowest luminance light surface)
+const DF = parseRgb(themeVar(DARK_THEME, 'foreground'))         // dark --foreground (parsed)
+const DARK_MUTED_FG = rgbaThemeVar(DARK_THEME, 'muted-foreground') // dark --muted-foreground (parsed)
 const KANBAN_COL = composite(CANVAS, 0.6, CARD) // tasks kanban column bg-background/60 over card
 const AUTH_CARD = composite(parseRgb('#fcfcfc'), 0.76, parseRgb('#f4f0e6')) // auth page card over paper gradient
 const AUTH_TAB = composite(parseRgb('#0c111b'), 0.05, AUTH_CARD)            // inactive-tab strip rgba(12,17,27,.05) over card
@@ -104,11 +155,14 @@ const LIGHT_SURFACES: Array<[string, [number, number, number]]> = [
 // ---------- 1. measured ratios for the fixed site classes ----------
 
 describe('D2 guard: fixed light-mode text sites measure >= 4.5:1', () => {
-  it('--muted-foreground (ink @ 0.62) clears AA on EVERY light app surface', () => {
+  it('--muted-foreground (parsed from globals.css) clears AA on EVERY light app surface', () => {
     // tasks-view now uses text-muted-foreground for all small text. The token
-    // is rgba(11,11,12,0.62); its worst case is the lowest-luminance surface.
+    // is PARSED from the globals.css :root block — if the theme changes, this
+    // test re-measures the new values instead of staying green on duplicated
+    // constants (PR #233 review: "Read contrast colors from the production
+    // theme").
     for (const [name, bg] of LIGHT_SURFACES) {
-      const ratio = contrast(composite(INK, 0.62, bg), bg)
+      const ratio = contrast(composite(rgbOf(MUTED_FG), MUTED_FG[3], bg), bg)
       expect(ratio, `muted-foreground on ${name}`).toBeGreaterThanOrEqual(AA)
     }
     // Worst-case proof of the original defect: /50 on --muted was 3.56:1.
@@ -166,14 +220,35 @@ describe('D2 guard: fixed light-mode text sites measure >= 4.5:1', () => {
 // ---------- 2. pattern guards on the six fixed files ----------
 
 describe('D2 guard: sub-AA alpha text patterns cannot return', () => {
-  it('tasks-view has no text-foreground alpha below /60', () => {
+  it('tasks-view sub-60 text-foreground alphas are exactly the two pinned exemptions', () => {
     const tv = src('src/components/tasks/tasks-view.tsx')
+
+    // The ONLY allowed sub-60 occurrences, pinned in their exact contexts
+    // (WCAG 1.4.3 disabled-state + 1.4.11 decorative non-text scoping — the
+    // bare alpha allow-list let ANY future text at /25 or /12 pass; PR #233
+    // review, cubic + codex):
+    // Index-based extraction: a `<button[^>]*>` regex would stop at the `>`
+    // inside the onClick arrow, so walk to the enclosing button explicitly.
+    const labelIdx = tv.indexOf('aria-label="Kanban board view"')
+    expect(labelIdx, 'the kanban board view toggle must exist').toBeGreaterThan(-1)
+    const btnStart = tv.lastIndexOf('<button', labelIdx)
+    const btnEnd = tv.indexOf('</button>', labelIdx)
+    expect(btnStart, 'an enclosing <button> must precede the toggle label').toBeGreaterThan(-1)
+    expect(btnEnd, 'a closing </button> must follow the toggle label').toBeGreaterThan(-1)
+    const disabledToggle = tv.slice(btnStart, btnEnd + '</button>'.length)
+    expect(
+      disabledToggle,
+      '/25 must sit on the disabled completed-tab toggle, not on active UI',
+    ).toMatch(/disabled=\{tab === 'completed'\}[\s\S]*cursor-not-allowed text-foreground\/25/)
+    const watermark = tv.match(/<CheckSquare className="h-12 w-12 text-foreground\/12" \/>/)
+    expect(watermark, 'the decorative empty-state watermark icon must keep its exact /12 class').not.toBeNull()
+
+    // Every OTHER alpha below /60 now FAILS: a future label or paragraph at
+    // /25 or /12 (or any new sub-AA alpha) is rejected outright.
     const alphas = [...tv.matchAll(/text-foreground\/(\d+)/g)].map((m) => +m[1])
-    // Remaining lows are documented exemptions only: /25 disabled toggle,
-    // /12 decorative watermark icon. Everything else must be >= 60.
-    for (const a of alphas) {
-      expect(a === 25 || a === 12 || a >= 60, `text-foreground/${a} is sub-AA small text`).toBe(true)
-    }
+    expect(alphas.length).toBeGreaterThan(0)
+    const lows = alphas.filter((a) => a < 60).sort((a, b) => a - b)
+    expect(lows, 'sub-60 text-foreground alphas must be exactly the pinned /12 + /25 exemptions').toEqual([12, 25])
     // The done-card `opacity-60` wrapper multiplied EVERY inner text color by
     // 0.6 (title fell to ~2.0:1); it was removed — assert it stays removed.
     expect(tv, 'done TaskCard must not dim text via card-level opacity').not.toMatch(/isDone \? 'opacity-60'/)
@@ -226,18 +301,19 @@ describe('D2 guard: sub-AA alpha text patterns cannot return', () => {
 // ---------- 3. dark-mode non-regression ----------
 
 describe('D2 guard: dark mode was not reduced by the light-mode fix', () => {
-  const DF = parseRgb('#f2f2f3') // dark --foreground
   const DARK_SURFACES: Array<[string, [number, number, number]]> = [
-    ['--background #08080a', parseRgb('#08080a')],
-    ['--card #141416', parseRgb('#141416')],
-    ['--muted #17171a', parseRgb('#17171a')],
+    ['--background (parsed)', parseRgb(themeVar(DARK_THEME, 'background'))],
+    ['--card (parsed)', parseRgb(themeVar(DARK_THEME, 'card'))],
+    ['--muted (parsed)', parseRgb(themeVar(DARK_THEME, 'muted'))],
   ]
 
-  it('dark --muted-foreground (f2f2f3 @ 0.60) still clears AA everywhere', () => {
+  it('dark --muted-foreground (parsed from globals.css) still clears AA everywhere', () => {
     // The tasks-view fix moved text ONTO this token; in dark it renders
     // 6.37-6.61:1 (vs the old foreground/50 at 4.79-4.87) — strictly better.
+    // Token values are PARSED from the .dark block, not duplicated here.
     for (const [name, bg] of DARK_SURFACES) {
-      expect(contrast(composite(DF, 0.6, bg), bg), `dark muted on ${name}`).toBeGreaterThanOrEqual(AA)
+      const ratio = contrast(composite(rgbOf(DARK_MUTED_FG), DARK_MUTED_FG[3], bg), bg)
+      expect(ratio, `dark muted on ${name}`).toBeGreaterThanOrEqual(AA)
     }
   })
 })
