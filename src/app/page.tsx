@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   LayoutDashboard, Users, GitBranch, Brain, Share2, Settings,
@@ -1527,14 +1527,21 @@ function PipelineView() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
+  // cubic P2: a deal created while a load is in flight used to be overwritten by the
+  // older response, so the new item vanished until a manual reload. Ignore any
+  // response a newer load has already superseded.
+  const pipelineRequestRef = useRef(0)
   const loadPipeline = useCallback(async () => {
+    const requestId = ++pipelineRequestRef.current
     setLoading(true)
     try {
       const res = await fetch("/api/pipeline")
       const data = await res.json()
+      if (requestId !== pipelineRequestRef.current) return
       if (data.error) throw new Error(data.error)
       setStages(normalizePipelineStages(data.pipeline?.stages))
     } catch (error) {
+      if (requestId !== pipelineRequestRef.current) return
       toast({
         title: "Failed to load pipeline",
         description: error instanceof Error ? error.message : "Unknown error",
@@ -1542,13 +1549,32 @@ function PipelineView() {
       })
       setStages([])
     } finally {
-      setLoading(false)
+      if (requestId === pipelineRequestRef.current) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     void loadPipeline()
   }, [loadPipeline])
+
+  // S29 — reload the board when a deal is created from the dialog.
+  // cubic P2: a creation refresh must not race an in-flight drag, or a stale GET can
+  // restore the pre-drag positions. Defer the refresh until moves settle.
+  const moveInFlightRef = useRef(0)
+  const refreshQueuedRef = useRef(false)
+
+  const requestPipelineRefresh = useCallback(() => {
+    if (moveInFlightRef.current > 0) {
+      refreshQueuedRef.current = true
+      return
+    }
+    void loadPipeline()
+  }, [loadPipeline])
+
+  useEffect(() => {
+    window.addEventListener("pipeline-refresh", requestPipelineRefresh)
+    return () => window.removeEventListener("pipeline-refresh", requestPipelineRefresh)
+  }, [requestPipelineRefresh])
 
   const onDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
@@ -1582,6 +1608,7 @@ function PipelineView() {
       return next
     })
 
+    moveInFlightRef.current += 1
     try {
       setSaving(true)
       const res = await fetch("/api/pipeline", {
@@ -1604,6 +1631,12 @@ function PipelineView() {
       await loadPipeline()
     } finally {
       setSaving(false)
+      moveInFlightRef.current = Math.max(0, moveInFlightRef.current - 1)
+      // A refresh that arrived mid-drag runs now, against settled state.
+      if (moveInFlightRef.current === 0 && refreshQueuedRef.current) {
+        refreshQueuedRef.current = false
+        void loadPipeline()
+      }
     }
   }, [loadPipeline, stages])
   
@@ -1627,9 +1660,9 @@ function PipelineView() {
               <span className="text-sm text-muted-foreground">{saving ? "saving…" : "live total"}</span>
             </div>
           </Card>
-          <Button className="btn-gold gap-2" onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}>
+          <Button className="btn-gold gap-2" onClick={() => window.dispatchEvent(new CustomEvent("open-add-deal"))}>
             <Plus className="w-4 h-4" />
-            Add Lead
+            Add Deal
           </Button>
         </div>
       </div>
@@ -1661,16 +1694,14 @@ function PipelineView() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-muted-foreground hover:text-[var(--accent-text)]"
-                      // S28: icon-only "+" in a pipeline stage column.
-                      // Deliberately NOT "Add lead to {stage.name}": the dispatch
-                      // carries no detail, use-workspace-overlays' leadHandler
-                      // ignores detail, and add-lead-dialog has no stage field
-                      // (its only Select is `source`). The lead would NOT land in
-                      // this column, so a stage-specific name would be a lie told
-                      // to screen-reader users. Honest label until the dialog can
-                      // actually accept a stage.
-                      aria-label="Add lead"
-                      onClick={() => window.dispatchEvent(new CustomEvent("open-add-lead"))}
+                      // S29: the deal dialog now accepts a stage, and the dispatch
+                      // carries it, so naming the column is a true promise.
+                      aria-label={`Add deal to ${stage.name}`}
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent("open-add-deal", { detail: { stageId: stage.id } }),
+                        )
+                      }
                     >
                       <Plus className="w-3 h-3" />
                     </Button>
@@ -2728,6 +2759,9 @@ export default function EliteCRM() {
     setCommandPaletteOpen,
     showAddLeadDialog,
     setShowAddLeadDialog,
+    showAddDealDialog,
+    setShowAddDealDialog,
+    dealStageId,
     showUploadDialog,
     setShowUploadDialog,
     leadsRefreshKey,
@@ -2815,6 +2849,10 @@ export default function EliteCRM() {
       <WorkspaceOverlays
         showAddLeadDialog={showAddLeadDialog}
         setShowAddLeadDialog={setShowAddLeadDialog}
+        showAddDealDialog={showAddDealDialog}
+        setShowAddDealDialog={setShowAddDealDialog}
+        dealStageId={dealStageId}
+        onDealCreated={() => { window.dispatchEvent(new CustomEvent("pipeline-refresh")) }}
         onLeadCreated={handleLeadCreated}
         showUploadDialog={showUploadDialog}
         setShowUploadDialog={setShowUploadDialog}

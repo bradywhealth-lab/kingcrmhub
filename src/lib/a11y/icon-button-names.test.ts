@@ -202,13 +202,11 @@ describe('S28: icon-only buttons have an accessible name', () => {
   it('the 4 remaining offenders are labelled, and the labels are TRUTHFUL', () => {
     const page = readFileSync(join(SRC, 'app/page.tsx'), 'utf8')
 
-    // Was `Add lead to ${stage.name}`. Review proved that a lie: the dispatch
-    // carries no detail, use-workspace-overlays' leadHandler ignores detail, and
-    // add-lead-dialog's only Select is `source` — the lead does NOT land in the
-    // clicked column. An honest generic label beats a specific false promise.
-    expect(page).toMatch(/aria-label="Add lead"/)
-    expect(page, 'the stage-specific false promise must stay gone')
-      .not.toContain('Add lead to ${stage.name}')
+    // S29 note: this asserted `aria-label="Add lead"` because the old dispatch made
+    // a stage-specific label a false promise. The deal path now exists and the
+    // dispatch carries the stage, so the label names the column again — truthfully.
+    // The dedicated assertion for that lives in the S29 test below.
+    expect(page).toMatch(/aria-label=\{`Add deal to \$\{stage\.name\}`\}/)
 
     // item.title is string|null (/api/content does `title?.trim() || null`) and
     // the row renders `item.title || 'Untitled post'`. Interpolating the raw
@@ -222,21 +220,33 @@ describe('S28: icon-only buttons have an accessible name', () => {
     expect(ai).toMatch(/aria-label="Send message"/)
   })
 
-  it('the honest Add lead label is consistent with what the button does', () => {
-    // Pin the reasoning, not just the string: the button must still dispatch the
-    // generic event with NO stage payload. If someone later makes the dialog
-    // stage-aware, this fails and the label should be revisited.
+  it('the pipeline "+" names its stage because the dispatch now carries it (S29)', () => {
+    // Superseded deliberately. This test used to pin the generic "Add lead" label,
+    // which was honest only because the lead dialog had no stage field and the
+    // dispatch carried no detail. S29 built the real deal path (POST /api/pipeline),
+    // so the per-column "+" now opens the deal dialog WITH the stage id — which
+    // makes a stage-specific label a true promise rather than a lie.
     const page = readFileSync(join(SRC, 'app/page.tsx'), 'utf8')
-    expect(page).toContain('new CustomEvent("open-add-lead")')
-    expect(page, 'open-add-lead must still carry no detail payload')
-      .not.toMatch(/new CustomEvent\("open-add-lead",\s*\{\s*detail/)
+    expect(page).toMatch(/aria-label=\{`Add deal to \$\{stage\.name\}`\}/)
+    expect(page, 'the "+" must pass the stage it belongs to').toMatch(
+      /new CustomEvent\("open-add-deal",\s*\{\s*detail:\s*\{\s*stageId:\s*stage\.id\s*\}\s*\}\)/,
+    )
+    expect(page, 'the header CTA must open the deal dialog').toContain('Add Deal')
+    // Pin the dispatch, not just the text: reverting the CTA to open-add-lead while
+    // keeping "Add Deal" would otherwise pass every test silently.
+    expect(page, 'the header CTA must dispatch open-add-deal').toMatch(
+      /new CustomEvent\("open-add-deal"\)/,
+    )
 
     const overlays = readFileSync(join(SRC, 'components/app/use-workspace-overlays.ts'), 'utf8')
-    expect(overlays).toMatch(/const leadHandler = \(\) => setShowAddLeadDialog\(true\)/)
-    expect(overlays, 'leadHandler must still ignore event detail').not.toContain('leadHandler = (event')
+    expect(overlays, 'the deal handler must read the stage from the event').toMatch(
+      /dealHandler = \(event: Event\)/,
+    )
+    expect(overlays, 'and must forward it to the dialog').toContain('detail?.stageId')
 
-    const dialog = readFileSync(join(SRC, 'components/app/add-lead-dialog.tsx'), 'utf8')
-    expect(dialog, 'the lead dialog has no stage field').not.toMatch(/name="stage"|id="stage"/)
+    const dialog = readFileSync(join(SRC, 'components/app/add-deal-dialog.tsx'), 'utf8')
+    expect(dialog, 'the deal dialog accepts a stage').toMatch(/defaultStageId/)
+    expect(dialog, 'and posts to the real pipeline endpoint').toContain('"/api/pipeline"')
   })
 
   it('does NOT flag the two legitimate patterns (guards against a cry-wolf rule)', () => {
