@@ -136,6 +136,10 @@ describe('free-tier AI routing — Groq pinned models win over the OpenRouter au
     // to catch.
     expect(config.model).toBe('qwen/qwen3.8-27b:free')
     expect(config.provider).toBe('openrouter')
+    // Pin WHICH branch produced this: the preference branch (org chose
+    // openrouter) has a distinct label from the free-tier fallback, so this
+    // cannot pass through the wrong route.
+    expect(config.label).toBe('OpenRouter Free (platform)')
   })
 
   it('falls back to Groq when only the Groq key exists', async () => {

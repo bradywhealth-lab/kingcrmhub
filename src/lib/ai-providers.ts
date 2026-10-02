@@ -367,16 +367,21 @@ export async function createChatStream(
     if (config.provider === 'openrouter' && !config.byokKey) {
       const groqFailoverKey = process.env.GROQ_API_KEY?.trim()
       if (groqFailoverKey) {
-        try {
-          return await attempt({
-            ...config,
-            provider: 'groq',
-            model: getDefaultModel('groq'),
-            apiKey: groqFailoverKey,
-            label: 'Groq (free, failover from OpenRouter)',
-          })
-        } catch {
-          // fall through: original error is the honest failure
+        // Walk the pinned list best-first, mirroring the Groq walk above: the
+        // first candidate can itself be model-specific-rate-limited, and a
+        // single-attempt failover would just move the 429 one hop downstream.
+        for (const groqModel of GROQ_FREE_MODELS) {
+          try {
+            return await attempt({
+              ...config,
+              provider: 'groq',
+              model: groqModel,
+              apiKey: groqFailoverKey,
+              label: 'Groq (free, failover from OpenRouter)',
+            })
+          } catch {
+            continue
+          }
         }
       }
     }

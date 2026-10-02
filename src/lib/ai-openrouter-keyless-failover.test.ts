@@ -74,6 +74,7 @@ afterEach(() => {
 describe('key-less stored openrouter preference means "no preference" (t_c1c40620)', () => {
   beforeEach(() => {
     mockSdkCreate.mockReset()
+    mockCtorArgs.length = 0
     vi.clearAllMocks()
     mockDb.organization.findUnique.mockResolvedValue({ settings: null })
     mirrorProdEnv()
@@ -145,6 +146,7 @@ describe('key-less stored openrouter preference means "no preference" (t_c1c4062
 describe('platform OpenRouter → Groq failover in createChatStream (t_c1c40620)', () => {
   beforeEach(() => {
     mockSdkCreate.mockReset()
+    mockCtorArgs.length = 0
     vi.clearAllMocks()
     mockDb.organization.findUnique.mockResolvedValue({ settings: null })
   })
@@ -195,6 +197,44 @@ describe('platform OpenRouter → Groq failover in createChatStream (t_c1c40620)
     expect(lastCtor.apiKey).toBe(GROQ_PLATFORM_FIXTURE)
     expect(text).toContain('answer via groq failover')
     expect(text).not.toContain('error')
+  })
+
+  it('keeps walking the pinned Groq list when the first failover model also 429s (mirrors the Groq walk)', async () => {
+    setEnv({
+      GROQ_API_KEY: undefined,
+      OPENROUTER_API_KEY: ROUTER_PLATFORM_FIXTURE,
+      OPENAI_API_KEY: undefined,
+      ANTHROPIC_API_KEY: undefined,
+    })
+    mockDb.organization.findUnique.mockResolvedValueOnce({ settings: { ...STALE_SHAPE } })
+    const config = await resolveAIConfig('org-1')
+    expect(config.provider).toBe('openrouter')
+
+    setEnv({ GROQ_API_KEY: GROQ_PLATFORM_FIXTURE })
+
+    mockSdkCreate
+      .mockRejectedValueOnce(new Error('429 openrouter upstream rate limit'))
+      .mockRejectedValueOnce(new Error('429 Rate limit reached for model openai/gpt-oss-120b'))
+      .mockResolvedValueOnce(
+        (async function* () {
+          yield { choices: [{ delta: { content: 'answer via second groq model' } }] }
+        })(),
+      )
+
+    const stream = await createChatStream(config, [{ role: 'user', content: 'hi' }])
+    const reader = stream.getReader()
+    const decoder = new TextDecoder()
+    let text = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      text += decoder.decode(value, { stream: true })
+    }
+
+    expect(mockSdkCreate).toHaveBeenCalledTimes(3)
+    expect((mockSdkCreate.mock.calls[1][0] as { model?: string }).model).toBe('openai/gpt-oss-120b')
+    expect((mockSdkCreate.mock.calls[2][0] as { model?: string }).model).toBe('openai/gpt-oss-20b')
+    expect(text).toContain('answer via second groq model')
   })
 
   it('does NOT fail over a BYOK OpenRouter key — the org chose that provider deliberately', async () => {
