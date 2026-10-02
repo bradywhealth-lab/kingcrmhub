@@ -44,6 +44,7 @@ interface DeployHarnessOptions {
   staticSrcDir?: string
   staticAssetCode?: number
   failCaddyCmd?: 'validate' | 'reload'
+  failRmi?: boolean
 }
 
 interface DeployHarness {
@@ -69,6 +70,7 @@ function createDeployHarness({
   staticSrcDir,
   staticAssetCode = 200,
   failCaddyCmd,
+  failRmi = false,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -177,6 +179,12 @@ exit 0
     `#!/usr/bin/env bash
 printf '%s\n' "$*" >> "$DEPLOY_LOG"
 args=" $* "
+# Record the rollback tag this deploy preserves so the later images listing can
+# include it (see the kingcrmhub-rollback listing branch below).
+if [[ "$args" == *" tag "* && "$args" == *"kingcrmhub-rollback:"* ]]; then
+  preserved=$(printf '%s' "$args" | grep -oE 'kingcrmhub-rollback:[0-9]+-[0-9]+' | head -1)
+  if [[ -n "$preserved" ]]; then printf '%s\n' "$preserved" > "$DEPLOY_ROOT/preserved_tag"; fi
+fi
 if [[ "$args" == *" compose version "* ]]; then exit 0; fi
 if [[ "$args" == *" prisma migrate deploy "* ]]; then
   if [[ "$FAIL_MIGRATE_DEPLOY" == "P3005" ]]; then
@@ -204,6 +212,24 @@ fi
 if [[ "$args" == *" container inspect "* ]]; then
   if [[ "$KEEP_CONTAINER_AFTER_REMOVE" == "1" ]]; then exit 0; fi
   exit 1
+fi
+if [[ "$args" == *" images --format {{.Repository}}:{{.Tag}} kingcrmhub-rollback "* ]]; then
+  # Realistic listing: includes the image this deploy just preserved (newest by
+  # tag) so a prune that destroys the live rollback path is observable.
+  if [[ -f "$DEPLOY_ROOT/preserved_tag" ]]; then cat "$DEPLOY_ROOT/preserved_tag"; fi
+  echo 'kingcrmhub-rollback:20260101000000-111'
+  echo 'kingcrmhub-rollback:20260102000000-222'
+  echo 'kingcrmhub-rollback:20260103000000-333'
+  echo 'kingceb-rollback:20260104000000-444'
+  echo 'kingcrmhub-rollback:20260104000000-444'
+  exit 0
+fi
+if [[ "$args" == *" rmi "* ]]; then
+  if [[ "$FAIL_RMI" == "1" && "$args" == *" kingcrmhub-rollback:"* ]]; then
+    echo "Error response from daemon: conflict" >&2
+    exit 1
+  fi
+  exit 0
 fi
 if [[ "$args" == *" images --no-trunc --quiet "* ]]; then
   if [[ -f "$DEPLOY_ROOT/image_built" ]]; then
@@ -275,6 +301,8 @@ exit 0
     CURL_LOG: join(root, 'curl.log'),
     // caddy shim failure injection: 'validate' or 'reload' (or '' = success).
     FAIL_CADDY_CMD: failCaddyCmd || '',
+    // 'docker rmi' failure injection: proves a prune error cannot roll back or mask an otherwise-healthy deploy.
+    FAIL_RMI: failRmi ? '1' : '0',
   }
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === 'string' && !(key in env)) env[key] = value
@@ -722,5 +750,40 @@ describe('KingCRMhub deploy hardening', () => {
     expect(apexBlock).not.toContain('handle_path /books*')
     expect(apexBlock).toContain('handle_path /books/*')
     expect(wwwBlock).not.toContain('Strict-Transport-Security')
+  })
+
+  it('keeps only the newest rollback images and prunes older ones after a successful deploy', deployTimeout, () => {
+    // Unbounded rollback images are the real disk emergency: each is ~2.36 GB and
+    // nothing pruned them, so the host hit 94% full / 2.9 GB free and deploys
+    // stalled on disk pressure. A successful deploy must prune older tags while
+    // retaining the just-preserved rollback path.
+    const { deployLog, result } = runMockDeploy()
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+
+    expect(result.status, dockerCalls).toBe(0)
+    expect(result.stdout).toContain('DEPLOY_V4_DONE')
+
+    const prunes = dockerCalls.match(/rmi [^\n]*kingcrmhub-rollback:\S+/g) ?? []
+    expect(prunes.length, 'deploy must prune old rollback images after success').toBeGreaterThan(0)
+    // The just-preserved tag must never be pruned — it is the live rollback path.
+    const preserved = dockerCalls.match(/tag \S+ (kingcrmhub-rollback:\S+)/)?.[1]
+    expect(preserved, 'rollback tag must have been preserved').toBeDefined()
+    expect(dockerCalls).not.toContain(`rmi ${preserved}`)
+    // Bounded retention must be an explicit numeric default, not luck.
+    expect(readDeployScript()).toMatch(/ROLLBACK_KEEP="?\$?\{?ROLLBACK_KEEP:-\d+\}?|ROLLBACK_KEEP="?\d+/)
+  })
+
+  it('still reports success when the rollback prune fails (disk hygiene cannot mask a healthy deploy)', deployTimeout, () => {
+    // The script runs under set -Eeuo pipefail with trap on_error ERR, so an
+    // unguarded failing prune would roll back a deploy whose every gate passed.
+    // Retention is a convenience - never a reason to revert good work.
+    const { result } = runMockDeploy({ failRmi: true })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status, output).toBe(0)
+    expect(result.stdout).toContain('DEPLOY_V4_DONE')
+    expect(output).toContain('ROLLBACK_PRUNE_FAIL')
+    expect(output).not.toContain('ROLLED_BACK_TO_ORIGINAL')
+    expect(output).not.toContain('DEPLOY_FAILED_ROLLING_BACK')
   })
 })

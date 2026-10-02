@@ -37,6 +37,26 @@ cleanup_static_snapshots() {
   return 0
 }
 trap cleanup_static_snapshots EXIT
+
+# Bound rollback-image retention. Newest-first by tag (fixed-width timestamp), so
+# the current deploy's preserved image is always kept. A prune failure must not
+# fail an otherwise-healthy deploy - it degrades to a warning and the next run retries.
+prune_old_rollback_images() {
+  local tags tag index=0
+  tags="$(docker images --format '{{.Repository}}:{{.Tag}}' 'kingcrmhub-rollback' 2>/dev/null | sort -r || true)"
+  [[ -n "$tags" ]] || return 0
+  while IFS= read -r tag; do
+    [[ -n "$tag" ]] || continue
+    index=$((index + 1))
+    if (( index > ROLLBACK_KEEP )); then
+      if docker rmi "$tag" >/dev/null 2>&1; then
+        echo "ROLLBACK_PRUNED: $tag"
+      else
+        echo "ROLLBACK_PRUNE_FAIL: $tag" >&2
+      fi
+    fi
+  done <<< "$tags"
+}
 DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-${DEPLOY_ROOT}/kingcrmhub-deploy.lock}"
 
 # Serialize deployments: only one deploy process may hold this lock.
@@ -414,5 +434,14 @@ ROLLBACK_ARMED=0
 # Clean finish: snapshots can no longer be needed, so the EXIT trap deletes
 # them (cubic P2: repeated deploys must not accumulate volume/config copies).
 STATIC_SNAPSHOTS_SPENT=1
+# Bound rollback-image retention. Each kingcrmhub-rollback image is ~2.36 GB and
+# nothing pruned them, so the host reached 94% full with 2.9 GB free and deploys
+# stalled on disk pressure twice. Keep the newest ROLLBACK_KEEP tags (newest-first
+# by fixed-width timestamp, so the image this deploy just preserved is always
+# retained). Runs AFTER the snapshot cleanup and is guarded: a prune failure must
+# never roll back or mask a deploy whose gates all passed, and the next run
+# retries the prune.
+ROLLBACK_KEEP="${ROLLBACK_KEEP:-2}"
+prune_old_rollback_images || echo "ROLLBACK_PRUNE_SKIPPED" >&2
 echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
 echo "DEPLOY_V4_DONE"
