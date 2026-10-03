@@ -228,6 +228,11 @@ function WelcomeStep({
   )
 }
 
+// Tagged error: only a FIELD_MESSAGES hit becomes a FieldError, so the catch
+// block pins the inline error to the logo field exclusively and request-level
+// failures (network, 429/500, non-logo zod issues) stay toast-only.
+class FieldError extends Error {}
+
 function OrganizationStep({
   initialName,
   onNext,
@@ -240,8 +245,19 @@ function OrganizationStep({
   const [name, setName] = useState(initialName)
   const [logo, setLogo] = useState("")
   const [saving, setSaving] = useState(false)
+  const [fieldError, setFieldError] = useState<string | null>(null)
+
+  // Field-level messages for 400s whose zod issue path matches. The message
+  // must NAME the field ("Logo URL must be a valid web address…") — the
+  // server's generic union message does not (S10 residual, t_5aa6676b). The
+  // only reachable logo-path failure from this form is an invalid address, so
+  // this message is exact; unknown paths fall back to the server issue message.
+  const FIELD_MESSAGES: Record<string, string> = {
+    logo: "Logo URL must be a valid web address (like https://example.com/logo.png)",
+  }
 
   const handleSave = async () => {
+    setFieldError(null)
     if (!name.trim()) {
       toast({ title: "Name required", description: "Enter your organization name.", variant: "destructive" })
       return
@@ -254,13 +270,31 @@ function OrganizationStep({
         body: JSON.stringify({ name: name.trim(), logo: logo.trim() || undefined }),
       })
       const data = await res.json()
-      if (data.error) throw new Error(data.error)
+      if (data.error) {
+        // parseJsonBody's 400 carries the zod issues array ({path, message});
+        // map the offending field's path to a message that names the field
+        // instead of surfacing only the generic body error (S10 residual).
+        // The FIELD_MESSAGES hit is the ONLY case that pins the inline error:
+        // network errors, 429/500s, and non-logo zod issues have no hit and
+        // stay toast-only — a request-level failure must never render under
+        // the logo input (codex 4170286852, cubic 4170296701).
+        const issues: Array<{ path: string; message: string }> = Array.isArray(data.issues) ? data.issues : []
+        const issue = issues.find((item) => item.path && FIELD_MESSAGES[item.path])
+        if (issue) {
+          throw new FieldError(FIELD_MESSAGES[issue.path])
+        }
+        throw new Error(issues[0]?.message ?? data.error)
+      }
       toast({ title: "Organization updated", description: "Your workspace name has been saved." })
       onNext()
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error"
+      if (error instanceof FieldError) {
+        setFieldError(message)
+      }
       toast({
         title: "Save failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: message,
         variant: "destructive",
       })
     } finally {
@@ -288,11 +322,24 @@ function OrganizationStep({
             <span className="text-[rgba(31,42,54,0.38)] normal-case font-normal tracking-normal">(optional)</span>
           </Label>
           <Input
-            className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm"
+            className={cn(
+              "h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-card shadow-sm",
+              fieldError && "border-red-400 focus-visible:ring-red-400"
+            )}
             value={logo}
-            onChange={(e) => setLogo(e.target.value)}
+            onChange={(e) => {
+              setLogo(e.target.value)
+              if (fieldError) setFieldError(null)
+            }}
+            aria-invalid={fieldError ? true : undefined}
+            aria-describedby={fieldError ? "logo-error" : undefined}
             placeholder="https://your-domain.com/logo.png"
           />
+          {fieldError && (
+            <p id="logo-error" role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+              {fieldError}
+            </p>
+          )}
         </div>
       </div>
 
