@@ -35,7 +35,7 @@ rm -rf node_modules
 
 **Do not switch to `bun install`.** This repo installs with **npm only**. Bun re-resolving this repo's `bun.lock` silently drops the protected `next-auth → uuid: 11.1.1` override from `package.json` `overrides`, producing a wrong dependency tree (proven on t_598b10c8). Bun use is confined to the non-blocking nightly CI job (`--frozen-lockfile`); it is not a supported local install path.
 
-Instead, wipe both `node_modules` and the lockfile state and reinstall from scratch with npm:
+Instead, remove `node_modules`, verify the npm cache, and reinstall from the existing `package-lock.json`:
 
 ```bash
 # From project root
@@ -48,7 +48,7 @@ npm run db:generate
 npm run dev
 ```
 
-If `npm install` still errors on corrupted tarballs after clearing the cache, check the "Things that often cause these errors" section below — the cause is almost always the filesystem (sync folders, antivirus, permissions), not npm itself.
+If `npm install` still errors on corrupted tarballs after `npm cache verify` (or after clearing the cache per Option A), check the "Things that often cause these errors" section below — the cause is almost always the filesystem (sync folders, antivirus, permissions), not npm itself.
 
 ---
 

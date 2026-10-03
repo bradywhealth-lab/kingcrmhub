@@ -28,7 +28,7 @@ Runs four independent status-check jobs on every change. Each job sets up Node 2
 1. **`lint`**: `npm run lint`
 2. **`typecheck`**: `npm run typecheck` (a gate that blocks new TypeScript errors while allowing the current baseline debt)
 3. **`test`**: `npm run test`
-4. **`build`**: Prisma generate, then `npm run build`
+4. **`build`**: Prisma generate, then `npm run build` and the pdf-parse externalization check (M159 bundling regression guard)
 
 Each job appears as a separate GitHub check, so branch protections can require them individually.
 Dependabot-authored PRs run this same npm-based CI; there is no separate Bun install path for Dependabot.
@@ -83,7 +83,7 @@ Dependabot-authored PRs run this same npm-based CI; there is no separate Bun ins
 
 ### What it does
 
-`health-check` job (scheduled only — **not** a merge-blocking gate):
+`health-check` job (scheduled or manually dispatched — **not** a merge-blocking gate):
 
 1. Checkout
 2. Setup Bun 1.4.2 (`oven-sh/setup-bun`)
