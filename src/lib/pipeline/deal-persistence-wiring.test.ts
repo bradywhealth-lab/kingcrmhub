@@ -41,7 +41,24 @@ describe('S29 persistence chain — the creation actually reaches the board', ()
     // The reported "does not persist" symptom would also occur if a failed POST
     // closed the dialog as if it had succeeded.
     expect(dialogSource).toMatch(/if \(!response\.ok\) \{[\s\S]{0,200}throw new Error/)
-    expect(dialogSource).toMatch(/onOpenChange\(false\)[\s\S]{0,120}onCreated\?\.\(\)/)
+  })
+
+  it('closes the dialog and signals creation ONLY on the success path (cubic P2)', () => {
+    // The success sequence must live inside the try AFTER response.ok was
+    // checked, and the catch must not close the dialog — otherwise a failed
+    // POST still closes as if it had persisted.
+    const okChecked = dialogSource.indexOf('if (!response.ok) {')
+    const closeIdx = dialogSource.indexOf('onOpenChange(false)')
+    const createdIdx = dialogSource.indexOf('onCreated?.()')
+    expect(okChecked, 'the non-OK branch must exist').toBeGreaterThanOrEqual(0)
+    expect(closeIdx, 'the dialog close must exist').toBeGreaterThan(okChecked)
+    expect(createdIdx, 'onCreated must fire after the non-OK guard').toBeGreaterThan(closeIdx)
+    // The catch branch must recover with a user-visible error, never a close:
+    const catchIdx = dialogSource.indexOf('} catch (err) {')
+    expect(catchIdx).toBeGreaterThan(createdIdx)
+    const catchSlice = dialogSource.slice(catchIdx, catchIdx + 300)
+    expect(catchSlice).toContain('setError')
+    expect(catchSlice, 'a failed create must leave the dialog open').not.toContain('onOpenChange(false)')
   })
 
   it('the dialog signals creation so the board can reload', () => {
@@ -59,5 +76,19 @@ describe('S29 persistence chain — the creation actually reaches the board', ()
 
   it('a creation refresh is deferred while a drag is in flight (no stale GET)', () => {
     expect(pageSource).toMatch(/moveInFlightRef\.current > 0[\s\S]{0,80}refreshQueuedRef\.current = true/)
+  })
+
+  it('the queued refresh is eventually drained after the drag settles (cubic P2)', () => {
+    // Deferring is only correct if the finally block drains the queue once the
+    // last move lands; otherwise a mid-drag create would never reach the board.
+    const drain = /if \(moveInFlightRef\.current === 0 && refreshQueuedRef\.current\) \{\s*refreshQueuedRef\.current = false\s*void loadPipeline\(\)\s*\}/
+    expect(pageSource, 'the drag-settle path must drain the queued refresh').toMatch(drain)
+    // The drain must live in the finally block, so it runs even when the move
+    // request itself failed.
+    const drainIdx = pageSource.search(/if \(moveInFlightRef\.current === 0 && refreshQueuedRef\.current\)/)
+    const finallyIdx = pageSource.lastIndexOf('} finally {', drainIdx)
+    const closeBrace = pageSource.indexOf('}', drainIdx)
+    expect(finallyIdx, 'the drain must sit inside a finally block').toBeGreaterThan(-1)
+    expect(closeBrace, 'the drain must not outlive its finally block').toBeGreaterThan(finallyIdx)
   })
 })
