@@ -499,7 +499,7 @@ export function TasksView({
     <div className="p-6 lg:p-8 space-y-6">
       {/* Header with filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-card p-1 shadow-sm">
+        <div className="flex max-w-full flex-wrap items-center gap-1 rounded-2xl border border-[rgba(31,42,54,0.08)] bg-card p-1 shadow-sm">
           {FILTER_TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
