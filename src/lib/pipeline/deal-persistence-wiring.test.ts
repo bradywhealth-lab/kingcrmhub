@@ -87,8 +87,57 @@ describe('S29 persistence chain — the creation actually reaches the board', ()
     // request itself failed.
     const drainIdx = pageSource.search(/if \(moveInFlightRef\.current === 0 && refreshQueuedRef\.current\)/)
     const finallyIdx = pageSource.lastIndexOf('} finally {', drainIdx)
-    const closeBrace = pageSource.indexOf('}', drainIdx)
     expect(finallyIdx, 'the drain must sit inside a finally block').toBeGreaterThan(-1)
-    expect(closeBrace, 'the drain must not outlive its finally block').toBeGreaterThan(finallyIdx)
+    // Brace-balance the finally body (cubic P2): a textual next-`}` probe
+    // matches the drain's own closing brace, so a drain moved OUTSIDE the
+    // finally block still passes. Require the drain inside the block's
+    // balanced body instead.
+    const bodyOpen = pageSource.indexOf('{', finallyIdx)
+    expect(bodyOpen, 'the finally block must have a body').toBeGreaterThan(finallyIdx)
+    const bodyClose = balancedBlockClose(pageSource, bodyOpen)
+    expect(
+      drainIdx,
+      'the drain must run inside the finally body, not after the block'
+    ).toBeLessThan(bodyClose)
   })
 })
+
+/**
+ * Index of the brace that closes the block opened at `openIdx`, skipping
+ * string/comment characters so braces inside them don't miscount. Returns -1
+ * if the block never closes.
+ */
+function balancedBlockClose(source: string, openIdx: number): number {
+  let depth = 0
+  for (let i = openIdx; i < source.length; i++) {
+    const ch = source[i]
+    if (ch === '"' || ch === "'" || ch === '`') {
+      i = skipStringLiteral(source, i, ch)
+    } else if (ch === '/' && source[i + 1] === '/') {
+      const nl = source.indexOf('\n', i)
+      if (nl === -1) return -1
+      i = nl
+    } else if (ch === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2)
+      if (end === -1) return -1
+      i = end + 1
+    } else if (ch === '{') {
+      depth++
+    } else if (ch === '}') {
+      depth--
+      if (depth === 0) return i
+    }
+  }
+  return -1
+}
+
+function skipStringLiteral(source: string, quoteIdx: number, quote: string): number {
+  for (let i = quoteIdx + 1; i < source.length; i++) {
+    if (source[i] === '\\') {
+      i++
+      continue
+    }
+    if (source[i] === quote) return i
+  }
+  return source.length - 1
+}
