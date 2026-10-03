@@ -80,11 +80,20 @@ describe('S10 residual — invalid input surfaces a field-level accessible inlin
         'persists in the DOM (the toast auto-dismisses)'
     ).not.toBeNull()
 
-    // NAMES THE FIELD: the user-visible text identifies the offending field.
+    // NAMES THE FIELD: the FIELD_MESSAGES map must key the logo path to a
+    // message that names the field — the rendered alert prints this state
+    // value, so a generic server string ("Invalid request body") fails this
+    // pin even though the static label contains "Logo URL"
+    // (cubic 4170296703: the old /Logo URL/ match hit the label, not the error).
+    const mapIdx = org.indexOf('FIELD_MESSAGES')
+    expect(mapIdx, 'FIELD_MESSAGES map must exist').toBeGreaterThanOrEqual(0)
+    const mapEnd = org.indexOf('}', org.indexOf('logo:', mapIdx))
+    const fieldMap = mapEnd > mapIdx ? org.slice(mapIdx, mapEnd + 1) : ''
     expect(
-      org.match(/Logo URL/),
-      'inline error text must name the field (e.g. "Logo URL must be a valid web address")'
-    ).not.toBeNull()
+      fieldMap,
+      'FIELD_MESSAGES must map the logo path to a message that names the field ' +
+        '("Logo URL must be a valid web address…") — the rendered alert text comes from this map'
+    ).toMatch(/logo:\s*"Logo URL must be a valid web address/)
 
     // BOUND TO THE INPUT: aria-invalid="true" on the logo input when the error
     // is active, so assistive tech ties the message to the field. The logo
@@ -138,5 +147,88 @@ describe('S10 residual — invalid input surfaces a field-level accessible inlin
       org.match(/disabled=\{saving\}/),
       'Save button must stay disabled while saving'
     ).not.toBeNull()
+  })
+
+  it('the alert is programmatically associated with the logo input (aria-describedby)', () => {
+    const org = organizationStepSource()
+
+    // The alert element must carry a stable id the input can reference.
+    // role="alert" alone announces on appearance but a screen-reader user
+    // revisiting the field hears nothing (codex 4170286856, cubic 4170296698).
+    const alertIdx = org.indexOf('role="alert"')
+    expect(alertIdx, 'inline error alert element must exist').toBeGreaterThanOrEqual(0)
+    const alertStart = org.lastIndexOf('<p', alertIdx)
+    const alertEnd = org.indexOf('</p>', alertIdx)
+    const alertEl = alertStart >= 0 && alertEnd > alertStart ? org.slice(alertStart, alertEnd + 4) : ''
+    expect(
+      alertEl,
+      'alert element must carry id="logo-error" so the input can reference it'
+    ).toContain('id="logo-error"')
+
+    // The logo input must reference the alert while the error is active and
+    // drop the reference when no error is shown. aria-describedby is chosen
+    // over aria-errormessage because aria-errormessage has inconsistent
+    // screen-reader support and only takes effect alongside aria-invalid;
+    // aria-describedby is universally announced.
+    const valueIdx = org.indexOf('value={logo}')
+    expect(valueIdx, 'the logo input must exist').toBeGreaterThanOrEqual(0)
+    const inputStart = org.lastIndexOf('<Input', valueIdx)
+    const inputEnd = org.indexOf('/>', valueIdx)
+    const logoInput = inputStart >= 0 && inputEnd > inputStart ? org.slice(inputStart, inputEnd + 2) : ''
+    expect(
+      logoInput,
+      'logo input must set aria-describedby to the alert id while the error is active, ' +
+        'and drop it when no error is shown'
+    ).toContain('aria-describedby={fieldError ? "logo-error" : undefined}')
+  })
+
+  it('only a matched FIELD_MESSAGES issue pins the inline error; other failures stay toast-only', () => {
+    const org = organizationStepSource()
+
+    // The catch block must not pin ANY error message to the field: network
+    // errors, 429/500 responses, and non-logo zod issues (e.g. a >120-char
+    // name) have no FIELD_MESSAGES hit and must stay toast-only
+    // (codex 4170286852, cubic 4170296701).
+    const catchIdx = org.indexOf('} catch (error)')
+    expect(catchIdx, 'handleSave catch block must exist').toBeGreaterThanOrEqual(0)
+    const finallyIdx = org.indexOf('} finally {', catchIdx)
+    const catchRaw = finallyIdx > catchIdx ? org.slice(catchIdx, finallyIdx) : ''
+    let catchBlock = catchRaw
+
+    // A FieldError-guarded setFieldError is the ONLY sanctioned call in the
+    // catch: remove the guard block before scanning, then require no naked
+    // setFieldError remains. This kills the original defect (an unconditional
+    // pin for every failure) while allowing the instanceof-gated pin.
+    const guardStart = catchBlock.indexOf('if (error instanceof FieldError)')
+    if (guardStart >= 0) {
+      const guardEnd = catchBlock.indexOf('}', catchBlock.indexOf('setFieldError(', guardStart))
+      if (guardEnd > guardStart) {
+        catchBlock = catchBlock.slice(0, guardStart) + catchBlock.slice(guardEnd + 1)
+      }
+    }
+    expect(
+      catchBlock,
+      'every setFieldError in the catch block must be inside the FieldError guard — ' +
+        'request-level failures (network, 429, 500, non-logo zod issues) must stay toast-only ' +
+        'and never pin to the logo input'
+    ).not.toContain('setFieldError(')
+
+    // The FIELD_MESSAGES hit branch must throw the tagged FieldError carrying
+    // the mapped message, and the catch guard must set the field error from
+    // it — together that is the full wiring "matched issue → fieldError state".
+    const findIdx = org.indexOf('issues.find(')
+    expect(findIdx, 'issues lookup must exist').toBeGreaterThanOrEqual(0)
+    const afterFind = org.slice(findIdx)
+    const nextAdvance = afterFind.indexOf('onNext()')
+    const issueBranch = nextAdvance > -1 ? afterFind.slice(0, nextAdvance) : afterFind
+    expect(
+      issueBranch,
+      'a matched FIELD_MESSAGES issue must throw the tagged FieldError carrying the mapped ' +
+        'message so only logo validation failures reach the field-error pin'
+    ).toContain('throw new FieldError(FIELD_MESSAGES[issue.path])')
+    expect(
+      catchRaw,
+      'the catch guard must set the field error from the tagged FieldError (the only pin path)'
+    ).toContain('setFieldError(message)')
   })
 })
