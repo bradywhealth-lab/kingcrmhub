@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   // so Next require()s the package's CJS entry, which loads its own
   // worker from real node_modules.
   serverExternalPackages: ['pdf-parse'],
+  // Next 16 dev blocks cross-origin access to /_next/* dev resources (HMR WS)
+  // when the probe/browser host differs from the registered 'localhost' origin.
+  // 127.0.0.1-based probes then get a silently dead (never-hydrated) UI
+  // (t_598b10c8). Allow both loopback forms in dev.
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
 };
 
 export default nextConfig;

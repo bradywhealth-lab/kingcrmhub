@@ -11,10 +11,12 @@ Elite CRM — a multi-tenant, AI-first CRM platform for insurance broker workflo
 | Service | Port | How to start |
 |---|---|---|
 | PostgreSQL | 5432 | `sudo service postgresql start` (must be running before Next.js) |
-| Next.js dev server | 3000 | `bun run dev` |
+| Next.js dev server | 3000 | `npm ci` then `npx next dev` — never bun (see first note) |
 
 ### Non-obvious notes
 
+- **Local dev is `npm ci` + `next dev` — never `bun install`/`bun run dev`.** bun 1.3.11 cannot parse this repo's committed `bun.lock` and silently re-resolves a different dependency set, dropping the protected `next-auth.uuid: 11.1.1` security pin from `package.json` `overrides` (proven on t_598b10c8). `bun.lock` stays in the repo by decision (#4); it must not drive installs.
+- **Probe dev servers via `http://localhost:PORT`, never `127.0.0.1` or a LAN IP.** Next 16 dev blocks cross-origin `/_next/*` dev resources (including the HMR websocket) from non-registered origins; a `127.0.0.1` probe then gets a silently dead, never-hydrated UI that is indistinguishable from a hung server. `next.config.ts` sets `allowedDevOrigins` for both loopback forms, but `localhost` remains the canonical probe host. When a dev server looks hung, grep its log for `Blocked cross-origin request` FIRST before diagnosing app code.
 - **Prisma config (`prisma.config.ts`)** falls back to SQLite (`file:./prisma/dev.db`) when `DATABASE_URL` is unset. Always ensure `DATABASE_URL` is exported in the shell or set in `.env` before running Prisma commands.
 - **`.env` auto-loading**: Next.js reads `.env` at dev startup, but Prisma CLI commands (e.g. `prisma db push`) require `DATABASE_URL` set via `.env` _or_ exported as a shell env var. If Prisma falls back to SQLite, `DATABASE_URL` is not being picked up — export it explicitly.
 - **`bun run test`** runs Vitest. Tests mock `@/lib/db` and do not require a live database.
