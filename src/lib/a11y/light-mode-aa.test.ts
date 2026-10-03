@@ -135,7 +135,6 @@ const MUTED_FG = rgbaThemeVar(LIGHT_THEME, 'muted-foreground')  // light --muted
 const CANVAS = parseRgb(themeVar(LIGHT_THEME, 'background'))    // --background
 const CARD = parseRgb(themeVar(LIGHT_THEME, 'card'))            // --card
 const MUTED = parseRgb(themeVar(LIGHT_THEME, 'muted'))          // --muted  (worst case: lowest luminance light surface)
-const DF = parseRgb(themeVar(DARK_THEME, 'foreground'))         // dark --foreground (parsed)
 const DARK_MUTED_FG = rgbaThemeVar(DARK_THEME, 'muted-foreground') // dark --muted-foreground (parsed)
 const KANBAN_COL = composite(CANVAS, 0.6, CARD) // tasks kanban column bg-background/60 over card
 const AUTH_CARD = composite(parseRgb('#fcfcfc'), 0.76, parseRgb('#f4f0e6')) // auth page card over paper gradient
