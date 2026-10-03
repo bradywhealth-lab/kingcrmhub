@@ -213,13 +213,13 @@ export function BookingPage({ slug, organizationName }: BookingPageProps) {
               value={form.firstName}
               onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
               placeholder="First name"
-              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-400"
+              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-400 focus:border-amber-400"
             />
             <input
               value={form.lastName}
               onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
               placeholder="Last name"
-              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-400"
+              className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-400 focus:border-amber-400"
             />
           </div>
           <input
@@ -228,26 +228,26 @@ export function BookingPage({ slug, organizationName }: BookingPageProps) {
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
             placeholder="Email"
-            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-400"
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-400 focus:border-amber-400"
           />
           <input
             value={form.phone}
             onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
             placeholder="Phone"
-            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-400"
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-400 focus:border-amber-400"
           />
           <input
             value={form.title}
             onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
             placeholder="Meeting title"
-            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-400"
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-400 focus:border-amber-400"
           />
           <textarea
             value={form.description}
             onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             placeholder="What should we prepare for the call?"
             rows={5}
-            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-400"
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none placeholder:text-zinc-400 focus:border-amber-400"
           />
           <button
             type="submit"

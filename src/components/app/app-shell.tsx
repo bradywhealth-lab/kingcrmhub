@@ -148,7 +148,7 @@ export function AppShell({
                 className="flex h-9 w-full cursor-pointer items-center rounded-xl border border-white/15 bg-white/5 pl-9 pr-2 text-sm text-white/50 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white/80"
               >
                 Search
-                <kbd className="ml-auto rounded border border-white/15 px-1.5 py-0.5 font-mono text-[11px] text-white/40">⌘K</kbd>
+                <kbd className="ml-auto rounded border border-white/15 px-1.5 py-0.5 font-mono text-[11px] text-white/60">⌘K</kbd>
               </button>
             </div>
             <button type="button" aria-label="Search" onClick={onOpenPalette} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white xl:hidden">

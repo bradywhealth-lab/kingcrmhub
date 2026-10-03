@@ -67,7 +67,7 @@ export function AuthLoadingSkeleton() {
                 <Sparkles className="h-5 w-5 text-[var(--ink)]" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--ink)]/50">King CRM Hub</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--ink)]/62">King CRM Hub</p>
                 <p className="text-sm font-semibold text-[var(--ink)]">Freelancer workspace</p>
               </div>
             </div>
@@ -98,7 +98,7 @@ export function AuthLoadingSkeleton() {
             </div>
           </div>
 
-          <p className="mt-10 text-center text-xs text-[var(--ink)]/35">
+          <p className="mt-10 text-center text-xs text-[var(--ink)]/62">
             © {new Date().getFullYear()} King CRM Hub. Proof. Decision. Next Move.
           </p>
         </section>

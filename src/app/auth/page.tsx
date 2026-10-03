@@ -386,7 +386,7 @@ function AuthPageInner() {
                   <Sparkles className="h-5 w-5 text-[var(--ink)]" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#0c111b]/50">King CRM Hub</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#0c111b]/62">King CRM Hub</p>
                   <p className="text-sm font-semibold text-[#0c111b]">Freelancer workspace</p>
                 </div>
               </div>
@@ -395,7 +395,7 @@ function AuthPageInner() {
             <div className="mb-8 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--teal-deep)]">Secure workspace access</p>
               <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]">{currentModeTitle}</h2>
-              <p className="text-sm leading-6 text-[#0c111b]/55">
+              <p className="text-sm leading-6 text-[#0c111b]/62">
                 {mode === 'login' && 'Sign in to manage leads, pipeline execution, automations, and AI workflows.'}
                 {mode === 'signup' && 'Create your workspace, owner account, and operating foundation in one move.'}
                 {mode === 'forgot' && 'Request a reset token for controlled password recovery.'}
@@ -415,7 +415,7 @@ function AuthPageInner() {
                         'rounded-[14px] px-4 py-3 text-sm font-semibold transition-all',
                         mode === tab
                           ? 'bg-white text-[#0c111b] shadow-[0_10px_25px_rgba(31,42,54,0.08)]'
-                          : 'text-[#0c111b]/45 hover:text-[#0c111b]'
+                          : 'text-[#0c111b]/62 hover:text-[#0c111b]'
                       )}
                     >
                       {tab === 'login' ? 'Sign in' : 'Create account'}
@@ -441,18 +441,18 @@ function AuthPageInner() {
                   {mode === 'signup' && (
                     <>
                       <div>
-                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
+                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Owner name</Label>
                         <Input id="signup-name" name="name" autoComplete="name" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
                       </div>
                       <div>
-                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
+                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Organization</Label>
                         <Input id="signup-org" name="organization" autoComplete="organization" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
+                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Email</Label>
                     <Input
                       id="auth-email"
                       name="email"
@@ -468,7 +468,7 @@ function AuthPageInner() {
                   </div>
 
                   <div>
-                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
+                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Password</Label>
                     <Input
                       id="auth-password"
                       name="password"
@@ -486,7 +486,7 @@ function AuthPageInner() {
 
                   {mode === 'signup' && (
                     <div>
-                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Confirm password</Label>
                       <Input
                         id="auth-confirm"
                         name="confirmPassword"
@@ -524,7 +524,7 @@ function AuthPageInner() {
                   </Button>
 
                   {mode === 'signup' && (
-                    <p className="text-center text-xs leading-5 text-[#0c111b]/55">
+                    <p className="text-center text-xs leading-5 text-[#0c111b]/62">
                       By creating a workspace you agree to our{' '}
                       <a
                         href="/terms"
@@ -567,11 +567,11 @@ function AuthPageInner() {
                   if (!forgotRequested) void handleForgotPassword()
                 }}
               >
-                <button type="button" onClick={() => switchMode('login')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+                <button type="button" onClick={() => switchMode('login')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/62 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
-                  <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
+                  <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Email address</Label>
                   <Input id="forgot-email" name="email" autoComplete="email" type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
@@ -596,19 +596,19 @@ function AuthPageInner() {
                   void handleResetPassword()
                 }}
               >
-                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/62 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
-                  <Label htmlFor="reset-token" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
+                  <Label htmlFor="reset-token" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Reset token</Label>
                   <Input id="reset-token" name="token" autoComplete="one-time-code" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="reset-new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
+                  <Label htmlFor="reset-new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">New password</Label>
                   <Input id="reset-new-password" name="newPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                  <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Confirm password</Label>
                   <Input id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
@@ -621,7 +621,7 @@ function AuthPageInner() {
             )}
           </div>
 
-          <p className="mt-10 text-center text-xs text-[#0c111b]/35">
+          <p className="mt-10 text-center text-xs text-[#0c111b]/62">
             © 2026 King CRM Hub. Proof. Decision. Next Move.
           </p>
         </section>
