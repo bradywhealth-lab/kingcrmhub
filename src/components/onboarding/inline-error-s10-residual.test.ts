@@ -193,21 +193,23 @@ describe('S10 residual — invalid input surfaces a field-level accessible inlin
     expect(catchIdx, 'handleSave catch block must exist').toBeGreaterThanOrEqual(0)
     const finallyIdx = org.indexOf('} finally {', catchIdx)
     const catchRaw = finallyIdx > catchIdx ? org.slice(catchIdx, finallyIdx) : ''
-    let catchBlock = catchRaw
 
     // A FieldError-guarded setFieldError is the ONLY sanctioned call in the
-    // catch: remove the guard block before scanning, then require no naked
-    // setFieldError remains. This kills the original defect (an unconditional
-    // pin for every failure) while allowing the instanceof-gated pin.
-    const guardStart = catchBlock.indexOf('if (error instanceof FieldError)')
-    if (guardStart >= 0) {
-      const guardEnd = catchBlock.indexOf('}', catchBlock.indexOf('setFieldError(', guardStart))
-      if (guardEnd > guardStart) {
-        catchBlock = catchBlock.slice(0, guardStart) + catchBlock.slice(guardEnd + 1)
-      }
-    }
+    // catch. Replace the VERIFIED matched guard pattern, then require no
+    // naked setFieldError remains. The regex replace (not an index scan)
+    // closes the erase-hole: an index scan can find the toast object's
+    // closing brace when the guard is empty and erase an unguarded pin
+    // (cubic 4172125988). An empty or padded guard fails the pattern match,
+    // the replace is a no-op, and the naked call survives to fail the scan.
+    const guardPattern = /if \(error instanceof FieldError\) \{\s*setFieldError\(message\)\s*\}/
     expect(
-      catchBlock,
+      catchRaw,
+      'the catch must pin the field error only via an instanceof FieldError guard whose ' +
+        'body is exactly the setFieldError call'
+    ).toMatch(guardPattern)
+    const catchWithoutGuard = catchRaw.replace(guardPattern, '')
+    expect(
+      catchWithoutGuard,
       'every setFieldError in the catch block must be inside the FieldError guard — ' +
         'request-level failures (network, 429, 500, non-logo zod issues) must stay toast-only ' +
         'and never pin to the logo input'
