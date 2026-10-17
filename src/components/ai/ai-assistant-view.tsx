@@ -408,36 +408,37 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
         <ScrollArea className="flex-1 p-2">
           <div className="space-y-1">
             {conversations.map((convo) => (
-              <button
-                key={convo.id}
-                onClick={() => setActiveChatId(convo.id)}
-                className={cn(
-                  "w-full group flex items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors",
-                  activeChatId === convo.id
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate leading-snug">{convo.title}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {new Date(convo.updatedAt).toLocaleDateString([], { month: "short", day: "numeric" })}
-                    {convo.messages.length > 0 && ` · ${convo.messages.length} msg${convo.messages.length > 1 ? "s" : ""}`}
-                  </p>
-                </div>
+              // Delete is a sibling (not nested) button so we never render a
+              // <button> inside a <button> (invalid HTML / hydration error).
+              <div key={convo.id} className="group relative">
+                <button
+                  onClick={() => setActiveChatId(convo.id)}
+                  className={cn(
+                    "w-full flex items-start gap-2 rounded-lg px-3 py-2.5 pr-9 text-left transition-colors",
+                    activeChatId === convo.id
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate leading-snug">{convo.title}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {new Date(convo.updatedAt).toLocaleDateString([], { month: "short", day: "numeric" })}
+                      {convo.messages.length > 0 && ` · ${convo.messages.length} msg${convo.messages.length > 1 ? "s" : ""}`}
+                    </p>
+                  </div>
+                </button>
                 {activeChatId === convo.id && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteChat(convo.id)
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 hover:text-red-500 text-muted-foreground transition-all"
+                    onClick={() => deleteChat(convo.id)}
+                    aria-label="Delete conversation"
+                    className="absolute right-1.5 top-2 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 hover:text-red-500 text-muted-foreground transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         </ScrollArea>
