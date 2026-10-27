@@ -201,7 +201,18 @@ export async function POST(request: Request) {
       }
 
       const sessionRes = await client.checkout.sessions.create({
+        // Parameters synced from Stripe Checkout Studio (t_004fc492 integration
+        // task). All values match the UI configuration.
+        ui_mode: 'hosted_page',
         mode: 'subscription',
+        billing_address_collection: 'auto',
+        phone_number_collection: { enabled: false },
+        automatic_tax: { enabled: false },
+        allow_promotion_codes: false,
+        payment_method_collection: 'always',
+        submit_type: 'auto',
+        integration_identifier: 'hosted_web_0001',
+        origin_context: 'web',
         customer: customerId ?? undefined,
         customer_email: customerId ? undefined : email,
         line_items: [{ price: priceId, quantity: 1 }],
