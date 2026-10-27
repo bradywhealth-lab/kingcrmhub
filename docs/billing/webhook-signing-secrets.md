@@ -53,14 +53,22 @@ docker compose -f /home/deployer/docker-compose.apps.yml up -d kingcrmhub
 ```
 
 This stop/rm + up sequence is the same container-recreate pattern the deploy
-script (`scripts/deploy-kingcrmhub.sh`) uses, so it is the established,
-rollback-safe way to cycle the app container.
+script (`scripts/deploy-kingcrmhub.sh`) uses — but run manually it does **not**
+give you the script's image backup, health check, or automatic rollback. After
+recreating, confirm the app is healthy (the probes below return the expected
+codes and `docker logs kingcrmhub` is clean) before treating the rotation as
+complete.
 
-**Rotation gap:** with a single secret there is no overlap window. Between
-revealing a new secret in the dashboard and recreating the container, every
-real Stripe delivery fails verification (400) — Stripe retries deliveries for
-up to 3 days, so nothing is lost, but complete both halves promptly and never
-leave the rotation half-done.
+**Rotation gap:** the app stores one secret, but Stripe's *roll signing
+secret* feature keeps the old secret active for up to 24 hours and signs each
+delivery with every active secret — prefer that overlap: roll the secret in
+the dashboard, then update the env and recreate the container while the old
+secret still verifies. If the old secret is expired or invalidated immediately
+instead, every real delivery fails verification (400) during the gap; Stripe
+retries failed deliveries for up to 3 days, which is a recovery window — not a
+guarantee. If the gap outlasts it, replay missed events from Stripe
+(Dashboard → Developers → Webhooks → endpoint) or reconcile billing state.
+Either way, never leave the rotation half-done.
 
 ## 4. Post-change probe recipe
 
@@ -76,6 +84,9 @@ check → HMAC verification → secret actually loaded.
   `customer.subscription.created|updated|deleted`) — a validly signed probe
   with a real `metadata.organizationId` **would write org billing state**.
 - **Never** use a real organization id in any probe payload.
+- Tools: `curl` and `python3` only. The HMAC helper below feeds the signing
+  secret to the local HMAC computation **via stdin — never as a
+  command-line argument**, where `ps` or host monitoring could capture it.
 - Run each probe promptly after generating its timestamp — Stripe signature
   tolerance is 5 minutes.
 
@@ -90,41 +101,49 @@ Expected responses (shipped single-secret code, live client active):
 ```bash
 URL=https://kingcrmhub.net/api/billing/webhook
 
+# HMAC helper: the signing secret arrives on STDIN, never as a command-line
+# argument (argv is world-readable via ps; a local pipe is not).
+stripe_sig() {
+  python3 -c 'import hashlib,hmac,sys; secret=sys.stdin.read().encode(); ts,payload=sys.argv[1:3]; print("t=%s,v1=%s"%(ts,hmac.new(secret,(ts+"."+payload).encode(),hashlib.sha256).hexdigest()))' "$1" "$2"
+}
+
 # 1. Unsigned -> 400 {"error":"Missing stripe-signature"}
 curl -s -w '\n%{http_code}\n' -X POST "$URL"
 
 # 2. Signed with a WRONG secret -> 400 {"error":"Invalid signature"}
 ts=$(date +%s)
 payload='{"id":"evt_probe_wrong","object":"event","api_version":"2026-08-26.dahlia","created":'"$ts"',"livemode":true,"type":"invoice.paid","data":{"object":{}}}'
-sig="t=${ts},v1=$(printf '%s' "${ts}.${payload}" | openssl dgst -sha256 -hmac 'whsec_wrong_on_purpose' -hex | sed 's/^.* //')"
+sig=$(printf '%s' 'whsec_wrong_on_purpose' | stripe_sig "$ts" "$payload")
 curl -s -w '\n%{http_code}\n' -X POST "$URL" \
   -H "stripe-signature: $sig" -H 'content-type: application/json' -d "$payload"
 
 # 3. Signed with the REAL secret -> 200 {"received":true}
 #    Paste the whsec_... revealed in Section 2 when prompted (hidden input,
 #    never lands in shell history or this transcript).
-read -s WHSEC
+read -r -s -p 'Stripe signing secret: ' WHSEC; printf '\n'
 ts=$(date +%s)
 payload='{"id":"evt_probe_valid","object":"event","api_version":"2026-08-26.dahlia","created":'"$ts"',"livemode":true,"type":"invoice.paid","data":{"object":{}}}'
-sig="t=${ts},v1=$(printf '%s' "${ts}.${payload}" | openssl dgst -sha256 -hmac "$WHSEC" -hex | sed 's/^.* //')"
+sig=$(printf '%s' "$WHSEC" | stripe_sig "$ts" "$payload")
 curl -s -w '\n%{http_code}\n' -X POST "$URL" \
   -H "stripe-signature: $sig" -H 'content-type: application/json' -d "$payload"
 unset WHSEC
 ```
 
-How the signature works (why probe 2 and 3 are built this way): Stripe signs
-`"<unix-timestamp>.<raw-body>"` with HMAC-SHA256 and the endpoint's secret, and
-the header carries it as `stripe-signature: t=<timestamp>,v1=<hex>`. The
-route's `constructEvent(body, signature, secret)` recomputes exactly that HMAC
-with the env-configured secret — so a locally computed signature with the
-correct secret verifies, and anything else is rejected.
+How the signature works: Stripe signs `"<unix-timestamp>.<raw-body>"` with
+HMAC-SHA256 and the endpoint's secret, and the header carries it as
+`stripe-signature: t=<timestamp>,v1=<hex>`. The route's
+`constructEvent(body, signature, secret)` recomputes exactly that HMAC with
+the env-configured secret — the `stripe_sig` helper produces exactly that
+format (secret via stdin, timestamp + payload as arguments), so a locally
+computed signature with the correct secret verifies, and anything else is
+rejected.
 
 ## 5. Reading the results
 
 | Observation | Meaning | Fix |
 | --- | --- | --- |
 | All three probes return expected codes | Chain healthy; env secret loaded and matching the live endpoint | None |
-| **Even the unsigned probe returns `200 {"received":true}`** | Route is **inert** — `STRIPE_WEBHOOK_SECRET` is not loaded in the running container (env not saved, compose var not wired, or container never recreated) | Redo Section 3, confirm the container was recreated, re-probe |
+| **Even the unsigned probe returns `200 {"received":true}`** | Route is **inert** — the running container lacks `STRIPE_WEBHOOK_SECRET` OR a charge-capable Stripe client (`STRIPE_SECRET_KEY` missing/malformed, or a live key without `STRIPE_LIVE_ACTIVATION=1`) | Check all three billing env vars, fix the env, recreate the container, re-probe — do not rotate a correct webhook secret |
 | Probe 3 returns `400 {"error":"Invalid signature"}` | Secret mismatch — wrong endpoint's secret, or the env value carries a trailing newline/whitespace, or the container is still running the old env | Re-reveal the secret for `we_1UHwS1LOt82rj6dcqgN9J0F9`, fix the env value, recreate the container, re-probe |
 | `5xx` / connection errors | App or proxy problem, not signing | Check `docker logs kingcrmhub` |
 
@@ -132,6 +151,8 @@ correct secret verifies, and anything else is rejected.
 
 - **Never** paste a `whsec_...` value into chat, tickets, PRs, screenshots, or
   commit messages — vault/env process only.
+- **Never** pass the signing secret as a command-line argument — argv is
+  world-readable via `ps`; the helper above takes it on stdin.
 - **Never** probe with handled event types or real organization ids.
 - **Never** copy a secret from a different endpoint — per-endpoint secrets
   never cross-verify.
