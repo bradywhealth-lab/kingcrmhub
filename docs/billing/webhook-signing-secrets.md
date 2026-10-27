@@ -84,8 +84,8 @@ check → HMAC verification → secret actually loaded.
   `customer.subscription.created|updated|deleted`) — a validly signed probe
   with a real `metadata.organizationId` **would write org billing state**.
 - **Never** use a real organization id in any probe payload.
-- Tools: `curl` and `python3` only. The HMAC helper below feeds the signing
-  secret to the local HMAC computation **via stdin — never as a
+- Tools: Bash, `curl`, `python3`, and `date`. The HMAC helper below feeds the
+  signing secret to the local HMAC computation **via stdin — never as a
   command-line argument**, where `ps` or host monitoring could capture it.
 - Run each probe promptly after generating its timestamp — Stripe signature
   tolerance is 5 minutes.
