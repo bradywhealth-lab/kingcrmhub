@@ -545,6 +545,14 @@ describe('buildSignupAuthUrl (conversion CTAs must open the SIGNUP form)', () =>
       expect(() => buildSignupAuthUrl(bad), `must reject ${JSON.stringify(bad)}`).toThrow()
     }
   })
+
+  it('rejects control characters (CR/LF/NUL/DEL) rather than emitting a malformed URL', () => {
+    // cubic P2: a newline would pass the same-origin shape check and reach
+    // /auth as a malformed callback. The producer must refuse it here.
+    for (const bad of ['/pricing\n', '/pricing\r\nLocation: //evil', '/pricing\u0000', '/pricing\u007f']) {
+      expect(() => buildSignupAuthUrl(bad), `must reject ${JSON.stringify(bad)}`).toThrow()
+    }
+  })
 })
 
 describe('crm-pricing-page routes conversion CTAs to signup (A11 wiring guard)', () => {
@@ -557,13 +565,19 @@ describe('crm-pricing-page routes conversion CTAs to signup (A11 wiring guard)',
     expect(source).not.toMatch(/["']\/auth\?mode=signup/)
   })
 
-  it('leaves exactly ONE bare /auth push — the nav "Sign in" button', () => {
+  it('leaves exactly ONE bare /auth push — and the nav "Sign in" button owns it', () => {
     // "Sign in" promises sign-in, so it correctly targets the login form.
     // Every other /auth push on the page is a signup-promise CTA and must go
     // through buildSignupAuthUrl. Before the A11 fix there were three
     // (free CTA, nav, bottom band).
-    const barePushes = source.match(/router\.push\("\/auth"\)/g) ?? []
+    //
+    // cubic P2: match every quote/whitespace variant so a reformatted push
+    // cannot slip past, and anchor the single remaining bare push to the nav —
+    // otherwise the guard passes with a bare push on the wrong CTA.
+    const barePushes = source.match(/router\.push\(\s*["'`]\/auth["'`]\s*\)/g) ?? []
     expect(barePushes.length, `bare /auth pushes: ${barePushes.length}`).toBe(1)
+    const navBlock = source.slice(source.indexOf('<nav'), source.indexOf('</nav>'))
+    expect(navBlock).toMatch(/router\.push\(\s*["']\/auth["']\s*\)/)
   })
 
   it('routes the signed-out 401 through signup mode with the intent preserved', () => {
@@ -578,14 +592,12 @@ describe('crm-pricing-page routes conversion CTAs to signup (A11 wiring guard)',
   })
 
   it('routes the free-tier CTA and the bottom "Start for free" through the builder', () => {
-    // handleCta runs from its declaration to the component's JSX return. The
-    // marker is the newline + 2-space-indented `return (` so the effect
-    // cleanup's `return () => {` (4-space indent) cannot match first.
-    const handleCtaBlock = source.slice(
-      source.indexOf('const handleCta'),
-      source.indexOf('\n  return ('),
-    )
-    expect(handleCtaBlock).toContain('router.push(buildSignupAuthUrl())')
+    // cubic P2: scope the assertion to the planId === "free" branch itself —
+    // searching the whole handler would not prove the free CTA uses signup mode.
+    const freeStart = source.indexOf('if (planId === "free")')
+    expect(freeStart, 'free-plan branch must exist').toBeGreaterThan(-1)
+    const freeBranch = source.slice(freeStart, source.indexOf('return;', freeStart))
+    expect(freeBranch).toContain('router.push(buildSignupAuthUrl())')
     const bottomBand = source.slice(source.indexOf('Ready to run a tighter operation?'))
     expect(bottomBand).toContain('router.push(buildSignupAuthUrl())')
   })

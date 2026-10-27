@@ -171,8 +171,22 @@ export function buildPricingCallbackUrl(
  */
 export function buildSignupAuthUrl(callbackUrl?: string): string {
   if (callbackUrl === undefined || callbackUrl === '') return '/auth?mode=signup'
+  if (typeof callbackUrl !== 'string') {
+    throw new Error(
+      `buildSignupAuthUrl: callbackUrl must be a same-origin path auth will honour (got ${JSON.stringify(callbackUrl)})`,
+    )
+  }
+  // charCode loop rather than a control-char regex: same guarantee without a
+  // lint-suppression, and it reads as the exact rule (C0 controls + DEL).
+  for (let i = 0; i < callbackUrl.length; i += 1) {
+    const code = callbackUrl.charCodeAt(i)
+    if (code < 0x20 || code === 0x7f) {
+      throw new Error(
+        `buildSignupAuthUrl: callbackUrl must not contain control characters (got ${JSON.stringify(callbackUrl)})`,
+      )
+    }
+  }
   if (
-    typeof callbackUrl !== 'string' ||
     !callbackUrl.startsWith('/') ||
     callbackUrl.startsWith('//') ||
     callbackUrl.includes('\\')
