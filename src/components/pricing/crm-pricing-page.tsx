@@ -10,6 +10,7 @@ import { PLANS as CATALOG, type PlanId } from "@/lib/billing/plans";
 import {
   buildPricingCallbackUrl,
   buildResumePrompt,
+  buildSignupAuthUrl,
   resolveResumeIntent,
   type PlanIntent,
 } from "@/lib/billing/plan-intent";
@@ -240,7 +241,10 @@ export function CrmPricingPage() {
 
   const handleCta = async (planId: PlanId) => {
     if (planId === "free") {
-      router.push("/auth");
+      // A11 (2026-10-27): "Get started free" promises account creation, so it
+      // must open the signup form, not the sign-in wall. Same shape the landing
+      // pages already use; built by the tested contract, not inline.
+      router.push(buildSignupAuthUrl());
       return;
     }
     // Synchronous lock: rejects a second concurrent checkout before any await.
@@ -258,8 +262,12 @@ export function CrmPricingPage() {
         // Shared with the resume consumer so producer and consumer cannot drift.
         // Verified live: this route returns application/json on 401, so the
         // res.json() above does not throw and this branch is reachable.
+        // A11 (2026-10-27): mode=signup so a signed-out visitor who clicked a
+        // paid CTA lands on the signup form with the plan intent preserved as
+        // callbackUrl — never a sign-in dead-end. After signup they return to
+        // /pricing and the resume prompt offers the checkout.
         router.push(
-          `/auth?callbackUrl=${encodeURIComponent(buildPricingCallbackUrl(planId, "monthly"))}`,
+          buildSignupAuthUrl(buildPricingCallbackUrl(planId, "monthly")),
         );
         return;
       }
@@ -472,7 +480,7 @@ export function CrmPricingPage() {
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
-            onClick={() => router.push("/auth")}
+            onClick={() => router.push(buildSignupAuthUrl())}
             className="flex h-12 items-center gap-2 rounded-2xl bg-white px-8 text-sm font-bold text-[#1e4fcc] shadow-lg transition hover:shadow-xl"
           >
             Start for free <ArrowRight className="h-4 w-4" />
