@@ -66,6 +66,8 @@ export const metadata: Metadata = {
     description: "The client pipeline for freelancers and solo operators.",
     images: ["/og-home.png"],
   },
+  // Pinterest domain verification (Brady, 2026-10-27) — exact tag value, do not alter.
+  other: { "p:domain_verify": "8686d64ee611f57a55be92b9a27cb9f9" },
 };
 
 const jsonLd = JSON.stringify(rootJsonLdGraph());
