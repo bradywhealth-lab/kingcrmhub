@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { db, withOrgRlsTransaction } from '@/lib/db'
-import { stripe, stripeWebhookSecret, stripeMode } from '@/lib/billing/stripe'
+import { stripe, stripeWebhookSecret, stripeWebhookSecretTest, stripeMode } from '@/lib/billing/stripe'
 import { planIdFromSubscription, syncSubscriptionToOrg } from '@/lib/billing/subscription'
 
 /**
@@ -16,34 +16,58 @@ import { planIdFromSubscription, syncSubscriptionToOrg } from '@/lib/billing/sub
  *
  * Safety:
  * - Signature verification is REQUIRED; unverifiable payloads -> 400.
- * - Without a configured secret/keys the route is inert (200 + skip).
+ * - Each Stripe webhook endpoint (live and test) has its OWN signing secret.
+ *   A valid signature from EITHER endpoint is accepted: the primary
+ *   STRIPE_WEBHOOK_SECRET is tried first, then STRIPE_WEBHOOK_SECRET_TEST.
+ *   400 only when every configured secret fails — or when the billing client
+ *   is active but no signing secret is configured at all.
+ * - Without a charge-capable client (billing off, live-pending-activation)
+ *   the route is inert (200 + skip).
  * - Every DB write is idempotent for webhook redelivery.
  * - Never logs key material; only event type + org id on failure paths.
  */
 
 export async function POST(request: Request) {
   const client = stripe()
-  const secret = stripeWebhookSecret()
+  const primarySecret = stripeWebhookSecret()
+  const testSecret = stripeWebhookSecretTest()
 
-  // Inert when billing is not configured (off, or live-pending-activation).
-  if (!client || !secret) {
+  // Inert when billing is not configured (off, or live-pending-activation):
+  // no charge-capable client exists, so there is nothing to verify against.
+  if (!client) {
     if (stripeMode() === 'live') {
       console.error('Stripe webhook: live key configured without activation — webhook inert')
     }
     return NextResponse.json({ received: true })
   }
 
-  const body = await request.text()
   const signature = request.headers.get('stripe-signature')
   if (!signature) {
     return NextResponse.json({ error: 'Missing stripe-signature' }, { status: 400 })
   }
 
-  let event: Stripe.Event
-  try {
-    event = client.webhooks.constructEvent(body, signature, secret)
-  } catch (error) {
-    console.error('Stripe webhook signature verification failed', error instanceof Error ? error.message : error)
+  // Live/primary deliveries are signed with the primary endpoint's secret;
+  // test-mode deliveries with the TEST endpoint's secret. Accept a valid
+  // signature from either endpoint; only reject when all fail or none is set.
+  const secrets = Array.from(new Set([primarySecret, testSecret].filter((s): s is string => Boolean(s))))
+  if (secrets.length === 0) {
+    console.error('Stripe webhook: billing client configured but no webhook signing secret is set')
+    return NextResponse.json({ error: 'Webhook signing secret not configured' }, { status: 400 })
+  }
+
+  const body = await request.text()
+
+  let event: Stripe.Event | undefined
+  for (const secret of secrets) {
+    try {
+      event = client.webhooks.constructEvent(body, signature, secret)
+      break
+    } catch {
+      // Signature did not verify against this endpoint's secret; try the next.
+    }
+  }
+  if (!event) {
+    console.error('Stripe webhook signature verification failed against all configured signing secrets')
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 

@@ -19,6 +19,7 @@ export type StripeMode = 'off' | 'test' | 'live'
 
 const SECRET_KEY = process.env.STRIPE_SECRET_KEY || ''
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ''
+const WEBHOOK_SECRET_TEST = process.env.STRIPE_WEBHOOK_SECRET_TEST || ''
 
 /** Brady's explicit go for live activation. Anything else keeps live inert. */
 const LIVE_MODE_ACTIVATION = process.env.STRIPE_LIVE_ACTIVATION || ''
@@ -66,6 +67,17 @@ export function stripeModeLabel(): string {
 /** Webhook signing secret, or null when not configured. */
 export function stripeWebhookSecret(): string | null {
   return WEBHOOK_SECRET || null
+}
+
+/**
+ * Signing secret for the TEST-mode webhook endpoint, or null when not
+ * configured. Every Stripe webhook endpoint (one per mode) has its OWN
+ * whsec_ — a dashboard-created test endpoint signs its deliveries with a
+ * secret that never matches the primary one. The webhook route falls back
+ * to this secret when the primary secret fails to verify.
+ */
+export function stripeWebhookSecretTest(): string | null {
+  return WEBHOOK_SECRET_TEST || null
 }
 
 /** True when an unactivated live secret is present (flag to Brady, never use). */

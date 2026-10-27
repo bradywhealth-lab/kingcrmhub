@@ -5,6 +5,7 @@ const constructEvent = vi.fn()
 vi.mock('@/lib/billing/stripe', () => ({
   stripe: vi.fn(),
   stripeWebhookSecret: vi.fn(),
+  stripeWebhookSecretTest: vi.fn(),
   stripeMode: vi.fn(() => 'test'),
 }))
 
@@ -19,11 +20,12 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import { POST } from './route'
-import { stripe, stripeWebhookSecret, stripeMode } from '@/lib/billing/stripe'
+import { stripe, stripeWebhookSecret, stripeWebhookSecretTest, stripeMode } from '@/lib/billing/stripe'
 import { db } from '@/lib/db'
 
 const mockStripeClient = stripe as unknown as ReturnType<typeof vi.fn>
 const mockSecret = stripeWebhookSecret as unknown as ReturnType<typeof vi.fn>
+const mockSecretTest = stripeWebhookSecretTest as unknown as ReturnType<typeof vi.fn>
 const mockMode = stripeMode as unknown as ReturnType<typeof vi.fn>
 const mockUpdate = db.organization.update as unknown as ReturnType<typeof vi.fn>
 const mockFind = db.organization.findUnique as unknown as ReturnType<typeof vi.fn>
@@ -67,8 +69,10 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
   it('acknowledges with 200 and performs no DB writes when billing is off (default state)', async () => {
     mockStripeClient.mockReturnValue(null)
     mockSecret.mockReturnValue(null)
+    mockSecretTest.mockReturnValue(null)
     const res = await POST(webhookRequest({ id: 'evt_off', type: 'customer.subscription.updated' }))
     expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ received: true })
     expect(mockUpdate).not.toHaveBeenCalled()
   })
 
@@ -92,6 +96,51 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     signatureThrows = true
     const res = await POST(webhookRequest({ type: 'checkout.session.completed' }))
     expect(res.status).toBe(400)
+  })
+
+  it('accepts a valid test-endpoint signature by falling back to STRIPE_WEBHOOK_SECRET_TEST', async () => {
+    // Each Stripe webhook endpoint has its OWN signing secret: test-mode
+    // deliveries are signed with the test endpoint's whsec_, which never
+    // matches the primary secret. The route must try the primary secret
+    // first, then fall back to the test secret, and accept the delivery.
+    mockSecret.mockReturnValue('whsec_primary')
+    mockSecretTest.mockReturnValue('whsec_test_endpoint')
+    constructEvent.mockImplementation((body: string, _sig: string, secret: string) => {
+      if (secret !== 'whsec_test_endpoint') {
+        throw new Error('No signatures found matching the expected signature.')
+      }
+      return JSON.parse(body)
+    })
+    const res = await POST(webhookRequest({ id: 'evt_test_sig', type: 'invoice.paid' }))
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ received: true })
+    expect(mockUpdate).not.toHaveBeenCalled()
+    // Primary attempted first, then the test endpoint secret.
+    const attemptedSecrets = constructEvent.mock.calls.map((call) => call[2])
+    expect(attemptedSecrets).toEqual(['whsec_primary', 'whsec_test_endpoint'])
+  })
+
+  it('rejects with 400 when neither the primary nor the test secret verifies', async () => {
+    mockSecret.mockReturnValue('whsec_primary')
+    mockSecretTest.mockReturnValue('whsec_test_endpoint')
+    constructEvent.mockImplementation(() => {
+      throw new Error('No signatures found matching the expected signature.')
+    })
+    const res = await POST(webhookRequest({ id: 'evt_bad_sig', type: 'invoice.paid' }))
+    expect(res.status).toBe(400)
+    const attemptedSecrets = constructEvent.mock.calls.map((call) => call[2])
+    expect(attemptedSecrets).toEqual(['whsec_primary', 'whsec_test_endpoint'])
+  })
+
+  it('returns 400 when the client is configured but no signing secret is set (signature present)', async () => {
+    // Billing client active + signature header + zero configured secrets:
+    // the endpoint must refuse the delivery instead of silently inert-acking,
+    // otherwise a dropped secret looks like successful webhook handling.
+    mockSecret.mockReturnValue(null)
+    mockSecretTest.mockReturnValue(null)
+    const res = await POST(webhookRequest({ id: 'evt_no_secret', type: 'invoice.paid' }))
+    expect(res.status).toBe(400)
+    expect(constructEvent).not.toHaveBeenCalled()
   })
 
   it('links customer + subscription on checkout.session.completed but does NOT grant the plan', async () => {
