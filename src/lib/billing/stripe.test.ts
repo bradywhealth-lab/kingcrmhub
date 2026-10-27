@@ -8,12 +8,14 @@ import { describe, expect, it, vi } from 'vitest'
 describe('stripe gateway env bindings', () => {
   it('exposes the test-endpoint signing secret when STRIPE_WEBHOOK_SECRET_TEST is set', async () => {
     vi.resetModules()
+    const previous = process.env.STRIPE_WEBHOOK_SECRET_TEST
     process.env.STRIPE_WEBHOOK_SECRET_TEST = 'whsec_test_example'
     try {
       const mod = await import('@/lib/billing/stripe')
       expect(mod.stripeWebhookSecretTest()).toBe('whsec_test_example')
     } finally {
-      delete process.env.STRIPE_WEBHOOK_SECRET_TEST
+      if (previous === undefined) delete process.env.STRIPE_WEBHOOK_SECRET_TEST
+      else process.env.STRIPE_WEBHOOK_SECRET_TEST = previous
     }
   })
 

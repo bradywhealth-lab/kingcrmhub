@@ -120,6 +120,23 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     expect(attemptedSecrets).toEqual(['whsec_primary', 'whsec_test_endpoint'])
   })
 
+  it('accepts a test-endpoint signature when only STRIPE_WEBHOOK_SECRET_TEST is configured', async () => {
+    // Test-only configuration (no primary secret): the single configured
+    // secret must be attempted — and accepted — on its own.
+    mockSecret.mockReturnValue(null)
+    mockSecretTest.mockReturnValue('whsec_test_endpoint')
+    constructEvent.mockImplementation((body: string, _sig: string, secret: string) => {
+      if (secret !== 'whsec_test_endpoint') {
+        throw new Error('No signatures found matching the expected signature.')
+      }
+      return JSON.parse(body)
+    })
+    const res = await POST(webhookRequest({ id: 'evt_test_only', type: 'invoice.paid', livemode: false }))
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ received: true })
+    expect(constructEvent.mock.calls.map((call) => call[2])).toEqual(['whsec_test_endpoint'])
+  })
+
   it('rejects with 400 when neither the primary nor the test secret verifies', async () => {
     mockSecret.mockReturnValue('whsec_primary')
     mockSecretTest.mockReturnValue('whsec_test_endpoint')
@@ -141,6 +158,93 @@ describe('/api/billing/webhook — subscription lifecycle', () => {
     const res = await POST(webhookRequest({ id: 'evt_no_secret', type: 'invoice.paid' }))
     expect(res.status).toBe(400)
     expect(constructEvent).not.toHaveBeenCalled()
+  })
+
+  it('ignores live-mode events delivered while billing runs in test mode', async () => {
+    // Mode isolation: a correctly-signed event from the wrong Stripe mode
+    // must never touch billing state (200-ack so Stripe stops retrying).
+    mockSecret.mockReturnValue('whsec_primary')
+    mockSecretTest.mockReturnValue(null)
+    const res = await POST(webhookRequest({
+      id: 'evt_live_in_test',
+      type: 'customer.subscription.updated',
+      livemode: true,
+      created: 1700000001,
+      data: {
+        object: {
+          id: 'sub_1',
+          status: 'active',
+          customer: 'cus_1',
+          metadata: { organizationId: 'org_1' },
+          items: { data: [{ price: { id: 'price_any' } }] },
+        },
+      },
+    }))
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ received: true })
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('ignores test-mode events delivered while billing runs in live mode, even with a valid test-endpoint signature', async () => {
+    // The dangerous case: live billing active + both endpoint secrets set.
+    // A test checkout.session.completed carrying a real org's metadata must
+    // NOT overwrite that org's live customer/subscription IDs.
+    mockMode.mockReturnValue('live')
+    mockSecret.mockReturnValue('whsec_primary')
+    mockSecretTest.mockReturnValue('whsec_test_endpoint')
+    constructEvent.mockImplementation((body: string, _sig: string, secret: string) => {
+      if (secret !== 'whsec_test_endpoint') {
+        throw new Error('No signatures found matching the expected signature.')
+      }
+      return JSON.parse(body)
+    })
+    const res = await POST(webhookRequest({
+      id: 'evt_test_in_live',
+      type: 'checkout.session.completed',
+      livemode: false,
+      data: {
+        object: {
+          id: 'cs_test_1',
+          metadata: { organizationId: 'org_1' },
+          customer: 'cus_test_1',
+          subscription: 'sub_test_1',
+        },
+      },
+    }))
+    expect(res.status).toBe(200)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('processes events whose livemode matches the active billing mode', async () => {
+    mockUpdate.mockResolvedValue({ plan: 'enterprise', status: 'active' })
+    const previous = process.env.STRIPE_PRICE_ELITE_MONTHLY
+    process.env.STRIPE_PRICE_ELITE_MONTHLY = 'price_elite_test'
+    try {
+      const event = {
+        id: 'evt_match_mode',
+        type: 'customer.subscription.updated',
+        livemode: false,
+        created: 1700000001,
+        data: {
+          object: {
+            id: 'sub_1',
+            status: 'active',
+            customer: 'cus_1',
+            metadata: { organizationId: 'org_1' },
+            items: { data: [{ price: { id: 'price_elite_test' } }] },
+          },
+        },
+      }
+      const res = await POST(webhookRequest(event))
+      expect(res.status).toBe(200)
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: 'org_1' },
+        data: expect.objectContaining({ plan: 'enterprise' }),
+      })
+    } finally {
+      if (previous === undefined) delete process.env.STRIPE_PRICE_ELITE_MONTHLY
+      else process.env.STRIPE_PRICE_ELITE_MONTHLY = previous
+    }
   })
 
   it('links customer + subscription on checkout.session.completed but does NOT grant the plan', async () => {

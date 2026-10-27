@@ -21,6 +21,9 @@ import { planIdFromSubscription, syncSubscriptionToOrg } from '@/lib/billing/sub
  *   STRIPE_WEBHOOK_SECRET is tried first, then STRIPE_WEBHOOK_SECRET_TEST.
  *   400 only when every configured secret fails — or when the billing client
  *   is active but no signing secret is configured at all.
+ * - Mode isolation: a verified event whose livemode does not match the active
+ *   billing mode is acknowledged (200) and dropped — a test-mode event must
+ *   never touch live billing state, and vice versa.
  * - Without a charge-capable client (billing off, live-pending-activation)
  *   the route is inert (200 + skip).
  * - Every DB write is idempotent for webhook redelivery.
@@ -69,6 +72,21 @@ export async function POST(request: Request) {
   if (!event) {
     console.error('Stripe webhook signature verification failed against all configured signing secrets')
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  // Mode isolation (codex P1): a correctly-signed event from the OTHER Stripe
+  // mode must never touch billing state — once live billing activates, a test
+  // checkout carrying a real org's metadata could otherwise overwrite that
+  // org's live customer/subscription IDs. Acknowledge with 200 (never 400 —
+  // repeated non-2xx would get the endpoint disabled by Stripe again).
+  const mode = stripeMode()
+  const eventIsLiveMode = event.livemode === true
+  if ((mode === 'live') !== eventIsLiveMode) {
+    console.error('Stripe webhook: event Stripe-mode does not match active billing mode — ignored', {
+      eventId: event.id,
+      type: event.type,
+    })
+    return NextResponse.json({ received: true })
   }
 
   try {
