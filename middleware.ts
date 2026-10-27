@@ -12,6 +12,7 @@ const PUBLIC_STATIC_ASSETS = new Set([
   '/logo.svg',
   '/og-home.png',
   '/manifest.webmanifest',
+  '/manifest.json',
 ])
 
 export async function middleware(request: NextRequest) {
@@ -51,7 +52,11 @@ export async function middleware(request: NextRequest) {
   // "Add to Home Screen" (and iOS Safari fetches apple-touch-icon logged-out).
   // The middleware matcher already skips these paths; this explicit
   // pass-through keeps them public even if the matcher is ever narrowed.
-  if (pathname === '/manifest.webmanifest' || pathname.startsWith('/icons/')) {
+  if (
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/manifest.json' ||
+    pathname.startsWith('/icons/')
+  ) {
     const response = NextResponse.next()
     return applySecurityHeaders(request, response)
   }
@@ -134,6 +139,8 @@ export const config = {
   matcher: [
     // Escaped dots + directory boundary (icons/, screenshots/) so unrelated
     // paths like /og-homeXpng or /icons-private can't slip past the middleware.
-    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo\\.svg|og-home\\.png|manifest\\.webmanifest|icons/|screenshots/).*)',
+    // manifest\.json is served by src/app/manifest.json/route.ts (conventional
+    // PWA path — browsers/audit tooling probe it without a session).
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo\\.svg|og-home\\.png|manifest\\.webmanifest|manifest\\.json|icons/|screenshots/).*)',
   ],
 }

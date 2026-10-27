@@ -21,6 +21,17 @@ describe('PWA assets stay public for logged-out visitors', () => {
     expect(response.headers.get('location')).toBeNull()
   })
 
+  it('passes manifest.json (conventional PWA path) through without an auth redirect', async () => {
+    const request = new NextRequest('http://localhost:3000/manifest.json')
+    const response = await middleware(request, undefined as never)
+
+    // /manifest.json is the conventional manifest path probed by browsers,
+    // crawlers, and PWA audit tooling. Sentinel SENT-20261027-002: it
+    // redirected to /auth in production and broke PWA install detection.
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
+  })
+
   it.each([
     '/icons/icon-192.png',
     '/icons/icon-512.png',
@@ -99,6 +110,7 @@ describe('middleware matcher excludes PWA assets', () => {
 
   it.each([
     '/manifest.webmanifest',
+    '/manifest.json',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-512-maskable.png',
