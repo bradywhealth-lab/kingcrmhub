@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PLANS as PLANS_SOURCE, PAID_PLAN_IDS, isPlanId as catalogIsPlanId } from './plans'
 import {
   buildPricingCallbackUrl,
+  buildSignupAuthUrl,
   isPlanId,
   parsePlanIntent,
   PLAN_INTENT_INTERVALS,
@@ -486,5 +487,106 @@ describe('crm-pricing-page guards concurrent checkout (cubic P2, wiring guard)',
       source.indexOf('data-testid="resume-checkout-dismiss"'),
     )
     expect(cont).toContain('disabled={isCheckoutBusy}')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A11 re-activation (2026-10-27, Sentinel sweep SENT-20261027-001 + codeforge
+// live measurement, evidence/2026-10-27_pre-fix-signed-out-cta-sweep.json):
+// every signup-promising /pricing CTA navigated to /auth and presented the
+// SIGN-IN form ("Welcome back") — none carried mode=signup, so conversion
+// traffic had to manually find the "Create account" tab. The original A11
+// claims (silent no-op, 401 dead-end) are falsified: navigation happens, the
+// 401 is handled, and the intent round-trips. The live defect is the missing
+// signup mode on the auth target.
+//
+// The auth page already honours /auth?mode=signup (deep-link support,
+// auth/page.tsx:110-133) and the landing page's working CTAs already use it
+// (welcome/page.tsx, privacy, terms). This builder makes that the single
+// shared shape every /pricing conversion CTA must go through.
+// ---------------------------------------------------------------------------
+describe('buildSignupAuthUrl (conversion CTAs must open the SIGNUP form)', () => {
+  it('targets signup mode when there is no intent to resume', () => {
+    // "Get started free" / "Start for free": the promise is account creation,
+    // so the visitor must land on the signup form, not "Welcome back".
+    expect(buildSignupAuthUrl()).toBe('/auth?mode=signup')
+    expect(buildSignupAuthUrl(undefined)).toBe('/auth?mode=signup')
+    expect(buildSignupAuthUrl('')).toBe('/auth?mode=signup')
+  })
+
+  it('nests a checkout intent as an encoded callbackUrl so it survives to resume', () => {
+    expect(buildSignupAuthUrl(buildPricingCallbackUrl('pro', 'monthly'))).toBe(
+      '/auth?mode=signup&callbackUrl=%2Fpricing%3Fplan%3Dpro%26interval%3Dmonthly',
+    )
+  })
+
+  it('round-trips every paid plan: signup mode AND resumable intent both survive', () => {
+    // The auth page reads mode and callbackUrl independently (auth/page.tsx
+    // consumes ?mode at mount and validates ?callbackUrl for the post-auth
+    // redirect), so both halves must survive one level of nesting.
+    for (const planId of PAID_PLAN_IDS) {
+      const url = buildSignupAuthUrl(buildPricingCallbackUrl(planId, 'monthly'))
+      const parsed = new URL(url, 'https://kingcrmhub.net').searchParams
+      expect(parsed.get('mode'), `mode for ${planId}`).toBe('signup')
+      const restored = parsed.get('callbackUrl')
+      expect(restored, `callbackUrl for ${planId}`).toBe(buildPricingCallbackUrl(planId, 'monthly'))
+      expect(resolveResumeIntent(restored?.slice(restored.indexOf('?'))), `resume for ${planId}`).toEqual({
+        planId,
+        interval: 'monthly',
+      })
+    }
+  })
+
+  it('rejects a callbackUrl auth would silently drop (open redirect shape, backslash, non-path)', () => {
+    // auth/page.tsx replaces an invalid callbackUrl with '/', silently dropping
+    // the intent. A producer emitting such a URL is the A11 defect class again,
+    // so the builder throws instead of emitting a URL that loses the intent.
+    for (const bad of ['//evil.com/pricing', 'https://evil.com/pricing', '/pricing\\?plan=pro', 'pricing?plan=pro']) {
+      expect(() => buildSignupAuthUrl(bad), `must reject ${JSON.stringify(bad)}`).toThrow()
+    }
+  })
+})
+
+describe('crm-pricing-page routes conversion CTAs to signup (A11 wiring guard)', () => {
+  const source = readFileSync(COMPONENT_PATH, 'utf8')
+
+  it('imports and uses the shared signup builder — no inline /auth?mode=signup strings', () => {
+    expect(source).toContain('buildSignupAuthUrl')
+    // The decision must live in the tested module, not be re-implemented inline
+    // (the #221 lesson: a test over duplicated logic proves nothing).
+    expect(source).not.toMatch(/["']\/auth\?mode=signup/)
+  })
+
+  it('leaves exactly ONE bare /auth push — the nav "Sign in" button', () => {
+    // "Sign in" promises sign-in, so it correctly targets the login form.
+    // Every other /auth push on the page is a signup-promise CTA and must go
+    // through buildSignupAuthUrl. Before the A11 fix there were three
+    // (free CTA, nav, bottom band).
+    const barePushes = source.match(/router\.push\("\/auth"\)/g) ?? []
+    expect(barePushes.length, `bare /auth pushes: ${barePushes.length}`).toBe(1)
+  })
+
+  it('routes the signed-out 401 through signup mode with the intent preserved', () => {
+    const branch = source.slice(
+      source.indexOf('if (res.status === 401)'),
+      source.indexOf('if (!res.ok)'),
+    )
+    expect(branch).toContain('buildSignupAuthUrl')
+    expect(branch).toContain('buildPricingCallbackUrl(planId, "monthly")')
+    // the old shape — /auth?callbackUrl=... with no mode — is the defect
+    expect(branch).not.toMatch(/`\/auth\?callbackUrl=/)
+  })
+
+  it('routes the free-tier CTA and the bottom "Start for free" through the builder', () => {
+    // handleCta runs from its declaration to the component's JSX return. The
+    // marker is the newline + 2-space-indented `return (` so the effect
+    // cleanup's `return () => {` (4-space indent) cannot match first.
+    const handleCtaBlock = source.slice(
+      source.indexOf('const handleCta'),
+      source.indexOf('\n  return ('),
+    )
+    expect(handleCtaBlock).toContain('router.push(buildSignupAuthUrl())')
+    const bottomBand = source.slice(source.indexOf('Ready to run a tighter operation?'))
+    expect(bottomBand).toContain('router.push(buildSignupAuthUrl())')
   })
 })
