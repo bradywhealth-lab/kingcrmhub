@@ -433,7 +433,7 @@ export function AiAssistantView({ onOpenAISettings }: { onOpenAISettings?: () =>
                   <button
                     onClick={() => deleteChat(convo.id)}
                     aria-label="Delete conversation"
-                    className="absolute right-1.5 top-2 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 hover:text-red-500 text-muted-foreground transition-all"
+                    className="absolute right-1.5 top-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] p-1 rounded hover:bg-red-100 hover:text-red-500 text-muted-foreground transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
