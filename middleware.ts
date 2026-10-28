@@ -26,9 +26,12 @@ const PUBLIC_STATIC_ASSETS = new Set([
 // it straight to signed-in users and skip the middleware redirect, cubic P2
 // on PR #253). Every response on a cookie-variant URL opts out of shared
 // caching. Responses identical for all requesters (public /pricing, /terms,
-// /privacy, /book, /compare) keep their prerender cache contract. Next's
-// internal full-route cache still serves no-store'd routes (x-nextjs-cache:
-// HIT), so there is no serving-perf regression.
+// /privacy, /book, /compare) keep their prerender cache contract. Tradeoff:
+// Next's internal full-route cache still serves no-store'd routes
+// (x-nextjs-cache: HIT — no re-render cost), but shared caches can no longer
+// offload them, so anonymous traffic on cookie-variant URLs always reaches
+// origin. Correctness first: an upstream cache serving the wrong variant to
+// a signed-in user is a P1; origin load on these routes is cheap.
 const NO_SHARED_CACHE = 'no-store, max-age=0'
 
 function withNoSharedCache(response: NextResponse): NextResponse {
@@ -107,7 +110,8 @@ export async function middleware(request: NextRequest) {
     // Cookie-variant URL (cubic P2 on PR #253): no-store the anonymous 200 as
     // well so a shared cache can never serve marketing HTML to a signed-in
     // user browsing to /welcome directly. Next's internal full-route cache
-    // still serves it (x-nextjs-cache: HIT), so there is no serving cost.
+    // still serves it (x-nextjs-cache: HIT), but shared caches can no longer
+    // hold it, so anonymous traffic reaches origin.
     const response = NextResponse.next()
     return withNoSharedCache(applySecurityHeaders(request, response))
   }
