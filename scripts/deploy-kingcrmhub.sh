@@ -176,6 +176,13 @@ echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
 # BUILD_MEMINFO_FILE overrides the memory source (unit tests).
 BUILD_MIN_HEADROOM_MB="${BUILD_MIN_HEADROOM_MB:-1400}"
 BUILD_MEMINFO_FILE="${BUILD_MEMINFO_FILE:-/proc/meminfo}"
+# cubic P2: a negative (or non-numeric) threshold would silently disable the
+# gate (every non-negative reading passes the comparison). 0 is the
+# documented disable value; validate the config loudly.
+if [[ ! "$BUILD_MIN_HEADROOM_MB" =~ ^[0-9]+$ ]]; then
+  echo "BUILD_MEMORY_HEADROOM_INVALID: BUILD_MIN_HEADROOM_MB must be a non-negative integer (got '$BUILD_MIN_HEADROOM_MB')" >&2
+  exit 1
+fi
 if [[ "$BUILD_MIN_HEADROOM_MB" != "0" && -r "$BUILD_MEMINFO_FILE" ]]; then
   mem_avail_kb="$(awk '/^MemAvailable:/{print $2; exit}' "$BUILD_MEMINFO_FILE" 2>/dev/null || echo 0)"
   swap_free_kb="$(awk '/^SwapFree:/{print $2; exit}' "$BUILD_MEMINFO_FILE" 2>/dev/null || echo 0)"
@@ -190,14 +197,47 @@ if [[ "$BUILD_MIN_HEADROOM_MB" != "0" && -r "$BUILD_MEMINFO_FILE" ]]; then
 fi
 
 echo "=== BUILD (live container remains untouched) ==="
-# Hard ceiling on the build container (OOM incident 2026-10-27): with only
-# the heap cap, several build processes can together still outgrow the host
-# and wedge the kernel. --memory puts the build itself in a cgroup ceiling —
-# the BUILD dies, not the host. Compose v2 exposes it as build -m/--memory.
-# The OOM lands inside the build container -> compose exits non-zero ->
-# this script aborts BEFORE the container swap (live site untouched).
-BUILD_MEMORY_LIMIT="${BUILD_MEMORY_LIMIT:-1400m}"
-compose build --memory "$BUILD_MEMORY_LIMIT" "$SERVICE"
+# Hard ceiling on the build (OOM incident 2026-10-27): with only the heap
+# cap, several build processes can together still outgrow the host and wedge
+# the kernel. Enforcement chain (verified empirically on Docker 29, 2026-10-28):
+#   - compose's build-time --memory flag is NOT enforced by the default
+#     BuildKit builder (a 3GB allocation survives a 500m cap — cubic P1);
+#   - a docker-container buildx builder whose buildkitd container is capped
+#     via `docker update --memory --memory-swap` IS enforced: the same 3GB
+#     allocation dies with 'cannot allocate memory' when compose builds
+#     through it (BUILDX_BUILDER).
+# The BUILD dies inside the capped builder, not the host. Compose stays the
+# single source of build truth (context/args flow through it). The builder
+# container is stopped after the bake — its anonymous volume keeps the layer
+# cache for the next deploy, and no buildkitd idles on the memory-tight host.
+BUILD_MEMORY_LIMIT_MB="${BUILD_MEMORY_LIMIT_MB:-1400}"
+BUILDX_BUILDER_NAME="${BUILDX_BUILDER_NAME:-kc-capped-builder}"
+BUILDER_CONTAINER="buildx_buildkit_${BUILDX_BUILDER_NAME}0"
+if ! docker buildx inspect "$BUILDX_BUILDER_NAME" >/dev/null 2>&1; then
+  docker buildx create --name "$BUILDX_BUILDER_NAME" --driver docker-container >/dev/null
+fi
+docker buildx inspect --bootstrap "$BUILDX_BUILDER_NAME" >/dev/null
+# docker update requires --memory and --memory-swap together.
+docker update --memory "${BUILD_MEMORY_LIMIT_MB}m" --memory-swap "${BUILD_MEMORY_LIMIT_MB}m" "$BUILDER_CONTAINER" >/dev/null
+BUILDER_MEM_BYTES="$(docker inspect --format '{{.HostConfig.Memory}}' "$BUILDER_CONTAINER" 2>/dev/null || true)"
+if [[ -z "$BUILDER_MEM_BYTES" || "$BUILDER_MEM_BYTES" == "0" ]]; then
+  echo "BUILD_MEMORY_CAP_VERIFY_FAIL: builder container $BUILDER_CONTAINER carries no memory cap" >&2
+  exit 1
+fi
+echo "BUILD_MEMORY_CAP_MB=$(( BUILDER_MEM_BYTES / 1024 / 1024 ))"
+# cubic P2: a failed build must name its cause class — an OOM inside the cap
+# otherwise reads as an unexplained compose failure.
+# (export/unset instead of a `VAR=… compose …` prefix: bash persists function
+# call prefix assignments, and only the BUILD should route through the
+# capped builder.)
+export BUILDX_BUILDER="$BUILDX_BUILDER_NAME"
+if ! compose build "$SERVICE"; then
+  echo "BUILD_FAILED: compose build exited non-zero (build ran under a ${BUILD_MEMORY_LIMIT_MB}MB cgroup cap — an OOM kill inside the builder is the expected signature of the ceiling doing its job)" >&2
+  unset BUILDX_BUILDER
+  exit 1
+fi
+unset BUILDX_BUILDER
+docker stop "$BUILDER_CONTAINER" >/dev/null 2>&1 || true
 # Image-identity gate (deploy defect 2026-09-21): the bake can finish and
 # fail to update the local service tag (observed: deployer-kingcrmhub:latest
 # still resolving to the pre-build image). Abort BEFORE stopping the container

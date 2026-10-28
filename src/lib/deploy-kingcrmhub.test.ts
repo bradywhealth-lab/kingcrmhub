@@ -50,6 +50,8 @@ interface DeployHarnessOptions {
   minHeadroomMb?: number
   /** Point BUILD_MEMINFO_FILE at a nonexistent path (gate-skip path). */
   missingMeminfo?: boolean
+  /** Shim prints no cap for the builder inspect (cap-verify-failure path). */
+  builderMemEmpty?: boolean
 }
 
 interface DeployHarness {
@@ -78,6 +80,7 @@ function createDeployHarness({
   meminfo,
   minHeadroomMb,
   missingMeminfo = false,
+  builderMemEmpty = false,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -229,6 +232,18 @@ if [[ "$args" == *" build "* && "$args" == *" kingcrmhub "* ]]; then
   # image id so the pre-swap image-identity gate passes.
   touch "$DEPLOY_ROOT/image_built"
 fi
+if [[ "$args" == *" buildx inspect kc-capped-builder "* ]]; then
+  # Without --bootstrap: simulate "builder does not exist yet" (first-run
+  # path) so the script creates it; --bootstrap then succeeds.
+  exit 1
+fi
+if [[ "$args" == *" inspect --format {{.HostConfig.Memory}} "* ]]; then
+  # Builder cgroup cap probe: prints the cap in bytes (1400m default), or
+  # nothing when BUILDER_MEM_EMPTY=1 (cap-verify-failure path).
+  if [[ "$BUILDER_MEM_EMPTY" == "1" ]]; then exit 0; fi
+  printf '%s' "\${BUILDER_MEM_CAP:-1468006400}"
+  exit 0
+fi
 if [[ "$args" == *" --format {{.Image}} kingcrmhub "* ]]; then
   printf 'sha256:old-image'
   exit 0
@@ -288,6 +303,10 @@ exit 0
     // deterministic on any host (never read the real /proc/meminfo). The
     // memory-gate tests opt in with minHeadroomMb + a meminfo fixture.
     BUILD_MIN_HEADROOM_MB: minHeadroomMb !== undefined ? String(minHeadroomMb) : '0',
+    // cubic P3: pin the builder cap so a host/CI shell exporting
+    // BUILD_MEMORY_LIMIT_MB cannot break the exact-invocation assertions.
+    BUILD_MEMORY_LIMIT_MB: '1400',
+    ...(builderMemEmpty ? { BUILDER_MEM_EMPTY: '1' } : {}),
     ...(meminfo
       ? {
           BUILD_MEMINFO_FILE: (() => {
@@ -758,8 +777,12 @@ describe('KingCRMhub deploy hardening', () => {
     expect(builderStage.indexOf('ENV NODE_OPTIONS')).toBeLessThan(builderStage.indexOf('RUN npm run build'))
     const script = readDeployScript()
     expect(script).toContain('BUILD_MEMORY_HEADROOM_FAIL')
-    // The hard ceiling: the build call must carry the cgroup memory cap.
-    expect(script).toContain('compose build --memory "$BUILD_MEMORY_LIMIT" "$SERVICE"')
+    // The hard ceiling: the buildkitd builder container must be cgroup-capped
+    // (compose build --memory is NOT enforced by the default BuildKit builder
+    // — verified empirically; cubic P1), and the build must route through it.
+    expect(script).toContain('docker update --memory "${BUILD_MEMORY_LIMIT_MB}m" --memory-swap "${BUILD_MEMORY_LIMIT_MB}m" "$BUILDER_CONTAINER"')
+    expect(script).toContain('export BUILDX_BUILDER="$BUILDX_BUILDER_NAME"')
+    expect(script).not.toContain('compose build --memory')
   })
 
   it('aborts before building when memory headroom is below the floor', deployTimeout, () => {
@@ -793,8 +816,15 @@ describe('KingCRMhub deploy hardening', () => {
 
     expect(result.status).toBe(0)
     expect(output).toContain('BUILD_HEADROOM_MB=4608')
-    // The build invocation itself must carry the hard cgroup ceiling.
-    expect(readFileSync(deployLog, 'utf8')).toContain('build --memory 1400m kingcrmhub')
+    // The build must run through the memory-capped buildkitd builder: cap
+    // applied via docker update, verified via inspect, build routed via
+    // BUILDX_BUILDER, builder idled after the bake.
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+    expect(dockerCalls).toContain('buildx create --name kc-capped-builder --driver docker-container')
+    expect(dockerCalls).toContain('update --memory 1400m --memory-swap 1400m buildx_buildkit_kc-capped-builder0')
+    expect(output).toContain('BUILD_MEMORY_CAP_MB=1400')
+    expect(dockerCalls).toContain('build kingcrmhub')
+    expect(dockerCalls).toContain('stop buildx_buildkit_kc-capped-builder0')
     expect(output).toContain('DEPLOY_V4_DONE')
   })
 
@@ -820,5 +850,30 @@ describe('KingCRMhub deploy hardening', () => {
 
     expect(result.status).toBe(0)
     expect(output).toContain('DEPLOY_V4_DONE')
+  })
+
+  it('rejects a negative or non-numeric headroom threshold loudly (cubic P2)', deployTimeout, () => {
+    // -1 would silently disable the gate (every non-negative reading passes
+    // the comparison); it must abort with a distinct marker instead.
+    const { result } = runMockDeploy({ minHeadroomMb: -1 })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain("BUILD_MEMORY_HEADROOM_INVALID: BUILD_MIN_HEADROOM_MB must be a non-negative integer (got '-1')")
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('aborts when the builder container carries no memory cap (cap verification)', deployTimeout, () => {
+    // If docker update silently failed (version drift, race), the build would
+    // run UNCAPPED on the default path — exactly the incident class. The
+    // inspect verification must fail the deploy before any build runs.
+    const { deployLog, result } = runMockDeploy({ builderMemEmpty: true })
+    const output = `${result.stdout}\n${result.stderr}`
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('BUILD_MEMORY_CAP_VERIFY_FAIL: builder container buildx_buildkit_kc-capped-builder0 carries no memory cap')
+    expect(dockerCalls).not.toContain(' build ')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
   })
 })
