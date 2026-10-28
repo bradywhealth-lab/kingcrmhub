@@ -44,6 +44,7 @@ interface DeployHarnessOptions {
   staticSrcDir?: string
   staticAssetCode?: number
   failCaddyCmd?: 'validate' | 'reload'
+  deployFreeze?: boolean
 }
 
 interface DeployHarness {
@@ -69,6 +70,7 @@ function createDeployHarness({
   staticSrcDir,
   staticAssetCode = 200,
   failCaddyCmd,
+  deployFreeze = false,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -121,6 +123,23 @@ function createDeployHarness({
   mkdirSync(join(repoDir, 'prisma/migrations/20260921_add_claim_grant'), { recursive: true })
   writeFileSync(composeFile, 'services: {}\n')
   writeFileSync(deployLog, '')
+  // Freeze-gate fixture (t_f4afaecd): the deploy script must refuse to run
+  // while $DEPLOY_FREEZE_FILE exists. Its default path resolves inside
+  // DEPLOY_ROOT (the harness root), so no extra env plumbing is needed.
+  // Contents mirror the real-world convention: reason + card id + who set it.
+  if (deployFreeze) {
+    writeFileSync(
+      join(root, 'DEPLOY_FREEZE'),
+      [
+        'reason: P0 fleet deploy-freeze (t_d347b9a5)',
+        'card: t_d347b9a5',
+        'set_by: recovery',
+        'set_at: 2026-10-28T00:20:00Z',
+        'lift_by: commander',
+        '',
+      ].join('\n'),
+    )
+  }
 
   writeExecutable(
     join(binDir, 'git'),
@@ -386,6 +405,54 @@ describe('KingCRMhub deploy hardening', () => {
     expect(result.status).toBe(75)
     expect(output).toContain('DEPLOY_ALREADY_RUNNING')
     expect(readFileSync(deployLog, 'utf8')).toBe('')
+  })
+
+  it('refuses to deploy when the DEPLOY_FREEZE flag exists, before any Docker or lock work', deployTimeout, () => {
+    const { deployLog, result, root } = runMockDeploy({ deployFreeze: true })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    // 77 (EX_NOPERM), NOT 75: 75 already means "another deploy holds the
+    // lock, retry later". Legacy retry wrappers (deploy_queue_a11.sh,
+    // t_45af839f) retry ONLY on 75 and abort on any other code — a distinct
+    // exit code makes even non-freeze-aware wrappers stop instead of
+    // grinding through a declared freeze (t_f4afaecd).
+    expect(result.status).toBe(77)
+    expect(output).toContain('DEPLOY_BLOCKED_BY_FREEZE')
+    // The flag contents (reason + card + who set it) are echoed so operators
+    // see WHY the deploy refused without hunting for the flag file.
+    expect(output).toContain('P0 fleet deploy-freeze')
+    expect(output).toContain('t_d347b9a5')
+    // Refusal must precede ALL deploy work: zero docker calls, and the lock
+    // file is never even created (frozen attempts never contend for the lock).
+    expect(readFileSync(deployLog, 'utf8')).toBe('')
+    expect(existsSync(join(root, 'deploy.lock'))).toBe(false)
+    expect(output).not.toContain('DEPLOY_ALREADY_RUNNING')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('deploys normally once the freeze flag is lifted — the flag is the only gate state', deployTimeout, () => {
+    const harness = createDeployHarness({ deployFreeze: true })
+
+    const frozen = spawnSync('bash', [deployScriptPath], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: harness.env,
+    })
+    expect(frozen.status).toBe(77)
+
+    // Recovery lifts the freeze by removing the flag; nothing else. The next
+    // attempt must proceed to a full clean deploy — the gate must not leave
+    // any latched state (lock, marker file, or otherwise) behind.
+    rmSync(join(harness.root, 'DEPLOY_FREEZE'))
+    const thawed = spawnSync('bash', [deployScriptPath], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: harness.env,
+    })
+    const output = `${thawed.stdout}\n${thawed.stderr}`
+
+    expect(thawed.status, output).toBe(0)
+    expect(output).toContain('DEPLOY_V4_DONE')
   })
 
   it('serializes concurrent deploys through a real file lock', deployTimeout, async () => {

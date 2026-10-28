@@ -37,6 +37,27 @@ cleanup_static_snapshots() {
   return 0
 }
 trap cleanup_static_snapshots EXIT
+# Deploy freeze gate (t_f4afaecd, P0 2026-10-28): during a declared fleet
+# freeze, Recovery/Commander create $DEPLOY_FREEZE_FILE (contents: reason,
+# card id, who set it, timestamps) and remove it to lift the freeze. The
+# deploy must refuse BEFORE any lock, pull, or build work so unattended
+# retry wrappers cannot fire a full-recompile build into a frozen fleet
+# (deploy_queue_a11.sh survived its own card and built at 235MB free on
+# the 1.9GB VPS; OpsForge killed it at 78s).
+# Exit 77 (EX_NOPERM), NOT 75: 75 already means "another deploy holds the
+# lock, retry later" — legacy retry wrappers retry ONLY on 75 and abort on
+# any other code, so a distinct exit code makes even non-freeze-aware
+# wrappers stop instead of grinding through a declared freeze.
+DEPLOY_FREEZE_FILE="${DEPLOY_FREEZE_FILE:-${DEPLOY_ROOT}/DEPLOY_FREEZE}"
+if [[ -e "$DEPLOY_FREEZE_FILE" ]]; then
+  echo "DEPLOY_BLOCKED_BY_FREEZE: $DEPLOY_FREEZE_FILE present — deploy refused" >&2
+  if [[ -f "$DEPLOY_FREEZE_FILE" ]]; then
+    echo "--- freeze flag contents ---" >&2
+    cat "$DEPLOY_FREEZE_FILE" >&2 || true
+    echo "--- end freeze flag contents ---" >&2
+  fi
+  exit 77
+fi
 DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-${DEPLOY_ROOT}/kingcrmhub-deploy.lock}"
 
 # Serialize deployments: only one deploy process may hold this lock.
