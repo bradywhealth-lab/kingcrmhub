@@ -325,11 +325,11 @@ function DashboardView() {
       {/* Focus band — soft cobalt tint, the day's next-best plays */}
       {myDay && myDay.leadsToCall.length > 0 && (
         <div className="grid gap-5 rounded-2xl bg-[var(--accent-soft)] p-5 md:grid-cols-[1.1fr_2fr] md:items-center md:p-6">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold text-foreground">Plays to make <span className="text-[var(--accent-text)]">today</span>.</h2>
             <p className="mt-2 text-sm text-muted-foreground">{myDay.summary || "Ranked by value at risk — clear these and you're ahead of the week."}</p>
           </div>
-          <div className="space-y-2.5">
+          <div className="min-w-0 space-y-2.5">
             {myDay.leadsToCall.slice(0, 3).map((lead, idx) => (
               <div key={lead.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
                 <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-solid)] font-mono text-xs font-bold text-white">{idx + 1}</span>
