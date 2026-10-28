@@ -274,6 +274,27 @@ describe('auth/page.tsx preserves callbackUrl (wiring guard)', () => {
     expect(source.match(/postAuthNavDoneRef\.current = true/g)).toHaveLength(2)
   })
 
+  it('both planner call sites read the LIVE latch state (cubic P2: the guard must gate the decision, not sit beside it)', () => {
+    // If either call site passed a literal or a stale snapshot instead of
+    // postAuthNavDoneRef.current, the planner could not see the other
+    // trigger's navigation and the double-nav bug would be reintroduced while
+    // every test above still passes.
+    expect(
+      source.match(/alreadyNavigated: postAuthNavDoneRef\.current/g),
+      'both the submit handler and the mount effect must feed the latch into the planner',
+    ).toHaveLength(2)
+  })
+
+  it('the planned result is what navigates — push/replace come from the plan, not a rebuilt target', () => {
+    expect(source).toContain('router.push(plan.target)')
+    expect(source).toContain('router.replace(plan.target)')
+    // The mount trigger must REPLACE (ambient redirect) and the submit
+    // trigger must PUSH (user action) — the plan's history field is wired,
+    // not decorative.
+    expect(source).toMatch(/trigger: 'mount'/)
+    expect(source).toMatch(/trigger: 'submit'/)
+  })
+
   it('no longer hardcodes the callback-dropping ternary', () => {
     // The two defective lines cubic flagged.
     expect(source).not.toContain("mustChangePassword ? '/auth/password' : safeCallback")
