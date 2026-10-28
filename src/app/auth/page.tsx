@@ -90,6 +90,23 @@ function AuthPageInner() {
   // that is a new auth event, and the already-authed mount redirect must
   // still fire there.
   const postAuthNavDoneRef = useRef(false)
+  /**
+   * Validated `?callbackUrl`, hoisted to component scope so BOTH post-auth
+   * redirects (the mount effect and the submit handler) can honour it.
+   * cubic P2: previously only the submit handler computed this, and it was dropped
+   * entirely on the mustChangePassword path.
+   * Same rules as before: single leading slash, not protocol-relative, no backslash.
+   * Declared BEFORE the mount effect: the effect's deps array evaluates during
+   * render, and a const referenced in deps before initialization is a TDZ
+   * ReferenceError that kills the whole page (deploy-defect 2026-10-28:
+   * /auth served "This page couldn't load" at runtime while build+tests passed).
+   */
+  const safeCallback = useMemo(() => {
+    const rawCallback = searchParams.get('callbackUrl') ?? ''
+    return rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+      ? rawCallback
+      : '/'
+  }, [searchParams])
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -147,20 +164,6 @@ function AuthPageInner() {
         return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
       })())
     }
-  }, [searchParams])
-
-  /**
-   * Validated `?callbackUrl`, hoisted to component scope so BOTH post-auth
-   * redirects (the mount effect and the submit handler) can honour it.
-   * cubic P2: previously only the submit handler computed this, and it was dropped
-   * entirely on the mustChangePassword path.
-   * Same rules as before: single leading slash, not protocol-relative, no backslash.
-   */
-  const safeCallback = useMemo(() => {
-    const rawCallback = searchParams.get('callbackUrl') ?? ''
-    return rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
-      ? rawCallback
-      : '/'
   }, [searchParams])
 
   const currentModeTitle = useMemo(() => {
