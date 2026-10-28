@@ -197,10 +197,19 @@ export function AISettingsPanel() {
                 <Key className="mr-1 h-3 w-3" />
                 Custom key active
               </Badge>
-            ) : selectedProvider === 'openrouter' ? (
+            ) : (selectedProvider === 'openrouter' || selectedProvider === 'groq') &&
+              (settings?.platformFallbacks?.openrouter || settings?.platformFallbacks?.groq) ? (
+              // t_ae4ae1a9 (Item B): both key-less openrouter and key-less
+              // groq resolve to the SAME platform Standard tier post-#234 —
+              // badge them identically instead of implying OpenRouter is "the
+              // free tier" while the actually-working Groq default wore an
+              // amber fallback warning. cubic P2: the included-tier claim is
+              // gated on a Standard-tier platform fallback actually existing
+              // (Groq or OpenRouter key present) — with neither, there is no
+              // included tier to promise and the amber warning shows.
               <Badge className="border-[var(--teal-deep)] bg-[var(--teal-tint)] text-[var(--teal-deep)]" variant="outline">
                 <Zap className="mr-1 h-3 w-3" />
-                Free tier
+                Standard — included
               </Badge>
             ) : (
               <Badge className="border-amber-500 bg-amber-50 text-amber-700" variant="outline">
@@ -228,8 +237,12 @@ export function AISettingsPanel() {
                     <div className="flex items-center gap-2">
                       <span>{p.label}</span>
                       {!p.requiresKey && (
+                        // t_ae4ae1a9 (Item B): the dropdown badge for a
+                        // platform-keyed provider must not promise "Free" —
+                        // post-#234 the tier the user gets is the included
+                        // Standard tier, so use the TIER_LABELS vocabulary.
                         <Badge variant="outline" className="ml-1 text-xs border-emerald-400 text-emerald-600">
-                          Free
+                          Included
                         </Badge>
                       )}
                     </div>
@@ -239,9 +252,24 @@ export function AISettingsPanel() {
             </Select>
             <p className="text-xs text-muted-foreground">
               {selectedProvider === 'openrouter'
-                ? settings?.platformFallbacks?.openrouter
-                  ? 'Free tier active — auto-routes to best available AI model.'
-                  : 'Add your own OpenRouter key at openrouter.ai/keys for free access.'
+                ? // t_ae4ae1a9 (Item B): describe post-#234 reality, and
+                  // branch on the resolver's ACTUAL fallback combination
+                  // (cubic P2) — ai-providers.ts only funds a key-less
+                  // openrouter preference on the platform OpenRouter key when
+                  // NO platform Groq key exists; with Groq present the
+                  // preference means "no preference" and resolves to the
+                  // Groq-backed Standard tier. The old "auto-routes to best
+                  // available AI model" copy described a dead upstream path
+                  // and re-created stale preferences. cubic P3: a saved BYOK
+                  // key wins every fallback — say so FIRST so a keyed org is
+                  // never told to add a key it already has.
+                  settings?.hasKey
+                    ? 'Your own key is active — it is used for every OpenRouter request.'
+                    : settings?.platformFallbacks?.groq
+                    ? 'Without your own key, this option uses the platform Standard tier — the same included tier as the Groq default. OpenRouter itself is used only when your own key is active.'
+                    : settings?.platformFallbacks?.openrouter
+                      ? 'Without your own key, this option runs on the platform OpenRouter key with a pinned zero-cost model — the included Standard tier on this deployment.'
+                      : 'OpenRouter needs a key on this deployment — add your own at openrouter.ai/keys, or choose a provider that is included.'
                 : selectedProvider === 'groq'
                 ? settings?.platformFallbacks?.groq
                   ? 'Groq fallback is available on this deployment.'

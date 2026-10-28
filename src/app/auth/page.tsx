@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AuthLoadingSkeleton } from '@/components/auth/auth-loading'
-import { buildPostAuthRedirect } from '@/lib/auth/post-auth-redirect'
+import { planPostAuthNavigation } from '@/lib/auth/post-auth-redirect'
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset'
 
@@ -80,6 +80,16 @@ function AuthPageInner() {
   // (not state) so the check is synchronous.
   const forgotRequestIdRef = useRef(0)
   const forgotInFlightRef = useRef(false)
+  // t_ae4ae1a9 (Item A): exactly ONE post-auth navigation per auth event. The
+  // submit handler AND the mount effect below can both fire (the
+  // router.refresh() queued right after signIn re-runs the mount effect once
+  // the session cookie lands) — the race double-navigated the callback target
+  // (a fresh free-plan org landed on /pricing twice post-signup, t_ae0cffe5).
+  // Whichever trigger navigates first flips this latch; every later trigger
+  // for the same page load becomes a no-op. A full page reload resets it —
+  // that is a new auth event, and the already-authed mount redirect must
+  // still fire there.
+  const postAuthNavDoneRef = useRef(false)
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -90,12 +100,19 @@ function AuthPageInner() {
       try {
         const session = await getSession()
         if (!cancelled && session?.user) {
-          router.replace(
-            buildPostAuthRedirect({
-              mustChangePassword: Boolean(session.user.mustChangePassword),
-              callbackPath: safeCallback,
-            }),
-          )
+          // t_ae4ae1a9: single-shot decision — no-ops if the submit handler
+          // already navigated (the refresh()-induced re-run), navigates once
+          // for an already-authed visitor on a fresh page load.
+          const plan = planPostAuthNavigation({
+            trigger: 'mount',
+            alreadyNavigated: postAuthNavDoneRef.current,
+            mustChangePassword: Boolean(session.user.mustChangePassword),
+            callbackPath: safeCallback,
+          })
+          if (plan.navigate) {
+            postAuthNavDoneRef.current = true
+            router.replace(plan.target)
+          }
           router.refresh()
         }
       } catch {
@@ -105,7 +122,7 @@ function AuthPageInner() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, safeCallback])
 
   // Deep-link support: /auth?mode=signup opens the signup form directly.
   // Reactive via useSearchParams (works on soft navigation + back/forward);
@@ -213,12 +230,19 @@ function AuthPageInner() {
       const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: safeCallback })
       if (!result || result.error) throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Authentication failed.')
       const session = await getSession()
-      router.push(
-        buildPostAuthRedirect({
-          mustChangePassword: Boolean(session?.user?.mustChangePassword),
-          callbackPath: safeCallback,
-        }),
-      )
+      // t_ae4ae1a9: single-shot decision — this is the FIRST navigation for
+      // the auth event, so it fires and latches the guard. The mount effect's
+      // refresh()-induced re-run afterwards becomes a no-op (the double-nav).
+      const plan = planPostAuthNavigation({
+        trigger: 'submit',
+        alreadyNavigated: postAuthNavDoneRef.current,
+        mustChangePassword: Boolean(session?.user?.mustChangePassword),
+        callbackPath: safeCallback,
+      })
+      if (plan.navigate) {
+        postAuthNavDoneRef.current = true
+        router.push(plan.target)
+      }
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.')
@@ -313,13 +337,13 @@ function AuthPageInner() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)] px-4 py-6 lg:px-8 lg:py-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(47,107,255,0.18),transparent_32%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)] px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden rounded-[32px] border border-white/60 bg-[rgba(252,252,252,0.76)] shadow-[0_30px_100px_rgba(31,42,54,0.14)] backdrop-blur-xl lg:min-h-[calc(100vh-4rem)]">
         <section className="relative hidden flex-1 overflow-hidden bg-[var(--ink)] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-14">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(47,107,255,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_32px_rgba(24,184,151,0.45)]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_32px_rgba(47,107,255,0.45)]">
                 <Sparkles className="h-5 w-5 text-[var(--ink)]" />
               </div>
               <div>
@@ -382,11 +406,11 @@ function AuthPageInner() {
           <div>
             <div className="mb-10 flex items-center justify-between lg:hidden">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_30px_rgba(24,184,151,0.32)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_30px_rgba(47,107,255,0.32)]">
                   <Sparkles className="h-5 w-5 text-[var(--ink)]" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#0c111b]/50">King CRM Hub</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#0c111b]/62">King CRM Hub</p>
                   <p className="text-sm font-semibold text-[#0c111b]">Freelancer workspace</p>
                 </div>
               </div>
@@ -395,7 +419,7 @@ function AuthPageInner() {
             <div className="mb-8 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--teal-deep)]">Secure workspace access</p>
               <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#0c111b]">{currentModeTitle}</h2>
-              <p className="text-sm leading-6 text-[#0c111b]/55">
+              <p className="text-sm leading-6 text-[#0c111b]/62">
                 {mode === 'login' && 'Sign in to manage leads, pipeline execution, automations, and AI workflows.'}
                 {mode === 'signup' && 'Create your workspace, owner account, and operating foundation in one move.'}
                 {mode === 'forgot' && 'Request a reset token for controlled password recovery.'}
@@ -415,7 +439,7 @@ function AuthPageInner() {
                         'rounded-[14px] px-4 py-3 text-sm font-semibold transition-all',
                         mode === tab
                           ? 'bg-white text-[#0c111b] shadow-[0_10px_25px_rgba(31,42,54,0.08)]'
-                          : 'text-[#0c111b]/45 hover:text-[#0c111b]'
+                          : 'text-[#0c111b]/62 hover:text-[#0c111b]'
                       )}
                     >
                       {tab === 'login' ? 'Sign in' : 'Create account'}
@@ -441,18 +465,18 @@ function AuthPageInner() {
                   {mode === 'signup' && (
                     <>
                       <div>
-                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Owner name</Label>
+                        <Label htmlFor="signup-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Owner name</Label>
                         <Input id="signup-name" name="name" autoComplete="name" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
                       </div>
                       <div>
-                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Organization</Label>
+                        <Label htmlFor="signup-org" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Organization</Label>
                         <Input id="signup-org" name="organization" autoComplete="organization" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="Your name or studio (e.g. Alex Design Co.)" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email</Label>
+                    <Label htmlFor="auth-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Email</Label>
                     <Input
                       id="auth-email"
                       name="email"
@@ -468,7 +492,7 @@ function AuthPageInner() {
                   </div>
 
                   <div>
-                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Password</Label>
+                    <Label htmlFor="auth-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Password</Label>
                     <Input
                       id="auth-password"
                       name="password"
@@ -486,7 +510,7 @@ function AuthPageInner() {
 
                   {mode === 'signup' && (
                     <div>
-                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                      <Label htmlFor="auth-confirm" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Confirm password</Label>
                       <Input
                         id="auth-confirm"
                         name="confirmPassword"
@@ -517,14 +541,14 @@ function AuthPageInner() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)] hover:opacity-95"
+                    className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(47,107,255,0.28)] hover:opacity-95"
                   >
                     {loading ? 'Working…' : mode === 'login' ? 'Sign in' : 'Create workspace'}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
 
                   {mode === 'signup' && (
-                    <p className="text-center text-xs leading-5 text-[#0c111b]/55">
+                    <p className="text-center text-xs leading-5 text-[#0c111b]/62">
                       By creating a workspace you agree to our{' '}
                       <a
                         href="/terms"
@@ -567,11 +591,11 @@ function AuthPageInner() {
                   if (!forgotRequested) void handleForgotPassword()
                 }}
               >
-                <button type="button" onClick={() => switchMode('login')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+                <button type="button" onClick={() => switchMode('login')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/62 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back to sign in
                 </button>
                 <div>
-                  <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Email address</Label>
+                  <Label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Email address</Label>
                   <Input id="forgot-email" name="email" autoComplete="email" type="email" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="you@company.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
@@ -581,7 +605,7 @@ function AuthPageInner() {
                     Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(47,107,255,0.28)]">
                     {loading ? 'Sending request…' : 'Request password reset'}
                   </Button>
                 )}
@@ -596,24 +620,24 @@ function AuthPageInner() {
                   void handleResetPassword()
                 }}
               >
-                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/55 hover:text-[#0c111b]">
+                <button type="button" onClick={() => switchMode('forgot')} className="inline-flex min-h-[24px] items-center gap-2 text-sm font-medium text-[#0c111b]/62 hover:text-[#0c111b]">
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
                 <div>
-                  <Label htmlFor="reset-token" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Reset token</Label>
+                  <Label htmlFor="reset-token" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Reset token</Label>
                   <Input id="reset-token" name="token" autoComplete="one-time-code" required className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white font-mono shadow-sm" placeholder="Paste your reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="reset-new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">New password</Label>
+                  <Label htmlFor="reset-new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">New password</Label>
                   <Input id="reset-new-password" name="newPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/52">Confirm password</Label>
+                  <Label htmlFor="reset-confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#0c111b]/62">Confirm password</Label>
                   <Input id="reset-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" required minLength={8} className="h-12 rounded-2xl border-[rgba(31,42,54,0.1)] bg-white shadow-sm" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
-                <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(47,107,255,0.28)]">
                   {loading ? 'Resetting password…' : 'Reset password'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -621,7 +645,7 @@ function AuthPageInner() {
             )}
           </div>
 
-          <p className="mt-10 text-center text-xs text-[#0c111b]/35">
+          <p className="mt-10 text-center text-xs text-[#0c111b]/62">
             © 2026 King CRM Hub. Proof. Decision. Next Move.
           </p>
         </section>

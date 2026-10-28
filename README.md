@@ -57,18 +57,20 @@ This scaffold provides a robust foundation built with:
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies (requires Bun >= 1.4.2 — the lockfile records a nested
-# next-auth override that older Bun clients cannot read)
-bun install
+# Install dependencies (npm ci is THE supported install path. Do NOT use bun:
+# bun 1.3.11 cannot parse this repo's committed bun.lock and silently
+# re-resolves a different dependency set, dropping the protected
+# next-auth.uuid 11.1.1 security pin in package.json overrides)
+npm ci
 
-# Start development server
-bun run dev
+# Start development server (tees dev.log; probe via http://localhost:3000)
+npm run dev
 
 # Build for production
-bun run build
+npm run build
 
 # Start production server
-bun start
+npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see your application running.
@@ -77,14 +79,14 @@ Open [http://localhost:3000](http://localhost:3000) to see your application runn
 
 Type safety is strictly enforced in local development and CI:
 
-- `bun run typecheck` runs `tsc --noEmit --project tsconfig.typecheck.json`.
+- `npm run typecheck` runs `tsc --noEmit --project tsconfig.typecheck.json`.
 - There is no TypeScript-error allowlist/baseline: any TS error fails the check.
 - The CI `typecheck` job is a required status check and fails on any TypeScript error.
 
 Run this before opening a PR:
 
 ```bash
-bun run typecheck
+npm run typecheck
 ```
 
 

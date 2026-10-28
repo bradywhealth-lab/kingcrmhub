@@ -89,3 +89,71 @@ export function buildPostAuthRedirect({
 
   return `${PASSWORD_ROUTE}?callbackUrl=${encodeURIComponent(safeCallback)}`
 }
+
+// ---------------------------------------------------------------------------
+// t_ae4ae1a9 (Item A) — exactly ONE post-auth navigation per auth event.
+//
+// src/app/auth/page.tsx carries TWO independent post-auth navigation
+// triggers: the submit handler (router.push) and the mount effect
+// (router.replace). The router.refresh() queued right after signIn
+// re-renders / re-suspends the page, which re-runs the mount effect AFTER the
+// session cookie lands — so both triggers can fire for ONE auth event and
+// navigate the callback target twice. Live observation (t_ae0cffe5,
+// 2026-10-27): a fresh free-plan org auto-navigated to /pricing TWICE
+// post-signup (paid-CTA callbackUrl); paid orgs unaffected.
+//
+// This planner is the single decision point: the caller flips a per-event
+// guard when a navigation is issued, and every later trigger for the same
+// event (the refresh-induced mount re-run) receives `alreadyNavigated: true`
+// and becomes a no-op. Extracted as a pure function because this repo has no
+// jsdom/testing-library — the React effect itself cannot be exercised in a
+// test, so the decision lives here where it CAN be asserted (same discipline
+// as buildPostAuthRedirect and plan-intent.ts).
+// ---------------------------------------------------------------------------
+
+/** Which of the two auth-page triggers is asking to navigate. */
+export type PostAuthNavTrigger = 'mount' | 'submit'
+
+export type PostAuthNavPlan =
+  | { navigate: false }
+  | { navigate: true; target: string; history: 'push' | 'replace' }
+
+export type PostAuthNavigationInput = PostAuthRedirectInput & {
+  /** The trigger asking to navigate: the submit handler, or the mount effect. */
+  trigger: PostAuthNavTrigger
+  /**
+   * True when a navigation has ALREADY been issued for this auth event. A ref
+   * in auth/page.tsx flips when the first navigation fires; a fresh page load
+   * resets it (a new load is a new auth event, and the already-authed mount
+   * redirect must still work there).
+   */
+  alreadyNavigated: boolean
+}
+
+/**
+ * Decide whether to navigate after authentication, and how.
+ *
+ * - No navigation has fired yet → navigate to the (validated) redirect
+ *   target. The submit trigger pushes (a user action created the history
+ *   entry); the mount trigger replaces (an ambient redirect should not
+ *   leave /auth in the back stack).
+ * - A navigation already fired for this auth event → do nothing. The
+ *   double-navigation is the defect this exists to prevent.
+ *
+ * Never throws and never returns an unsafe target: the target comes from
+ * buildPostAuthRedirect, which applies the same-origin validation.
+ */
+export function planPostAuthNavigation({
+  trigger,
+  alreadyNavigated,
+  mustChangePassword,
+  callbackPath,
+}: PostAuthNavigationInput): PostAuthNavPlan {
+  if (alreadyNavigated) return { navigate: false }
+
+  return {
+    navigate: true,
+    target: buildPostAuthRedirect({ mustChangePassword, callbackPath }),
+    history: trigger === 'mount' ? 'replace' : 'push',
+  }
+}

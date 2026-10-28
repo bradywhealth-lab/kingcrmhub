@@ -146,6 +146,59 @@ export function buildPricingCallbackUrl(
 }
 
 /**
+ * Build the /auth URL that opens the SIGNUP form for a conversion CTA.
+ *
+ * A11 re-activation (2026-10-27, live measurement on production): every
+ * signup-promising /pricing CTA landed on the SIGN-IN form ("Welcome back")
+ * because the redirect targeted `/auth` (or `/auth?callbackUrl=...`) without
+ * `?mode=signup`. The auth page honours mode=signup (deep-link support,
+ * src/app/auth/page.tsx) and the landing pages already use this shape
+ * (welcome/privacy/terms). This builder is the single producer for that
+ * contract so /pricing CTAs cannot drift back to the sign-in wall: a CTA that
+ * promises account creation must open the account-creation form.
+ *
+ * An optional callbackUrl is nested percent-encoded, exactly what the signed-out
+ * 401 branch needs: a paid-plan click becomes
+ * `/auth?mode=signup&callbackUrl=%2Fpricing%3Fplan%3D...` so the visitor signs
+ * up, lands back on /pricing, and the resume prompt offers the checkout — the
+ * intent survives instead of stranding on a sign-in wall.
+ *
+ * Throws on a callbackUrl the auth page would silently replace with '/'
+ * (auth/page.tsx validates: single leading slash, not protocol-relative, no
+ * backslash). Emitting such a URL would drop the intent invisibly at the end
+ * of a redirect — the same defect class this module exists to prevent — so the
+ * producer fails loudly instead.
+ */
+export function buildSignupAuthUrl(callbackUrl?: string): string {
+  if (callbackUrl === undefined || callbackUrl === '') return '/auth?mode=signup'
+  if (typeof callbackUrl !== 'string') {
+    throw new Error(
+      `buildSignupAuthUrl: callbackUrl must be a same-origin path auth will honour (got ${JSON.stringify(callbackUrl)})`,
+    )
+  }
+  // charCode loop rather than a control-char regex: same guarantee without a
+  // lint-suppression, and it reads as the exact rule (C0 controls + DEL).
+  for (let i = 0; i < callbackUrl.length; i += 1) {
+    const code = callbackUrl.charCodeAt(i)
+    if (code < 0x20 || code === 0x7f) {
+      throw new Error(
+        `buildSignupAuthUrl: callbackUrl must not contain control characters (got ${JSON.stringify(callbackUrl)})`,
+      )
+    }
+  }
+  if (
+    !callbackUrl.startsWith('/') ||
+    callbackUrl.startsWith('//') ||
+    callbackUrl.includes('\\')
+  ) {
+    throw new Error(
+      `buildSignupAuthUrl: callbackUrl must be a same-origin path auth will honour (got ${JSON.stringify(callbackUrl)})`,
+    )
+  }
+  return `/auth?mode=signup&callbackUrl=${encodeURIComponent(callbackUrl)}`
+}
+
+/**
  * Resolve a resume intent from a raw `location.search` string.
  *
  * This is the mount-time seam the pricing page calls. It exists as a pure
