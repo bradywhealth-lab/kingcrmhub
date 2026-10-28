@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AuthLoadingSkeleton } from '@/components/auth/auth-loading'
-import { buildPostAuthRedirect } from '@/lib/auth/post-auth-redirect'
+import { planPostAuthNavigation } from '@/lib/auth/post-auth-redirect'
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset'
 
@@ -80,6 +80,16 @@ function AuthPageInner() {
   // (not state) so the check is synchronous.
   const forgotRequestIdRef = useRef(0)
   const forgotInFlightRef = useRef(false)
+  // t_ae4ae1a9 (Item A): exactly ONE post-auth navigation per auth event. The
+  // submit handler AND the mount effect below can both fire (the
+  // router.refresh() queued right after signIn re-runs the mount effect once
+  // the session cookie lands) — the race double-navigated the callback target
+  // (a fresh free-plan org landed on /pricing twice post-signup, t_ae0cffe5).
+  // Whichever trigger navigates first flips this latch; every later trigger
+  // for the same page load becomes a no-op. A full page reload resets it —
+  // that is a new auth event, and the already-authed mount redirect must
+  // still fire there.
+  const postAuthNavDoneRef = useRef(false)
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -90,12 +100,19 @@ function AuthPageInner() {
       try {
         const session = await getSession()
         if (!cancelled && session?.user) {
-          router.replace(
-            buildPostAuthRedirect({
-              mustChangePassword: Boolean(session.user.mustChangePassword),
-              callbackPath: safeCallback,
-            }),
-          )
+          // t_ae4ae1a9: single-shot decision — no-ops if the submit handler
+          // already navigated (the refresh()-induced re-run), navigates once
+          // for an already-authed visitor on a fresh page load.
+          const plan = planPostAuthNavigation({
+            trigger: 'mount',
+            alreadyNavigated: postAuthNavDoneRef.current,
+            mustChangePassword: Boolean(session.user.mustChangePassword),
+            callbackPath: safeCallback,
+          })
+          if (plan.navigate) {
+            postAuthNavDoneRef.current = true
+            router.replace(plan.target)
+          }
           router.refresh()
         }
       } catch {
@@ -105,7 +122,7 @@ function AuthPageInner() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, safeCallback])
 
   // Deep-link support: /auth?mode=signup opens the signup form directly.
   // Reactive via useSearchParams (works on soft navigation + back/forward);
@@ -213,12 +230,19 @@ function AuthPageInner() {
       const result = await signIn('credentials', { redirect: false, email, password, callbackUrl: safeCallback })
       if (!result || result.error) throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Authentication failed.')
       const session = await getSession()
-      router.push(
-        buildPostAuthRedirect({
-          mustChangePassword: Boolean(session?.user?.mustChangePassword),
-          callbackPath: safeCallback,
-        }),
-      )
+      // t_ae4ae1a9: single-shot decision — this is the FIRST navigation for
+      // the auth event, so it fires and latches the guard. The mount effect's
+      // refresh()-induced re-run afterwards becomes a no-op (the double-nav).
+      const plan = planPostAuthNavigation({
+        trigger: 'submit',
+        alreadyNavigated: postAuthNavDoneRef.current,
+        mustChangePassword: Boolean(session?.user?.mustChangePassword),
+        callbackPath: safeCallback,
+      })
+      if (plan.navigate) {
+        postAuthNavDoneRef.current = true
+        router.push(plan.target)
+      }
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.')

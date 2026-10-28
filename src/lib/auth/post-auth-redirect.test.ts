@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPostAuthRedirect } from './post-auth-redirect'
+import { buildPostAuthRedirect, planPostAuthNavigation } from './post-auth-redirect'
 
 // ---------------------------------------------------------------------------
 // cubic P2 (crm-pricing-page.tsx:246, confidence 8) — VERIFIED in source:
@@ -119,6 +119,129 @@ describe('buildPostAuthRedirect', () => {
 })
 
 // ---------------------------------------------------------------------------
+// t_ae4ae1a9 (Item A) — the post-signup DOUBLE navigation to the callback
+// target.
+//
+// VERIFIED IN SOURCE (src/app/auth/page.tsx): the page carries TWO independent
+// post-auth navigation triggers —
+//   1. the submit handler: router.push(buildPostAuthRedirect(...)) + router.refresh()
+//   2. the mount effect:   router.replace(buildPostAuthRedirect(...)) + router.refresh()
+// The refresh() queued right after signIn re-renders / re-suspends the page,
+// which re-runs the mount effect AFTER the session cookie lands — so BOTH
+// triggers can fire for ONE auth event. Live observation (t_ae0cffe5,
+// 2026-10-27): a fresh free-plan org auto-navigated to /pricing TWICE
+// post-signup (paid-CTA callbackUrl /pricing?plan=...); paid orgs unaffected.
+// CodeForge live re-measurement (same day): the race usually coalesces into a
+// single navigation, but the structure permits two — the fix makes two
+// structurally impossible: ONE navigation owner, guarded per auth event.
+//
+// Intended post-signup sequences (verified live on prod + source):
+//   free-plan signup (no checkout intent): /auth?mode=signup -> ONE
+//   navigation to '/' (dashboard) with the onboarding wizard. A /pricing
+//   visit is NOT part of the free-plan onboarding design.
+//   paid-CTA signup (checkout intent): ONE navigation to /pricing?plan=...
+//   where the resume prompt offers the checkout (pinned in plan-intent.test.ts).
+// ---------------------------------------------------------------------------
+describe('planPostAuthNavigation (exactly one navigation per auth event)', () => {
+  it('issues a push navigation for the submit trigger', () => {
+    const plan = planPostAuthNavigation({
+      trigger: 'submit',
+      alreadyNavigated: false,
+      mustChangePassword: false,
+      callbackPath: '/pricing?plan=starter&interval=monthly',
+    })
+    expect(plan).toEqual({
+      navigate: true,
+      target: '/pricing?plan=starter&interval=monthly',
+      history: 'push',
+    })
+  })
+
+  it('suppresses the mount re-trigger once a submit navigation fired (the /pricing double-nav)', () => {
+    // The refresh()-induced mount re-run arrives AFTER the submit handler has
+    // already navigated. It must be a no-op, or the callback target is
+    // navigated twice — the exact anomaly observed on the fresh free-plan org.
+    const plan = planPostAuthNavigation({
+      trigger: 'mount',
+      alreadyNavigated: true,
+      mustChangePassword: false,
+      callbackPath: '/pricing?plan=starter&interval=monthly',
+    })
+    expect(plan).toEqual({ navigate: false })
+  })
+
+  it('still navigates a fresh page-load mount for an already-authed visitor (replace, not push)', () => {
+    // The mount-effect redirect for an already-authenticated /auth visit must
+    // survive the guard — a ref resets on every full page load, and this path
+    // is the one that redirects visitors who land on /auth with a session.
+    const plan = planPostAuthNavigation({
+      trigger: 'mount',
+      alreadyNavigated: false,
+      mustChangePassword: false,
+      callbackPath: '/',
+    })
+    expect(plan).toEqual({ navigate: true, target: '/', history: 'replace' })
+  })
+
+  it('pins the free-plan post-signup sequence: ONE navigation to the dashboard root, never /pricing', () => {
+    // Full trigger sequence for a free-plan signup (no callbackUrl):
+    // submit navigates, then the refresh-induced mount re-trigger fires.
+    const sequence = [
+      planPostAuthNavigation({
+        trigger: 'submit',
+        alreadyNavigated: false,
+        mustChangePassword: false,
+        callbackPath: '/',
+      }),
+      planPostAuthNavigation({
+        trigger: 'mount',
+        alreadyNavigated: true,
+        mustChangePassword: false,
+        callbackPath: '/',
+      }),
+    ]
+    const navigations = sequence.filter((p) => p.navigate)
+    expect(navigations).toHaveLength(1)
+    expect(navigations[0]).toEqual({ navigate: true, target: '/', history: 'push' })
+    expect(navigations[0].target).not.toContain('/pricing')
+  })
+
+  it('pins the paid-CTA signup sequence: the /pricing resume target, exactly once', () => {
+    const sequence = [
+      planPostAuthNavigation({
+        trigger: 'submit',
+        alreadyNavigated: false,
+        mustChangePassword: false,
+        callbackPath: '/pricing?plan=starter&interval=monthly',
+      }),
+      planPostAuthNavigation({
+        trigger: 'mount',
+        alreadyNavigated: true,
+        mustChangePassword: false,
+        callbackPath: '/pricing?plan=starter&interval=monthly',
+      }),
+    ]
+    const navigations = sequence.filter((p) => p.navigate)
+    expect(navigations).toHaveLength(1)
+    expect(navigations[0].target).toBe('/pricing?plan=starter&interval=monthly')
+  })
+
+  it('forwards the forced-password-change branch through the same single-shot contract', () => {
+    const plan = planPostAuthNavigation({
+      trigger: 'submit',
+      alreadyNavigated: false,
+      mustChangePassword: true,
+      callbackPath: '/pricing?plan=pro&interval=monthly',
+    })
+    expect(plan).toEqual({
+      navigate: true,
+      target: '/auth/password?callbackUrl=%2Fpricing%3Fplan%3Dpro%26interval%3Dmonthly',
+      history: 'push',
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // WIRING GUARD — same discipline as plan-intent.test.ts. The pure tests above all
 // pass even if auth/page.tsx never imports this helper, which is exactly the
 // defect being fixed. Source-level assertion; HONEST LIMITATION: with no jsdom in
@@ -136,8 +259,19 @@ describe('auth/page.tsx preserves callbackUrl (wiring guard)', () => {
     expect(source).toContain("from '@/lib/auth/post-auth-redirect'")
   })
 
-  it('routes BOTH post-auth redirects through it (mount effect + submit handler)', () => {
-    expect(source.match(/buildPostAuthRedirect\(\{/g)).toHaveLength(2)
+  it('routes BOTH post-auth triggers through the single-shot planner (mount effect + submit handler)', () => {
+    // t_ae4ae1a9: both navigation triggers must decide through
+    // planPostAuthNavigation so exactly one navigation can fire per auth event.
+    expect(source.match(/planPostAuthNavigation\(\{/g)).toHaveLength(2)
+    // The page must no longer call buildPostAuthRedirect directly — a direct
+    // call is a second, unguarded decision point (the double-nav defect class).
+    expect((source.match(/buildPostAuthRedirect\(\{/g) ?? []).length).toBe(0)
+  })
+
+  it('flips an in-flight guard so the second trigger cannot double-navigate', () => {
+    // The ref is the single-shot latch: whichever trigger navigates first wins.
+    expect(source).toContain('postAuthNavDoneRef')
+    expect(source.match(/postAuthNavDoneRef\.current = true/g)).toHaveLength(2)
   })
 
   it('no longer hardcodes the callback-dropping ternary', () => {

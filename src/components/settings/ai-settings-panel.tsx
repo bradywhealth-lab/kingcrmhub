@@ -197,10 +197,15 @@ export function AISettingsPanel() {
                 <Key className="mr-1 h-3 w-3" />
                 Custom key active
               </Badge>
-            ) : selectedProvider === 'openrouter' ? (
+            ) : selectedProvider === 'openrouter' || selectedProvider === 'groq' ? (
+              // t_ae4ae1a9 (Item B): both key-less openrouter and key-less
+              // groq resolve to the SAME platform Standard tier post-#234 —
+              // badge them identically instead of implying OpenRouter is "the
+              // free tier" while the actually-working Groq default wore an
+              // amber fallback warning.
               <Badge className="border-[var(--teal-deep)] bg-[var(--teal-tint)] text-[var(--teal-deep)]" variant="outline">
                 <Zap className="mr-1 h-3 w-3" />
-                Free tier
+                Standard — included
               </Badge>
             ) : (
               <Badge className="border-amber-500 bg-amber-50 text-amber-700" variant="outline">
@@ -239,9 +244,14 @@ export function AISettingsPanel() {
             </Select>
             <p className="text-xs text-muted-foreground">
               {selectedProvider === 'openrouter'
-                ? settings?.platformFallbacks?.openrouter
-                  ? 'Free tier active — auto-routes to best available AI model.'
-                  : 'Add your own OpenRouter key at openrouter.ai/keys for free access.'
+                ? // t_ae4ae1a9 (Item B): describe post-#234 reality — a
+                  // key-less OpenRouter preference resolves to the platform
+                  // Standard tier (Groq-backed on this deployment); the old
+                  // "auto-routes to best available AI model" copy described a
+                  // dead upstream path and re-created stale preferences.
+                  (settings?.platformFallbacks?.openrouter
+                    ? 'Without your own key, this option uses the platform Standard tier — the same included tier as Groq. OpenRouter is only used when your own key is active.'
+                    : 'OpenRouter requires your own key on this deployment — get one at openrouter.ai/keys.')
                 : selectedProvider === 'groq'
                 ? settings?.platformFallbacks?.groq
                   ? 'Groq fallback is available on this deployment.'
