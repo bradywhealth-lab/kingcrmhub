@@ -78,6 +78,14 @@ describe('settings AI panel copy describes post-#234 reality (t_ae4ae1a9)', () =
     )
   })
 
+  it('the OpenRouter helper copy acknowledges an active saved key before any fallback branch (cubic P3)', () => {
+    // With a saved BYOK key the resolver runs OpenRouter on the org's own
+    // key — the helper must say so, not tell a keyed org to add a key.
+    expect(rendered).toContain(
+      'Your own key is active — it is used for every OpenRouter request.',
+    )
+  })
+
   it('the provider dropdown badge says "Included", not "Free"', () => {
     // The dropdown rendered a "Free" badge for every provider with a platform
     // key — on this deployment that badge sat next to OpenRouter and was the

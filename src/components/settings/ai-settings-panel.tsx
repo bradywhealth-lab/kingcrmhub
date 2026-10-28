@@ -260,12 +260,16 @@ export function AISettingsPanel() {
                   // preference means "no preference" and resolves to the
                   // Groq-backed Standard tier. The old "auto-routes to best
                   // available AI model" copy described a dead upstream path
-                  // and re-created stale preferences.
-                  (settings?.platformFallbacks?.groq
+                  // and re-created stale preferences. cubic P3: a saved BYOK
+                  // key wins every fallback — say so FIRST so a keyed org is
+                  // never told to add a key it already has.
+                  settings?.hasKey
+                    ? 'Your own key is active — it is used for every OpenRouter request.'
+                    : settings?.platformFallbacks?.groq
                     ? 'Without your own key, this option uses the platform Standard tier — the same included tier as the Groq default. OpenRouter itself is used only when your own key is active.'
                     : settings?.platformFallbacks?.openrouter
                       ? 'Without your own key, this option runs on the platform OpenRouter key with a pinned zero-cost model — the included Standard tier on this deployment.'
-                      : 'OpenRouter needs a key on this deployment — add your own at openrouter.ai/keys, or choose a provider that is included.')
+                      : 'OpenRouter needs a key on this deployment — add your own at openrouter.ai/keys, or choose a provider that is included.'
                 : selectedProvider === 'groq'
                 ? settings?.platformFallbacks?.groq
                   ? 'Groq fallback is available on this deployment.'
