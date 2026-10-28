@@ -20,10 +20,15 @@ const PUBLIC_STATIC_ASSETS = new Set([
 // shell. Next.js advertises BOTH variants as `cache-control: s-maxage=31536000`
 // (its default for prerendered routes) with no `Vary: Cookie`, authorizing any
 // shared cache layered in front (CDN, Caddy cache module, corporate proxy) to
-// serve the anonymous marketing variant to signed-in users for a year. Every
-// response whose bytes depend on the session cookie must opt out of shared
+// serve the anonymous marketing variant to signed-in users for a year. The
+// same variant class covers /auth, /welcome, and /claim (anonymous 200 vs
+// signed-in redirect — a shared cache holding the anonymous page would serve
+// it straight to signed-in users and skip the middleware redirect, cubic P2
+// on PR #253). Every response on a cookie-variant URL opts out of shared
 // caching. Responses identical for all requesters (public /pricing, /terms,
-// /privacy, /book, /compare) keep their prerender cache contract.
+// /privacy, /book, /compare) keep their prerender cache contract. Next's
+// internal full-route cache still serves no-store'd routes (x-nextjs-cache:
+// HIT), so there is no serving-perf regression.
 const NO_SHARED_CACHE = 'no-store, max-age=0'
 
 function withNoSharedCache(response: NextResponse): NextResponse {
@@ -85,8 +90,11 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/'
       return withNoSharedCache(NextResponse.redirect(url))
     }
+    // Cookie-variant URL: anonymous 200 vs signed-in redirect — the anonymous
+    // 200 must be no-store too, or a shared cache could serve the login page
+    // to signed-in users and skip the redirect (cubic P2 on PR #253).
     const response = NextResponse.next()
-    return applySecurityHeaders(request, response)
+    return withNoSharedCache(applySecurityHeaders(request, response))
   }
 
   // Public landing routes for visitors; signed-in users stay in the app
@@ -96,8 +104,12 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/'
       return withNoSharedCache(NextResponse.redirect(url))
     }
+    // Cookie-variant URL (cubic P2 on PR #253): no-store the anonymous 200 as
+    // well so a shared cache can never serve marketing HTML to a signed-in
+    // user browsing to /welcome directly. Next's internal full-route cache
+    // still serves it (x-nextjs-cache: HIT), so there is no serving cost.
     const response = NextResponse.next()
-    return applySecurityHeaders(request, response)
+    return withNoSharedCache(applySecurityHeaders(request, response))
   }
 
   // Public pricing — visitors must be able to evaluate plans before signup.
@@ -116,8 +128,9 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/'
       return withNoSharedCache(NextResponse.redirect(url))
     }
+    // Cookie-variant URL (cubic P2 on PR #253): no-store the anonymous 200 too.
     const response = NextResponse.next()
-    return applySecurityHeaders(request, response)
+    return withNoSharedCache(applySecurityHeaders(request, response))
   }
 
   // Public booking pages (/book/[slug]) — accessible without a session

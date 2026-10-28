@@ -207,4 +207,20 @@ describe('root HTML shared-cache contract (t_3b1d1aa0): cookie-variant responses
     expect(response.headers.get('location')).toBeNull()
     expect(response.headers.get('cache-control')).toBeNull()
   })
+
+  it.each(['/auth', '/welcome', '/claim'])(
+    'logged-out GET %s (anonymous 200) carries no-store — a shared cache must not serve it to signed-in users (cubic P2)',
+    async (path) => {
+      // These URLs are cookie-variant: anonymous 200 vs signed-in redirect.
+      // If the anonymous 200 stayed s-maxage=31536000, a shared cache could
+      // serve the cached page to a signed-in user and skip the middleware
+      // redirect entirely.
+      vi.mocked(getToken).mockResolvedValue(undefined)
+      const request = new NextRequest(`http://localhost:3000${path}`)
+      const response = await middleware(request, undefined as never)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('cache-control')).toContain('no-store')
+    },
+  )
 })
