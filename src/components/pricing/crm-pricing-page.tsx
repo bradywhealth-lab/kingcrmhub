@@ -289,7 +289,7 @@ export function CrmPricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.08),transparent_40%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(47,107,255,0.08),transparent_40%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)]">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5 sm:px-10 lg:px-16">
         <div className="flex items-center gap-3">

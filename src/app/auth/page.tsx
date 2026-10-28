@@ -313,13 +313,13 @@ function AuthPageInner() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.18),transparent_32%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)] px-4 py-6 lg:px-8 lg:py-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(47,107,255,0.18),transparent_32%),linear-gradient(180deg,#fcf8ec_0%,#f4f0e6_100%)] px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden rounded-[32px] border border-white/60 bg-[rgba(252,252,252,0.76)] shadow-[0_30px_100px_rgba(31,42,54,0.14)] backdrop-blur-xl lg:min-h-[calc(100vh-4rem)]">
         <section className="relative hidden flex-1 overflow-hidden bg-[var(--ink)] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-14">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(24,184,151,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(47,107,255,0.35),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(58,95,217,0.28),transparent_28%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_32px_rgba(24,184,151,0.45)]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_32px_rgba(47,107,255,0.45)]">
                 <Sparkles className="h-5 w-5 text-[var(--ink)]" />
               </div>
               <div>
@@ -382,7 +382,7 @@ function AuthPageInner() {
           <div>
             <div className="mb-10 flex items-center justify-between lg:hidden">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_30px_rgba(24,184,151,0.32)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--teal)] shadow-[0_12px_30px_rgba(47,107,255,0.32)]">
                   <Sparkles className="h-5 w-5 text-[var(--ink)]" />
                 </div>
                 <div>
@@ -517,7 +517,7 @@ function AuthPageInner() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)] hover:opacity-95"
+                    className="h-12 w-full rounded-2xl bg-[var(--teal)] text-sm font-semibold text-[var(--ink)] shadow-[0_16px_34px_rgba(47,107,255,0.28)] hover:opacity-95"
                   >
                     {loading ? 'Working…' : mode === 'login' ? 'Sign in' : 'Create workspace'}
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -581,7 +581,7 @@ function AuthPageInner() {
                     Continue to reset <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(47,107,255,0.28)]">
                     {loading ? 'Sending request…' : 'Request password reset'}
                   </Button>
                 )}
@@ -613,7 +613,7 @@ function AuthPageInner() {
                 </div>
                 {error && <StatusCard tone="error" message={error} />}
                 {success && <StatusCard tone="success" message={success} />}
-                <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(24,184,151,0.28)]">
+                <Button type="submit" disabled={loading} className="h-12 w-full rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_16px_34px_rgba(47,107,255,0.28)]">
                   {loading ? 'Resetting password…' : 'Reset password'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
