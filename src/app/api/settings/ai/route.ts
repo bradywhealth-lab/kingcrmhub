@@ -30,9 +30,20 @@ function maskKey(key: string | undefined | null): string | null {
 /**
  * Atlas Gate v1.4 — vendor-only labels for dropdown (no model names).
  * Model slugs are internal SDK params, imported from ai-providers.ts.
+ *
+ * t_ae4ae1a9 (Item B): OpenRouter must NOT be labeled "(Free)". Post-#234 a
+ * key-less openrouter preference resolves to the Groq-backed platform
+ * Standard tier (ai-providers.ts gates the OpenRouter platform branch behind
+ * !GROQ_API_KEY, and this deployment holds a platform Groq key), and the
+ * upstream free slug behind the label was retired (the 2026-10-27 assistant
+ * outage). The "(Free)" promise is what led a user to re-save the stale
+ * key-less preference the October migration had cleaned. A plain vendor
+ * label — same convention as the other three — carries no tier promise; the
+ * tier the user actually gets is stated by providerLabel (Standard —
+ * included / Advanced — bring your own key).
  */
 const PROVIDER_LABELS: Record<AIProvider, string> = {
-  openrouter: 'OpenRouter (Free)',
+  openrouter: 'OpenRouter',
   groq: 'Groq',
   openai: 'OpenAI',
   anthropic: 'Anthropic',

@@ -219,7 +219,7 @@ function ClaimPageInner() {
         </div>
 
         <div className="mt-10 border-t pt-6" style={{ borderColor: 'rgba(244,240,230,0.12)' }}>
-          <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'rgba(244,240,230,0.45)' }}>Eligible products</p>
+          <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'rgba(244,240,230,0.5)' }}>Eligible products</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {products.map((product) => (
               <span key={product.id} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium" style={{ borderColor: 'rgba(244,240,230,0.2)', color: PAPER }}>
@@ -227,17 +227,17 @@ function ClaimPageInner() {
               </span>
             ))}
             {products.length === 0 && (
-              <span className="text-xs" style={{ color: 'rgba(244,240,230,0.4)' }}>
+              <span className="text-xs" style={{ color: 'rgba(244,240,230,0.5)' }}>
                 Eligible products are listed when available.
               </span>
             )}
           </div>
-          <p className="mt-4 text-xs" style={{ color: 'rgba(244,240,230,0.4)' }}>
+          <p className="mt-4 text-xs" style={{ color: 'rgba(244,240,230,0.5)' }}>
             No guarantees, no refunds, no surprise charges. At the end of your month you choose: keep Studio at $39/mo or drop to Free — your data stays either way.
           </p>
         </div>
 
-        <div className="mt-8 flex items-center justify-center gap-2 text-xs" style={{ color: 'rgba(244,240,230,0.45)' }}>
+        <div className="mt-8 flex items-center justify-center gap-2 text-xs" style={{ color: 'rgba(244,240,230,0.5)' }}>
           <Users className="h-4 w-4" />
           Built for freelancers and one-person businesses.
         </div>

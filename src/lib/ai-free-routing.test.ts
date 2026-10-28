@@ -119,6 +119,11 @@ describe('free-tier AI routing — Groq pinned models win over the OpenRouter au
   it('coerces an org whose STORED model is the retired auto-router slug', async () => {
     // Migration trap: orgs saved `openrouter/free` under earlier versions. Left
     // as-is it would resurrect the exact defect this PR removes.
+    // t_c1c40620: with BOTH platform keys present, a key-less stored
+    // openrouter preference is "no preference" and resolves to Groq-first (see
+    // ai-openrouter-keyless-failover.test.ts). The OpenRouter branch only
+    // fires when no Groq key exists — assert the coercion there.
+    setEnv({ GROQ_API_KEY: undefined })
     mockDb.organization.findUnique.mockResolvedValueOnce({
       settings: { aiProvider: 'openrouter', aiModel: 'openrouter/free' },
     })
@@ -131,6 +136,10 @@ describe('free-tier AI routing — Groq pinned models win over the OpenRouter au
     // to catch.
     expect(config.model).toBe('qwen/qwen3.8-27b:free')
     expect(config.provider).toBe('openrouter')
+    // Pin WHICH branch produced this: the preference branch (org chose
+    // openrouter) has a distinct label from the free-tier fallback, so this
+    // cannot pass through the wrong route.
+    expect(config.label).toBe('OpenRouter Free (platform)')
   })
 
   it('falls back to Groq when only the Groq key exists', async () => {
