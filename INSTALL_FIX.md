@@ -13,7 +13,7 @@ Run these in your **project root** in a normal terminal (so you can enter your p
 rm -rf ~/.npm/_cacache
 
 # 2. From project root: remove node_modules and reinstall
-cd /Users/bradywilson/Desktop/insurafuze_king-crm/z.ai-1st-kingCRM
+cd /path/to/kingcrmhub
 rm -rf node_modules
 npm install
 
@@ -31,25 +31,24 @@ rm -rf node_modules
 
 ---
 
-## Option B: Use Bun (project already has `bun.lock`)
+## Option B: Full clean reinstall (if npm keeps failing)
 
-If npm keeps failing, use Bun for installs:
+**Do not switch to `bun install`.** This repo installs with **npm only**. Bun re-resolving this repo's `bun.lock` silently drops the protected `next-auth → uuid: 11.1.1` override from `package.json` `overrides`, producing a wrong dependency tree (proven on t_598b10c8). Bun use is confined to the non-blocking nightly CI job (`--frozen-lockfile`); it is not a supported local install path.
+
+Instead, remove `node_modules`, verify the npm cache, and reinstall from the existing `package-lock.json`:
 
 ```bash
-# Install Bun (one-time)
-curl -fsSL https://bun.sh/install | bash
-# Restart terminal or: source ~/.zshrc
-
 # From project root
-cd /Users/bradywilson/Desktop/insurafuze_king-crm/z.ai-1st-kingCRM
+cd /path/to/kingcrmhub
 rm -rf node_modules
-bun install
+npm cache verify
+npm install
 
 npm run db:generate
 npm run dev
 ```
 
-You can keep using `npm run` for scripts; Bun is only for installing dependencies.
+If `npm install` still errors on corrupted tarballs after `npm cache verify` (or after clearing the cache per Option A), check the "Things that often cause these errors" section below — the cause is almost always the filesystem (sync folders, antivirus, permissions), not npm itself.
 
 ---
 
@@ -57,7 +56,7 @@ You can keep using `npm run` for scripts; Bun is only for installing dependencie
 
 - **iCloud Drive or Dropbox** syncing the project folder → move the project to a local folder (e.g. `~/Projects`) and try again.
 - **Antivirus** locking files during extract → temporarily disable or exclude the project folder.
-- **Mixing package managers** → use either npm **or** Bun, and stick to one. If using npm, you can delete `bun.lock` and use only `package-lock.json`.
+- **Mixing package managers** → this repo installs with **npm only** (`package-lock.json` is canonical). Do not run `bun install` locally (see Option B), and do not delete `bun.lock` on your own — it is still consumed by the nightly CI job and its retirement is a pending maintainer decision.
 
 ---
 
