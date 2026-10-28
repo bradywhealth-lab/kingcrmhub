@@ -166,8 +166,38 @@ fi
 docker tag "$OLD_IMAGE_ID" "$ROLLBACK_IMAGE"
 echo "ROLLBACK_IMAGE=$ROLLBACK_IMAGE"
 
+# === Build memory headroom gate (OOM incident 2026-10-27) ===
+# The 2GB VPS wedged when the uncapped `next build` raced the live
+# container: MemAvailable + SwapFree hit ~0 and the kernel starved
+# userspace (SSH refused, site dark ~60min). Refuse to even START the
+# build when the host lacks headroom for the build plus the running app.
+# The abort happens before the container swap, so the live site is never
+# touched. BUILD_MIN_HEADROOM_MB=0 disables (local dev / CI);
+# BUILD_MEMINFO_FILE overrides the memory source (unit tests).
+BUILD_MIN_HEADROOM_MB="${BUILD_MIN_HEADROOM_MB:-1400}"
+BUILD_MEMINFO_FILE="${BUILD_MEMINFO_FILE:-/proc/meminfo}"
+if [[ "$BUILD_MIN_HEADROOM_MB" != "0" && -r "$BUILD_MEMINFO_FILE" ]]; then
+  mem_avail_kb="$(awk '/^MemAvailable:/{print $2; exit}' "$BUILD_MEMINFO_FILE" 2>/dev/null || echo 0)"
+  swap_free_kb="$(awk '/^SwapFree:/{print $2; exit}' "$BUILD_MEMINFO_FILE" 2>/dev/null || echo 0)"
+  mem_avail_kb="${mem_avail_kb:-0}"
+  swap_free_kb="${swap_free_kb:-0}"
+  build_headroom_mb=$(( (mem_avail_kb + swap_free_kb) / 1024 ))
+  echo "BUILD_HEADROOM_MB=$build_headroom_mb (minimum $BUILD_MIN_HEADROOM_MB)"
+  if (( build_headroom_mb < BUILD_MIN_HEADROOM_MB )); then
+    echo "BUILD_MEMORY_HEADROOM_FAIL: ${build_headroom_mb}MB headroom < ${BUILD_MIN_HEADROOM_MB}MB required - free memory (or add swap) before building" >&2
+    exit 1
+  fi
+fi
+
 echo "=== BUILD (live container remains untouched) ==="
-compose build "$SERVICE"
+# Hard ceiling on the build container (OOM incident 2026-10-27): with only
+# the heap cap, several build processes can together still outgrow the host
+# and wedge the kernel. --memory puts the build itself in a cgroup ceiling —
+# the BUILD dies, not the host. Compose v2 exposes it as build -m/--memory.
+# The OOM lands inside the build container -> compose exits non-zero ->
+# this script aborts BEFORE the container swap (live site untouched).
+BUILD_MEMORY_LIMIT="${BUILD_MEMORY_LIMIT:-1400m}"
+compose build --memory "$BUILD_MEMORY_LIMIT" "$SERVICE"
 # Image-identity gate (deploy defect 2026-09-21): the bake can finish and
 # fail to update the local service tag (observed: deployer-kingcrmhub:latest
 # still resolving to the pre-build image). Abort BEFORE stopping the container
