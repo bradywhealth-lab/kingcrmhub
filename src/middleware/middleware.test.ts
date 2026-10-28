@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 // middleware.ts imports next-auth/jwt — mock getToken so no real secret or
 // session cookie is needed: the default (undefined token) models a logged-out
@@ -133,5 +134,77 @@ describe('middleware matcher excludes PWA assets', () => {
     '/some-protected-view',
   ])('matcher still matches %s (middleware protection intact)', (path) => {
     expect(pattern.test(path)).toBe(true)
+  })
+})
+
+describe('root HTML shared-cache contract (t_3b1d1aa0): cookie-variant responses are never shared-cacheable', () => {
+  // `/` is cookie-variant: an anonymous request rewrites to the /welcome
+  // marketing prerender while a signed-in request gets the app shell. Next.js
+  // advertises BOTH variants as `cache-control: s-maxage=31536000` with no
+  // `Vary: Cookie`, which authorizes any shared cache layered in front (CDN,
+  // Caddy cache module, corporate proxy) to serve the anonymous marketing
+  // variant to signed-in users for a year — the exact t_ae0cffe5 anomaly
+  // (marketing HTML inside a valid session). Every response whose bytes
+  // depend on the session cookie must opt out of shared caching.
+  beforeEach(() => {
+    vi.mocked(getToken).mockReset()
+  })
+
+  it('logged-out GET / (rewrite to /welcome) carries no-store', async () => {
+    vi.mocked(getToken).mockResolvedValue(undefined)
+    const request = new NextRequest('http://localhost:3000/')
+    const response = await middleware(request, undefined as never)
+
+    expect(response.headers.get('x-middleware-rewrite')).toContain('/welcome')
+    expect(response.headers.get('cache-control')).toContain('no-store')
+  })
+
+  it('logged-in GET / (app shell) carries no-store', async () => {
+    vi.mocked(getToken).mockResolvedValue({ sub: 'user_1', sessionToken: 'session_token_1' })
+    const request = new NextRequest('http://localhost:3000/')
+    const response = await middleware(request, undefined as never)
+
+    expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+    expect(response.headers.get('cache-control')).toContain('no-store')
+  })
+
+  it('logged-in GET /welcome (redirect to /) carries no-store', async () => {
+    vi.mocked(getToken).mockResolvedValue({ sub: 'user_1', sessionToken: 'session_token_1' })
+    const request = new NextRequest('http://localhost:3000/welcome')
+    const response = await middleware(request, undefined as never)
+
+    expect(response.headers.get('location')).toBe('http://localhost:3000/')
+    expect(response.headers.get('cache-control')).toContain('no-store')
+  })
+
+  it('logged-in GET /auth (redirect to /) carries no-store', async () => {
+    vi.mocked(getToken).mockResolvedValue({ sub: 'user_1', sessionToken: 'session_token_1' })
+    const request = new NextRequest('http://localhost:3000/auth')
+    const response = await middleware(request, undefined as never)
+
+    expect(response.headers.get('location')).toBe('http://localhost:3000/')
+    expect(response.headers.get('cache-control')).toContain('no-store')
+  })
+
+  it('logged-out protected route (307 to /auth) carries no-store', async () => {
+    vi.mocked(getToken).mockResolvedValue(undefined)
+    const request = new NextRequest('http://localhost:3000/some-protected-view')
+    const response = await middleware(request, undefined as never)
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('cache-control')).toContain('no-store')
+  })
+
+  it('public /pricing stays shared-cacheable (identical bytes for every requester)', async () => {
+    // /pricing passes through middleware with the SAME response for signed-in
+    // and anonymous visitors — no cookie variance, so leaving its prerender
+    // s-maxage contract intact stays correct. Guard against an over-broad
+    // no-store that would silently de-cache every marketing page.
+    vi.mocked(getToken).mockResolvedValue({ sub: 'user_1', sessionToken: 'session_token_1' })
+    const request = new NextRequest('http://localhost:3000/pricing')
+    const response = await middleware(request, undefined as never)
+
+    expect(response.headers.get('location')).toBeNull()
+    expect(response.headers.get('cache-control')).toBeNull()
   })
 })
