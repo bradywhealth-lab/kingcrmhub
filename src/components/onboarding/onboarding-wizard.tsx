@@ -116,7 +116,7 @@ function StepIndicator({
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all duration-300",
                 status === "done" && "border-[var(--teal-deep)] bg-[var(--teal-deep)] text-white",
-                status === "active" && "border-[var(--teal)] bg-[var(--teal-deep)] text-white shadow-[0_0_12px_rgba(18,124,102,0.45)]",
+                status === "active" && "border-[var(--teal)] bg-[var(--teal-deep)] text-white shadow-[0_0_12px_rgba(30,79,204,0.45)]",
                 status === "skipped" && "border-amber-400 bg-amber-50 text-amber-600",
                 status === "pending" && "border-[rgba(31,42,54,0.15)] bg-card text-muted-foreground"
               )}
@@ -161,7 +161,7 @@ function WelcomeStep({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
+        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(30,79,204,0.28)]"
       >
         <Sparkles className="h-9 w-9 text-foreground" />
       </motion.div>
@@ -218,7 +218,7 @@ function WelcomeStep({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
         <Button
           onClick={onNext}
-          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
+          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(30,79,204,0.24)] hover:opacity-95"
         >
           Get started
           <ArrowRight className="ml-2 h-4 w-4" />
@@ -307,7 +307,7 @@ function OrganizationStep({
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(30,79,204,0.2)] hover:opacity-95"
         >
           {saving ? "Saving…" : "Save & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -394,7 +394,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[rgba(24,184,151,0.18)] bg-muted p-4 text-sm text-foreground/65">
+      <div className="rounded-2xl border border-[rgba(47,107,255,0.18)] bg-muted p-4 text-sm text-foreground/65">
         You can add more offers and upload service documents in{" "}
         <span className="font-semibold text-[var(--teal-deep)]">Settings → Offers</span> at any time.
       </div>
@@ -410,7 +410,7 @@ function CarrierStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(30,79,204,0.2)] hover:opacity-95"
         >
           {saving ? "Adding offer…" : "Add offer & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -524,7 +524,7 @@ function LeadStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }
         <Button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(30,79,204,0.2)] hover:opacity-95"
         >
           {saving ? "Adding client…" : "Add client & continue"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -572,7 +572,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
     <div className="space-y-6">
       <div className="rounded-2xl border border-[rgba(31,42,54,0.08)] bg-muted p-5">
         <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(18,124,102,0.12)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(30,79,204,0.12)]">
             <Zap className="h-5 w-5 text-[var(--teal-deep)]" />
           </div>
           <div className="min-w-0 flex-1">
@@ -581,10 +581,10 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
               When a new client is created, automatically create a task: "Follow up within 5 minutes".
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-[rgba(18,124,102,0.28)] bg-[rgba(18,124,102,0.08)] px-3 py-1 text-xs text-[var(--teal-deep)]">
+              <span className="rounded-full border border-[rgba(30,79,204,0.28)] bg-[rgba(30,79,204,0.08)] px-3 py-1 text-xs text-[var(--teal-deep)]">
                 Trigger: Client created
               </span>
-              <span className="rounded-full border border-[rgba(18,124,102,0.28)] bg-[rgba(18,124,102,0.08)] px-3 py-1 text-xs text-[var(--teal-deep)]">
+              <span className="rounded-full border border-[rgba(30,79,204,0.28)] bg-[rgba(30,79,204,0.08)] px-3 py-1 text-xs text-[var(--teal-deep)]">
                 Action: Create task
               </span>
             </div>
@@ -608,7 +608,7 @@ function AutomationStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         <Button
           onClick={() => void handleEnable()}
           disabled={saving}
-          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(18,124,102,0.2)] hover:opacity-95"
+          className="h-11 flex-1 rounded-2xl bg-[var(--teal)] text-[var(--ink)] shadow-[0_8px_20px_rgba(30,79,204,0.2)] hover:opacity-95"
         >
           {saving ? "Enabling…" : "Enable automation & finish"}
           <ChevronRight className="ml-1.5 h-4 w-4" />
@@ -631,7 +631,7 @@ function DoneStep({
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 180, delay: 0.05 }}
-        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(18,124,102,0.28)]"
+        className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--teal)] shadow-[0_20px_40px_rgba(30,79,204,0.28)]"
       >
         <Check className="h-9 w-9 text-foreground" />
       </motion.div>
@@ -689,7 +689,7 @@ function DoneStep({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
         <Button
           onClick={onFinish}
-          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(18,124,102,0.24)] hover:opacity-95"
+          className="h-12 rounded-2xl bg-[var(--teal)] px-8 text-[var(--ink)] shadow-[0_12px_28px_rgba(30,79,204,0.24)] hover:opacity-95"
         >
           Go to dashboard
           <ArrowRight className="ml-2 h-4 w-4" />
