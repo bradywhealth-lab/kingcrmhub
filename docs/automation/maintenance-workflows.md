@@ -23,15 +23,15 @@ This document explains exactly what automation was added, what each workflow doe
 
 ### What it does
 
-Runs four independent status-check jobs on every change:
+Runs four independent status-check jobs on every change. Each job sets up Node 22 with npm caching, installs with **`npm ci`** (frozen against `package-lock.json`), then runs:
 
-1. **`lint`**: install dependencies then run `bun run lint`
-2. **`typecheck`**: install dependencies then run `bun run typecheck` (a gate that blocks new TypeScript errors while allowing the current baseline debt)
-3. **`test`**: install dependencies then run `bun run test`
-4. **`build`**: install dependencies, run Prisma generate, then run `bun run build`
+1. **`lint`**: `npm run lint`
+2. **`typecheck`**: `npm run typecheck` (a gate that blocks new TypeScript errors while allowing the current baseline debt)
+3. **`test`**: `npm run test`
+4. **`build`**: Prisma generate, then `npm run build` and the pdf-parse externalization check (M159 bundling regression guard)
 
 Each job appears as a separate GitHub check, so branch protections can require them individually.
-For Dependabot-authored PRs, CI uses non-frozen `bun install` to avoid lockfile drift failures between `package-lock.json` and `bun.lock`.
+Dependabot-authored PRs run this same npm-based CI; there is no separate Bun install path for Dependabot.
 
 ### Why this helps
 
@@ -83,11 +83,11 @@ For Dependabot-authored PRs, CI uses non-frozen `bun install` to avoid lockfile 
 
 ### What it does
 
-`health-check` job:
+`health-check` job (scheduled or manually dispatched — **not** a merge-blocking gate):
 
 1. Checkout
-2. Setup Bun
-3. Install dependencies
+2. Setup Bun 1.4.2 (`oven-sh/setup-bun`)
+3. Install dependencies with `bun install --frozen-lockfile` (frozen against `bun.lock`; this is the only Bun usage in CI — all merge-blocking checks use npm)
 4. Prisma generate
 5. Run lint + typecheck + tests + build
 
