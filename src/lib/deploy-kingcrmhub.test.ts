@@ -47,11 +47,13 @@ interface DeployHarnessOptions {
   /** Fixture /proc/meminfo contents for the build memory headroom gate. */
   meminfo?: { memAvailKb: number; swapFreeKb: number }
   /** BUILD_MIN_HEADROOM_MB for the gate; harness default 0 (disabled). */
-  minHeadroomMb?: number
+  minHeadroomMb?: number | string
   /** Point BUILD_MEMINFO_FILE at a nonexistent path (gate-skip path). */
   missingMeminfo?: boolean
   /** Shim prints no cap for the builder inspect (cap-verify-failure path). */
   builderMemEmpty?: boolean
+  /** Shim fails the compose build (BUILD_FAILED + EXIT-trap path). */
+  failBuild?: boolean
 }
 
 interface DeployHarness {
@@ -81,6 +83,7 @@ function createDeployHarness({
   minHeadroomMb,
   missingMeminfo = false,
   builderMemEmpty = false,
+  failBuild = false,
 }: DeployHarnessOptions = {}): DeployHarness {
   const root = mkdtempSync(join(tmpdir(), 'kingcrmhub-deploy-test-'))
   tempDirs.push(root)
@@ -227,9 +230,13 @@ if [[ "$args" == *" images --no-trunc --quiet "* ]]; then
   exit 0
 fi
 if [[ "$args" == *" build "* && "$args" == *" kingcrmhub "* ]]; then
-  # Real invocation is docker compose -f COMPOSE_FILE build --memory 1400m
-  # kingcrmhub; once the build completes, the service ref resolves to a NEW
-  # image id so the pre-swap image-identity gate passes.
+  # Real invocation is docker compose -f COMPOSE_FILE build kingcrmhub routed
+  # through the capped builder; once the build completes, the service ref
+  # resolves to a NEW image id so the pre-swap image-identity gate passes.
+  if [[ "$FAIL_BUILD" == "1" ]]; then
+    echo "simulated build failure" >&2
+    exit 1
+  fi
   touch "$DEPLOY_ROOT/image_built"
 fi
 if [[ "$args" == *" buildx inspect kc-capped-builder "* ]]; then
@@ -306,7 +313,11 @@ exit 0
     // cubic P3: pin the builder cap so a host/CI shell exporting
     // BUILD_MEMORY_LIMIT_MB cannot break the exact-invocation assertions.
     BUILD_MEMORY_LIMIT_MB: '1400',
+    // cubic P3 (round 2): pin the builder name so a host/CI shell exporting
+    // BUILDX_BUILDER_NAME cannot break the exact-match assertions.
+    BUILDX_BUILDER_NAME: 'kc-capped-builder',
     ...(builderMemEmpty ? { BUILDER_MEM_EMPTY: '1' } : {}),
+    ...(failBuild ? { FAIL_BUILD: '1' } : {}),
     ...(meminfo
       ? {
           BUILD_MEMINFO_FILE: (() => {
@@ -874,6 +885,31 @@ describe('KingCRMhub deploy hardening', () => {
     expect(result.status).toBe(1)
     expect(output).toContain('BUILD_MEMORY_CAP_VERIFY_FAIL: builder container buildx_buildkit_kc-capped-builder0 carries no memory cap')
     expect(dockerCalls).not.toContain(' build ')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('stops the capped builder via the EXIT trap when the build fails (cubic P2 round 2)', deployTimeout, () => {
+    // A failed build exits before the inline docker stop; without trap
+    // cleanup, buildkitd stays resident on the memory-constrained host —
+    // the exact leak this deploy exists to prevent.
+    const { deployLog, result } = runMockDeploy({ failBuild: true })
+    const output = `${result.stdout}\n${result.stderr}`
+    const dockerCalls = readFileSync(deployLog, 'utf8')
+
+    expect(result.status).toBe(1)
+    expect(output).toContain('BUILD_FAILED: compose build exited non-zero')
+    // The EXIT trap (not the inline success-path stop) must have idled the
+    // builder: exactly one stop, fired even though the build failed.
+    expect(dockerCalls).toContain('stop buildx_buildkit_kc-capped-builder0')
+    expect(output).not.toContain('DEPLOY_V4_DONE')
+  })
+
+  it('rejects a non-numeric headroom threshold, not just negatives (cubic P3 round 2)', deployTimeout, () => {
+    const { result } = runMockDeploy({ minHeadroomMb: 'fourteen' })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain("BUILD_MEMORY_HEADROOM_INVALID: BUILD_MIN_HEADROOM_MB must be a non-negative integer (got 'fourteen')")
     expect(output).not.toContain('DEPLOY_V4_DONE')
   })
 })

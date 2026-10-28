@@ -25,7 +25,19 @@ STATIC_PHASE_DONE=0
 # or a clean deploy finish. A FAILED rollback (ROLLBACK_NAME_CONFLICT /
 # ROLLBACK_HEALTH_FAIL) keeps them for forensics.
 STATIC_SNAPSHOTS_SPENT=0
+# cubic P2 (round 2): EVERY exit path after the builder is created must stop
+# buildkitd — a failed build exits before the inline `docker stop`, and
+# setup/verification failures do the same. A resident buildkitd on a
+# memory-constrained host is precisely the leak this deploy defends against.
+stop_capped_builder() {
+  if [[ -n "${BUILDER_CONTAINER:-}" && "${BUILDER_CONTAINER_STOPPED:-0}" != "1" ]]; then
+    docker stop "$BUILDER_CONTAINER" >/dev/null 2>&1 || true
+    BUILDER_CONTAINER_STOPPED=1
+  fi
+}
 cleanup_static_snapshots() {
+  stop_capped_builder
+  # original snapshot cleanup follows below
   if [[ "$STATIC_SNAPSHOTS_SPENT" == "1" ]]; then
     if [[ -n "${STATIC_BACKUP_DIR:-}" ]]; then
       rm -rf "$STATIC_BACKUP_DIR"
@@ -238,6 +250,7 @@ if ! compose build "$SERVICE"; then
 fi
 unset BUILDX_BUILDER
 docker stop "$BUILDER_CONTAINER" >/dev/null 2>&1 || true
+BUILDER_CONTAINER_STOPPED=1
 # Image-identity gate (deploy defect 2026-09-21): the bake can finish and
 # fail to update the local service tag (observed: deployer-kingcrmhub:latest
 # still resolving to the pre-build image). Abort BEFORE stopping the container
