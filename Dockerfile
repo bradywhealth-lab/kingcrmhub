@@ -52,6 +52,13 @@ ENV DATABASE_URL=$DATABASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Cap the V8 heap for `next build` (OOM incident 2026-10-27): an uncapped
+# build (jest workers + postcss) can demand more memory than the 2GB host
+# has while the live container runs, wedging the kernel (swap exhausted,
+# SSH refused, site down ~60min). 1024MB heap leaves room for the running
+# app; jest workers spawned by the build inherit NODE_OPTIONS.
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+
 RUN npm run build
 
 # ============================================================
