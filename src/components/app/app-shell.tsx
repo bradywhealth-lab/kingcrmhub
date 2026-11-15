@@ -17,13 +17,16 @@ export const APP_NAV_ITEMS = [
   { id: "leads", icon: Users, label: "Clients" },
   { id: "pipeline", icon: GitBranch, label: "Pipeline" },
   { id: "tasks", icon: CheckSquare, label: "Tasks" },
-  { id: "automation", icon: Zap, label: "Automations" },
   { id: "assistant", icon: MessageSquare, label: "Assistant" },
+  { id: "settings", icon: Settings, label: "Settings" },
+  { id: "automation", icon: Zap, label: "Automations" },
   { id: "prompts", icon: Sparkles, label: "Prompts" },
   { id: "social", icon: Share2, label: "Social" },
 ] as const
 
-const PRIMARY_COUNT = 4
+// Assistant and Settings are promoted to primary pills (operator request).
+// Automations / Prompts / Social remain under the "More" overflow menu.
+const PRIMARY_COUNT = 6
 
 function getInitials(name: string | null | undefined) {
   if (!name) return "KC"
@@ -75,7 +78,7 @@ export function AppShell({
           {/* Brand lockup */}
           <button onClick={() => navigate("dashboard")} className="mr-1 flex shrink-0 items-center gap-2.5" aria-label="King CRM Hub — home">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent-solid)] font-display text-sm font-extrabold text-white">K</span>
-            <span className="hidden font-display text-lg font-bold tracking-tight text-white sm:inline">
+            <span className="hidden font-display text-lg font-bold tracking-tight text-white xl:inline">
               King <span className="text-white/55">CRM Hub</span>
             </span>
           </button>
@@ -103,7 +106,7 @@ export function AppShell({
                 <DropdownMenuTrigger asChild>
                   <button className={cn(
                     "flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors",
-                    (overflow.some((o) => o.id === activeView) || activeView === "settings") ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                    overflow.some((o) => o.id === activeView) ? "bg-[var(--accent-solid)] text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}>
                     More <ChevronDown className="h-3.5 w-3.5" />
                   </button>
@@ -114,9 +117,6 @@ export function AppShell({
                       <item.icon className="h-4 w-4" /> {item.label}
                     </DropdownMenuItem>
                   ))}
-                  <DropdownMenuItem onClick={() => navigate("settings")} className="cursor-pointer gap-2">
-                    <Settings className="h-4 w-4" /> Settings
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -194,9 +194,6 @@ export function AppShell({
                     </button>
                   )
                 })}
-                <button onClick={() => navigate("settings")} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/8">
-                  <Settings className="h-4 w-4" /> Settings
-                </button>
                 <button onClick={onSignOut} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/8">
                   <LogOut className="h-4 w-4" /> Sign out
                 </button>
