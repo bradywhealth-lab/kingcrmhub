@@ -94,6 +94,21 @@ function AuthPageInner() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
+  /**
+   * Validated `?callbackUrl`, hoisted ABOVE the mount effect that consumes it.
+   * It must be initialized before that effect's dependency array is evaluated,
+   * otherwise accessing it throws a temporal-dead-zone ReferenceError that
+   * crashes the entire auth page render ("Cannot access 'safeCallback' before
+   * initialization"). Both the mount effect and the submit handler honour it.
+   * Same rules: single leading slash, not protocol-relative, no backslash.
+   */
+  const safeCallback = useMemo(() => {
+    const rawCallback = searchParams.get('callbackUrl') ?? ''
+    return rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
+      ? rawCallback
+      : '/'
+  }, [searchParams])
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -147,20 +162,6 @@ function AuthPageInner() {
         return window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
       })())
     }
-  }, [searchParams])
-
-  /**
-   * Validated `?callbackUrl`, hoisted to component scope so BOTH post-auth
-   * redirects (the mount effect and the submit handler) can honour it.
-   * cubic P2: previously only the submit handler computed this, and it was dropped
-   * entirely on the mustChangePassword path.
-   * Same rules as before: single leading slash, not protocol-relative, no backslash.
-   */
-  const safeCallback = useMemo(() => {
-    const rawCallback = searchParams.get('callbackUrl') ?? ''
-    return rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('\\')
-      ? rawCallback
-      : '/'
   }, [searchParams])
 
   const currentModeTitle = useMemo(() => {
