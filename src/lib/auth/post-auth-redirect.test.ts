@@ -308,6 +308,18 @@ describe('auth/page.tsx preserves callbackUrl (wiring guard)', () => {
     expect(source.match(/const safeCallback =/g)).toHaveLength(1)
   })
 
+  it('declares safeCallback BEFORE the mount effect that consumes it (no TDZ crash)', () => {
+    // Regression guard: the useMemo was once placed AFTER the mount effect, so
+    // the effect's dependency array `[router, safeCallback]` hit a temporal
+    // dead zone and threw "Cannot access 'safeCallback' before initialization",
+    // crashing the entire auth page render.
+    const declIndex = source.indexOf('const safeCallback = useMemo(')
+    const firstUseIndex = source.indexOf('callbackPath: safeCallback')
+    expect(declIndex).toBeGreaterThan(-1)
+    expect(firstUseIndex).toBeGreaterThan(-1)
+    expect(declIndex).toBeLessThan(firstUseIndex)
+  })
+
   it('still validates callbackUrl as a same-origin path before use', () => {
     expect(source).toContain("searchParams.get('callbackUrl')")
     expect(source).toContain("startsWith('//')")
